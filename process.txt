@@ -1,0 +1,115 @@
+SQL Server: 0b0ed79a-6af1-4aab-873b-9b907d3e9ebc
+
+Install azure cli
+az login
+connect to Azure Data Studio
+
+Azure SQL DB structure:
+1. Auth
+    - Users (id, first name, last name, GTID, ...)
+
+Cosmos JSON structure:
+
+1. partition_key? userID (id) from Users Table
+2. prompt
+3. student_information [4]
+    - skill summary
+    - after college I want to
+    - best way to assist me
+    - currently i want to achieve
+4. prompt responses
+    Store version history in array structure, "indexed" by a timestamp 
+    { 
+        [
+            {response-v3},
+            {response-v2},
+            {response-v1}
+        ] 
+    }
+
+
+Sample Document
+{
+    "id": "replace_with_new_document_id",
+    "userID": "Student1",
+    "assignmentID":"Assignment1",
+    "prompt_initial": "test_prompt_for_llm",
+    "skill_summary": "",
+    "post_college_goals": "",
+    "best_Way_to_assist": "",
+    "current_goals": "",
+    "version_history":" 
+    { 
+        [
+            {response-v3},
+            {response-v2},
+            {response-v1}
+        ]
+    }"
+    "_rid": "77ADAKOkY5ECAAAAAAAAAA==",
+    "_self": "dbs/77ADAA==/colls/77ADAKOkY5E=/docs/77ADAKOkY5ECAAAAAAAAAA==/",
+    "_etag": "\"050040ce-0000-4d00-0000-683663bf0000\"",
+    "_attachments": "attachments/",
+    "_ts": 1748394943
+}
+
+-------------------------------------------------------
+//   "student_id": 42 // ID refernced here is pulled from Users Auth table (SQL)
+container: ai-student-profiles
+StudentProfiles
+{
+  "student_id": 42, 
+  "strengths": ["Organized", "Good at writing"],
+  "challenges": ["Hard to focus", "Deadlines"],
+  "short_term_goals": "...",
+  "long_term_goals": "...",
+  "best_ways_to_help": ["Step-by-step", "Audio response"],
+  "summaries": {
+    "strength_short": "...",
+    "goals_short": "...",
+    ...
+  }
+}
+
+container: ai-assignment-modifications
+AssignmentModifications
+{
+  "student_id": 42,
+  "assignment_id": "HCI_Homework2",
+  "original_assignment": "...", // POINTER TO Blob storage
+  "modified_assignment": "...", // POINTER TO Blob storage
+  "udl_reasons": {
+    "Interest": "...",
+    "Ways of Learning": "...",
+    ...
+  },
+  "generated_at": "2024-11-26T01:16:00Z"
+}
+
+container: ai-prompt-version-history
+AssignmentVersions 
+{
+  "student_id": 42,
+  "assignment_id": "HCI_Homework2",
+  "versions": [
+    {
+      "version": 1,
+      "modified_by": "GPT-4",
+      "date": "2024-11-26",
+      "content": "...",
+      "rating": {
+        "difficulty": "Just Right",
+        "best_changes": [1, 3, 4],
+        "disliked_changes": [2]
+      }
+    }
+  ]
+}
+
+
+🔄 Backend Flow
+SQL loads dropdowns, user filters, structured info.
+
+Cosmos fills in unstructured/AI content after loading student or assignment context.
+
+Document IDs in Cosmos are built around composite keys: student_id, assignment_id, and version where applicable.
