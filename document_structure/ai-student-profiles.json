@@ -1,0 +1,12 @@
+{
+    "student_id": 42,
+    "strengths": ["Organized", "Good at writing"],
+    "challenges": ["Hard to focus", "Deadlines"],
+    "short_term_goals": "...",
+    "long_term_goals": "...",
+    "best_ways_to_help": ["Step-by-step", "Audio response"],
+    "summaries": {
+      "strength_short": "...",
+      "goals_short": "..."
+    }
+  }
