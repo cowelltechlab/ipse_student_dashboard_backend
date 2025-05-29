@@ -1,7 +1,11 @@
 
 
 def require_user_access():
-    pass
+    #  TODO: Implement actual user access logic.
+    def dependency():
+        return {"user_id": "1", "role": "student"}  # Mock user data
+    return dependency
+
 
 def require_teacher_access():
     pass

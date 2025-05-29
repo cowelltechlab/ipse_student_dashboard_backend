@@ -13,6 +13,6 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[StudentResponse])
-def fetch_boxes(user_data: dict = Depends(require_user_access())):
-    """Retrieve all boxes."""
+def fetch_students(user_data: dict = Depends(require_user_access())):
+    """Retrieve all students."""
     return get_all_students()

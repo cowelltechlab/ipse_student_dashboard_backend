@@ -1,8 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from application.core.config import get_settings
+# from application.core.config import get_settings
 
+from application.features.students.routes import router as student_router
 
 
 application = FastAPI()
@@ -18,8 +19,4 @@ application.add_middleware(
 )
 
 
-@application.on_event("startup")
-def preload_secrets():
-    get_settings()  # Triggers one-time secret loading
-
-application.include_router(auth_router, tags=["Auth"])
+application.include_router(student_router, tags=["Students"], prefix="/students")
