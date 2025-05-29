@@ -1,9 +1,10 @@
 import pyodbc
+import os
+from dotenv import load_dotenv
 
-from application.core.config import get_settings
-
+load_dotenv()
 
 def get_sql_db_connection():
-    settings = get_settings()
-    conn = pyodbc.connect(settings.db_url)
+    sql_url = os.getenv("SQL_URL")
+    conn = pyodbc.connect(sql_url)
     return conn
