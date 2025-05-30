@@ -1,9 +1,9 @@
-IPSE Student Dashboard Backend
+# IPSE Student Dashboard Backend
 ==============================
 
 A FastAPI backend service for managing student data and interactions within the IPSE project.
 
-Installation
+## Installation
 ------------
 
 1. Create a virtual environment:
@@ -31,7 +31,7 @@ Installation
 4. Install dependencies:
    pip install -r requirements.txt
 
-Running the Application
+## Running the Application
 -----------------------
 
 Start the FastAPI backend server:
