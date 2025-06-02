@@ -3,18 +3,16 @@
 
 from http.client import HTTPException
 from typing import List
-from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends, status
 
 from application.features.auth.permissions import require_user_access
-from application.features.students.crud import get_all_students, get_student_by_id, add_student, delete_student, update_student
+from application.features.students.crud import get_all_students, get_student_by_id, add_student, delete_student, update_student as crud_update_student
 from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate
 
 
 # router = APIRouter()
 ''' Prepend all student routes with /students and collect all student-relevant endpoints under Students tag in SwaggerUI'''
-router = APIRouter(prefix="/students", tags=["Students"])
-
-
+router = APIRouter()
 
 @router.get("/", response_model=List[StudentResponse])
 def fetch_students(user_data: dict = Depends(require_user_access())):
@@ -34,16 +32,18 @@ def create_student(student_data: StudentCreate, user_data: dict = Depends(requir
     """Create a new student."""
     created_student = add_student(student_data.dict())
     if "error" in created_student:
+        print(f"Creation error: {created_student['error']}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_student["error"])
     return created_student
 
 @router.put("/{student_id}", response_model=StudentResponse)
-def update_student(student_id: int, update_data: StudentUpdate, user_data: dict = Depends(require_user_access())):
+def update_student_route(student_id: int, update_data: StudentUpdate, user_data: dict = Depends(require_user_access())):
     """Update a student."""
-    updated_student = update_student(student_id, update_data.dict())
+    updated_student = crud_update_student(student_id, update_data.dict())
     if "error" in updated_student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=updated_student["error"])
     return updated_student
+
 
 @router.delete("/{student_id}")
 def delete_student(student_id: int, user_data: dict = Depends(require_user_access())):

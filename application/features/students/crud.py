@@ -1,7 +1,8 @@
 from application.database.mssql_crud_helpers import (
     create_record, 
     delete_record, 
-    fetch_all, 
+    fetch_all,
+    fetch_all_students_with_names, 
     fetch_by_id, 
     update_record
 )
@@ -10,7 +11,7 @@ TABLE_NAME = "Students"
 
 
 def get_all_students():
-    return fetch_all(TABLE_NAME)
+    return fetch_all_students_with_names()
 
 
 def get_student_by_id(student_id):

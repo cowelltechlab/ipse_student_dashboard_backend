@@ -17,23 +17,66 @@ def fetch_all(table_name):
     finally:
         conn.close()
 
-
-def fetch_by_id(table_name, record_id):
-    """Generic function to fetch a single record by ID."""
+def fetch_all_students_with_names():
+    """Fetch all students with their first and last names joined from Users table."""
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
     try:
-        cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (record_id,))
-        record = cursor.fetchone()
-        if not record:
-            return None
+        query = """
+        SELECT 
+            s.id, 
+            u.first_name, 
+            u.last_name, 
+            s.user_id,
+            s.year_id, 
+            s.reading_level, 
+            s.writing_level
+        FROM Students s
+        JOIN Users u ON s.user_id = u.id
+        """
+        cursor.execute(query)
+        records = cursor.fetchall()
         column_names = [column[0] for column in cursor.description]
-        return dict(zip(column_names, record))
+        return [dict(zip(column_names, row)) for row in records]
+
     except pyodbc.Error as e:
         return {"error": str(e)}
     finally:
         conn.close()
+
+def fetch_by_id(table_name, record_id):
+    """Generic function to fetch a single record by ID, with special join for students."""
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        if table_name == "Students":
+            query = """
+            SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level,
+                u.first_name, u.last_name
+            FROM students s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.id = ?
+            """
+            cursor.execute(query, (record_id,))
+        else:
+            # Generic simple query for other tables
+            query = f"SELECT * FROM {table_name} WHERE id = ?"
+            cursor.execute(query, (record_id,))
+
+        record = cursor.fetchone()
+        if not record:
+            return None
+
+        column_names = [column[0] for column in cursor.description]
+        return dict(zip(column_names, record))
+
+    except pyodbc.Error as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
 
 
 def create_record(table_name, data):
