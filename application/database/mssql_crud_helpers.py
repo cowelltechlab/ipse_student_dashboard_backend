@@ -19,22 +19,36 @@ def fetch_all(table_name):
 
 
 def fetch_by_id(table_name, record_id):
-    """Generic function to fetch a single record by ID."""
+    """Generic function to fetch a single record by ID, with special join for students."""
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
     try:
-        cursor.execute(f"SELECT * FROM {table_name} WHERE id = ?", (record_id,))
+        if table_name == "Students":
+            query = """
+            SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level,
+                u.first_name, u.last_name
+            FROM students s
+            JOIN users u ON s.user_id = u.id
+            WHERE s.id = ?
+            """
+            cursor.execute(query, (record_id,))
+        else:
+            # Generic simple query for other tables
+            query = f"SELECT * FROM {table_name} WHERE id = ?"
+            cursor.execute(query, (record_id,))
+
         record = cursor.fetchone()
         if not record:
             return None
+
         column_names = [column[0] for column in cursor.description]
         return dict(zip(column_names, record))
+
     except pyodbc.Error as e:
         return {"error": str(e)}
     finally:
         conn.close()
-
 
 def create_record(table_name, data):
     """Generic function to insert a new record into a metadata table and return the created record."""
