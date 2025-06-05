@@ -14,11 +14,27 @@ def db_connection():
 
 def test_delete_student_and_associated_records(db_connection):
     cursor = db_connection.cursor()
+        # Clean up if user already exists
+    cursor.execute("SELECT id FROM Users WHERE email = ?", "frank@example.com")
+    existing = cursor.fetchone()
+    if existing:
+        existing_user_id = existing[0]
+        # Delete student-related data first (respecting FK constraints)
+        cursor.execute("DELETE FROM TutorStudents WHERE student_id IN (SELECT id FROM Students WHERE user_id = ?)", existing_user_id)
+        cursor.execute("DELETE FROM StudentAssignments WHERE student_id IN (SELECT id FROM Students WHERE user_id = ?)", existing_user_id)
+        cursor.execute("DELETE FROM StudentRatings WHERE student_id IN (SELECT id FROM Students WHERE user_id = ?)", existing_user_id)
+        cursor.execute("DELETE FROM StudentClasses WHERE student_id IN (SELECT id FROM Students WHERE user_id = ?)", existing_user_id)
+        cursor.execute("DELETE FROM Students WHERE user_id = ?", existing_user_id)
+        cursor.execute("DELETE FROM UserRoles WHERE user_id = ?", existing_user_id)
+        cursor.execute("DELETE FROM Users WHERE id = ?", existing_user_id)
+        db_connection.commit()
+
+    # Continue as normal
     cursor.execute("""
-    INSERT INTO Users (email, first_name, last_name, gt_email, password_hash, created_at)
-    OUTPUT INSERTED.id
-    VALUES (?, ?, ?, ?, ?, GETDATE())
-""", "frank@example.com", "Frank", "Doe", "frank@gatech.edu", "hashed_pw_here")
+        INSERT INTO Users (email, first_name, last_name, gt_email, password_hash, created_at)
+        OUTPUT INSERTED.id
+        VALUES (?, ?, ?, ?, ?, GETDATE())
+    """, "frank@example.com", "Frank", "Doe", "frank@gatech.edu", "hashed_pw_here")
     student_user_id = cursor.fetchone()[0]
 
     cursor.execute("""
@@ -27,6 +43,7 @@ def test_delete_student_and_associated_records(db_connection):
         VALUES (?, ?, ?, ?, ?, 1)
     """, student_user_id, 2, 3, 4, "https://example.com/pic.jpg")
     student_id = cursor.fetchone()[0]
+    
    # student_id = 108
     tutor_user_id = 4
     #student_user_id = 116  # user_id in Users table for the student
