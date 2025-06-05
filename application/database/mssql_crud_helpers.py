@@ -17,33 +17,6 @@ def fetch_all(table_name):
     finally:
         conn.close()
 
-def fetch_all_students_with_names():
-    """Fetch all students with their first and last names joined from Users table."""
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        query = """
-        SELECT 
-            s.id, 
-            u.first_name, 
-            u.last_name, 
-            s.user_id,
-            s.year_id, 
-            s.reading_level, 
-            s.writing_level
-        FROM Students s
-        JOIN Users u ON s.user_id = u.id
-        """
-        cursor.execute(query)
-        records = cursor.fetchall()
-        column_names = [column[0] for column in cursor.description]
-        return [dict(zip(column_names, row)) for row in records]
-
-    except pyodbc.Error as e:
-        return {"error": str(e)}
-    finally:
-        conn.close()
 
 def fetch_by_id(table_name, record_id):
     """Generic function to fetch a single record by ID, with special join for students."""
@@ -76,8 +49,6 @@ def fetch_by_id(table_name, record_id):
         return {"error": str(e)}
     finally:
         conn.close()
-
-
 
 def create_record(table_name, data):
     """Generic function to insert a new record into a metadata table and return the created record."""

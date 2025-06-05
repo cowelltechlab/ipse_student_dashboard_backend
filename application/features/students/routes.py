@@ -2,12 +2,13 @@
 #  To be used, for example, in an admin's login page to view a list of all students 
 
 from http.client import HTTPException
-from typing import List
-from fastapi import HTTPException, APIRouter, Depends, status
+from typing import List, Optional
+from fastapi import HTTPException, APIRouter, Depends, status, Query
 
 from application.features.auth.permissions import require_user_access
 from application.features.students.crud import get_all_students, get_student_by_id, add_student, delete_student, update_student as crud_update_student
-from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate
+from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate 
+from application.features.students.crud import  get_students_by_year,  delete_student_records
 
 
 # router = APIRouter()
@@ -15,8 +16,13 @@ from application.features.students.schemas import StudentResponse, StudentCreate
 router = APIRouter()
 
 @router.get("/", response_model=List[StudentResponse])
-def fetch_students(user_data: dict = Depends(require_user_access())):
-    """Retrieve all students."""
+def fetch_students(
+    year_id: Optional[int] = Query(None),
+    user_data: dict = Depends(require_user_access())
+):
+    """Retrieve all students or filter by year_id."""
+    if year_id is not None:
+        return get_students_by_year(year_id)
     return get_all_students()
 
 @router.get("/{student_id}", response_model=StudentResponse)
@@ -39,7 +45,7 @@ def create_student(student_data: StudentCreate, user_data: dict = Depends(requir
 @router.put("/{student_id}", response_model=StudentResponse)
 def update_student_route(student_id: int, update_data: StudentUpdate, user_data: dict = Depends(require_user_access())):
     """Update a student."""
-    updated_student = crud_update_student(student_id, update_data.dict())
+    updated_student = crud_update_student(student_id, update_data.dict(exclude_unset=True))
     if "error" in updated_student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=updated_student["error"])
     return updated_student
@@ -48,7 +54,7 @@ def update_student_route(student_id: int, update_data: StudentUpdate, user_data:
 @router.delete("/{student_id}")
 def delete_student(student_id: int, user_data: dict = Depends(require_user_access())):
     """Delete a student."""
-    result = delete_student(student_id)
+    result = delete_student_records(student_id)
     if "error" in result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
     return {"message": f"Student with id {student_id} deleted successfully."}
