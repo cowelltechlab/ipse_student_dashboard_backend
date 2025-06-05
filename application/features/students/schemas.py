@@ -5,7 +5,6 @@ from typing import Optional
 class StudentBase(BaseModel):
     first_name: str
     last_name: str
-    year_id: int
     reading_level: int
     writing_level: int
 
@@ -17,8 +16,8 @@ class StudentCreate(StudentBase):
     first_name: Optional[str]
     last_name: Optional[str]
     gt_email: Optional[str]
-    password_hash: Optional[str]
     year_id: int
+    password_hash: Optional[str]
     reading_level: Optional[int]
     writing_level: Optional[int]
     profile_picture_url: Optional[str]
@@ -42,6 +41,7 @@ class StudentResponse(StudentBase):
 
     id: int
     active_status: Optional[bool] = None
+    year_name: str
 
     class Config:
         orm_mode = True

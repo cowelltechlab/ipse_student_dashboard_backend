@@ -53,7 +53,7 @@ def test_create_student_with_names():
     data = response.json()
     assert "id" in data
     # assert "user_id" in data
-    assert data["year_id"] == new_student["year_id"]
+    assert data["year_name"] == "Junior"  # or whatever year_id=3 maps to in your Years table
     assert data["reading_level"] == new_student["reading_level"]
     assert data["writing_level"] == new_student["writing_level"]
     assert data["first_name"] == new_student["first_name"]

@@ -11,42 +11,39 @@ TABLE_NAME = "Students"
 def fetch_all_students_with_names():
     """Fetch all students with their first and last names joined from Users table."""
     conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
-    try:
+    with conn.cursor() as cursor:
         query = """
-        SELECT 
-            s.id, 
-            u.first_name, 
-            u.last_name, 
-            s.user_id,
-            s.year_id, 
-            s.reading_level, 
-            s.writing_level
-        FROM Students s
-        JOIN Users u ON s.user_id = u.id
+        SELECT
+            students.id,
+            students.year_id,
+            students.reading_level,
+            students.writing_level,
+            students.active_status,
+            users.first_name,
+            users.last_name,
+            users.email,
+            years.name AS year_name
+        FROM students
+        JOIN users ON students.user_id = users.id
+        JOIN years ON students.year_id = years.id
         """
         cursor.execute(query)
-        records = cursor.fetchall()
-        column_names = [column[0] for column in cursor.description]
-        return [dict(zip(column_names, row)) for row in records]
-
-    except pyodbc.Error as e:
-        return {"error": str(e)}
-    finally:
-        conn.close()
+        rows = cursor.fetchall()
+        return [dict(zip([column[0] for column in cursor.description], row)) for row in rows]
 
 def fetch_by_id(table_name, record_id):
-    """Generic function to fetch a single record by ID, with special join for students."""
+    """Generic function to fetch a single student record by ID, with joins for user and year name."""
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
     try:
         query = """
-        SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level,
-            u.first_name, u.last_name
+        SELECT s.id, s.user_id, s.reading_level, s.writing_level, s.active_status,
+               u.first_name, u.last_name,
+               y.name AS year_name
         FROM students s
         JOIN users u ON s.user_id = u.id
+        JOIN years y ON s.year_id = y.id
         WHERE s.id = ?
         """
         cursor.execute(query, (record_id,))
@@ -72,16 +69,18 @@ def get_students_by_year(year_id: int):
             students.year_id,
             students.reading_level,
             students.writing_level,
+            students.active_status,
             users.first_name,
             users.last_name,
-            users.email
+            users.email,
+            years.name AS year_name
         FROM students
         JOIN users ON students.user_id = users.id
+        JOIN years ON students.year_id = years.id
         WHERE students.year_id = ?
         """
         cursor.execute(query, (year_id,))
         rows = cursor.fetchall()
-        # Convert to list of dicts (if needed)
         return [dict(zip([column[0] for column in cursor.description], row)) for row in rows]
 
 def create_record(data):
@@ -114,7 +113,6 @@ def create_record(data):
         OUTPUT INSERTED.id
         VALUES (?, ?, ?, ?, ?)
         """
-
         cursor.execute(insert_student_query, (
             user_id,
             data["year_id"],
@@ -124,6 +122,11 @@ def create_record(data):
         ))
         student_id = cursor.fetchone()[0]
 
+        # Get year name from Years table
+        cursor.execute("SELECT name FROM Years WHERE id = ?", (data["year_id"],))
+        year_row = cursor.fetchone()
+        year_name = year_row[0] if year_row else None
+
         conn.commit()
 
         return {
@@ -132,10 +135,11 @@ def create_record(data):
             "email": data["email"],
             "first_name": data.get("first_name"),
             "last_name": data.get("last_name"),
-            "year_id": data["year_id"],
+            "year_name": year_name,  # <-- Add this
             "reading_level": data.get("reading_level"),
             "writing_level": data.get("writing_level"),
-            "profile_picture_url": data.get("profile_picture_url")
+            "profile_picture_url": data.get("profile_picture_url"),
+            "active_status": True  # Optional: if you want to include this
         }
 
     except pyodbc.Error as e:
@@ -143,87 +147,6 @@ def create_record(data):
         return {"error": str(e)}
     finally:
         conn.close()
-'''
-def update_student_record(student_id: int, update_data: dict):
-    conn = get_sql_db_connection()
-    with conn.cursor() as cursor:
-        # 1. Fetch existing user and student records
-        cursor.execute("""
-            SELECT u.id as user_id, u.email, u.first_name, u.last_name, u.gt_email,
-                   s.id as student_id, s.year_id, s.reading_level, s.writing_level, s.profile_picture_url
-            FROM Students s
-            JOIN Users u ON s.user_id = u.id
-            WHERE s.id = ?
-        """, (student_id,))
-        existing = cursor.fetchone()
-        if not existing:
-            raise ValueError("Student not found")
-
-        columns = [col[0] for col in cursor.description]
-        existing_record = dict(zip(columns, existing))
-
-        # 2. Separate user and student fields from update_data
-        user_fields = {"email", "first_name", "last_name", "gt_email"}
-        student_fields = {"year_id", "reading_level", "writing_level", "profile_picture_url", "active_status"}
-
-        # 3. Prepare new values by merging update_data with existing data
-        user_update_data = {}
-        student_update_data = {}
-
-        for field in user_fields:
-            if field in update_data:
-                user_update_data[field] = update_data[field]
-            else:
-                user_update_data[field] = existing_record[field]
-
-        for field in student_fields:
-            if field in update_data:
-                student_update_data[field] = update_data[field]
-            else:
-                student_update_data[field] = existing_record[field]
-
-        # 4. Validate required fields are not None
-        required_fields = ["first_name", "last_name", "writing_level", "active_status"]
-        for field in required_fields:
-            if user_update_data.get(field) is None and student_update_data.get(field) is None:
-                raise ValueError(f"Required field {field} is None after update")
-
-        # 5. Update Users table if any changes
-        user_values = []
-        user_set_clauses = []
-        for k, v in user_update_data.items():
-            user_set_clauses.append(f"{k} = ?")
-            user_values.append(v)
-        user_values.append(existing_record["user_id"])
-
-        user_update_query = f"UPDATE Users SET {', '.join(user_set_clauses)} WHERE id = ?"
-        cursor.execute(user_update_query, user_values)
-
-        # 6. Update Students table if any changes
-        student_values = []
-        student_set_clauses = []
-        for k, v in student_update_data.items():
-            student_set_clauses.append(f"{k} = ?")
-            student_values.append(v)
-        student_values.append(student_id)
-
-        student_update_query = f"UPDATE Students SET {', '.join(student_set_clauses)} WHERE id = ?"
-        cursor.execute(student_update_query, student_values)
-
-        conn.commit()
-
-        # 7. Return updated student record
-        cursor.execute("""
-            SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
-                   u.email, u.first_name, u.last_name, u.gt_email
-            FROM Students s
-            JOIN Users u ON s.user_id = u.id
-            WHERE s.id = ?
-        """, (student_id,))
-        updated_record = cursor.fetchone()
-        columns = [column[0] for column in cursor.description]
-        return dict(zip(columns, updated_record))
-'''
 
 def update_student_record(student_id: int, update_data: dict):
     conn = get_sql_db_connection()
@@ -279,15 +202,18 @@ def update_student_record(student_id: int, update_data: dict):
 
         # 7. Return updated student record
         cursor.execute("""
-            SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
-                   u.email, u.first_name, u.last_name, u.gt_email
+            SELECT 
+                s.id, s.user_id, s.year_id, y.name AS year_name,
+                s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
+                u.email, u.first_name, u.last_name, u.gt_email
             FROM Students s
             JOIN Users u ON s.user_id = u.id
+            JOIN Years y ON s.year_id = y.id
             WHERE s.id = ?
         """, (student_id,))
-        updated_record = cursor.fetchone()
-        columns = [column[0] for column in cursor.description]
-        return dict(zip(columns, updated_record))
+        new_student_record = cursor.fetchone()
+        columns = [col[0] for col in cursor.description]
+        return dict(zip(columns, new_student_record))
 
 def delete_student_records(student_id: int):
     conn = get_sql_db_connection()

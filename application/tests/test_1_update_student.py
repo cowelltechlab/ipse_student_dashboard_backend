@@ -60,7 +60,7 @@ def test_update_student_writing_level():
     assert updated_student["writing_level"] == update_data["writing_level"]
 
     # Assert unchanged fields
-    assert updated_student["year_id"] == new_student["year_id"]
+    assert updated_student["year_name"] == "Sophomore"
     assert updated_student["reading_level"] == new_student["reading_level"]
     #assert updated_student["writing_level"] == new_student["writing_level"]
     #assert updated_student["first_name"] == new_student["first_name"]
