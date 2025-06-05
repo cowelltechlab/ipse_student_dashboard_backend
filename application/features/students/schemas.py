@@ -35,7 +35,7 @@ class StudentUpdate(BaseModel):
     reading_level: Optional[int] = None
     writing_level: Optional[int] = None
     profile_picture_url: Optional[str] = None
-    active_status: Optional[bool]
+    active_status: Optional[bool] = True
 
 class StudentResponse(StudentBase):
     """Schema for returning a student record."""

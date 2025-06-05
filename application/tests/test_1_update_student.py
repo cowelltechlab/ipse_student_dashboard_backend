@@ -27,26 +27,28 @@ def delete_user_by_email(email: str):
 
 def test_update_student_writing_level():
     # Cleanup before test
-    delete_user_by_email("mark.smith@example.com")
+    delete_user_by_email("laura.smith@example.com")
 
     # Create student first
     new_student = {
-        "email": "mark.smith@example.com",
-        "first_name": "Mark",
+        "email": "laura.smith@example.com",
+        "first_name": "Laura",
         "last_name": "Smith",
-        "gt_email": "msmith@gatech.edu",
+        "gt_email": "lsmith@gatech.edu",
         "password_hash": "hashed_pw_here",
-        "year_id": 4,
-        "reading_level": 3,
-        "writing_level": 4,
+        "year_id": 2,
+        "reading_level": 2,
+        "writing_level": 2,
         "profile_picture_url": "https://example.com/pic.jpg"
     }
     create_response = client.post("/students/", json=new_student)
     assert create_response.status_code == 201
     created_student = create_response.json()
     student_id = created_student["id"]
+    print(created_student)
 
-    update_data = {"active_status": 0}
+    update_data = {"first_name": "TEST",
+                   "writing_level": 4}
     update_response = client.put(f"/students/{student_id}", json=update_data)
     assert update_response.status_code == 200
 
@@ -54,13 +56,14 @@ def test_update_student_writing_level():
     print("Updated student response:", updated_student)
 
         # Assert updated field
-    assert updated_student["active_status"] == update_data["active_status"]
+    assert updated_student["first_name"] == update_data["first_name"]
+    assert updated_student["writing_level"] == update_data["writing_level"]
 
     # Assert unchanged fields
     assert updated_student["year_id"] == new_student["year_id"]
     assert updated_student["reading_level"] == new_student["reading_level"]
-    assert updated_student["writing_level"] == new_student["writing_level"]
-    assert updated_student["first_name"] == new_student["first_name"]
+    #assert updated_student["writing_level"] == new_student["writing_level"]
+    #assert updated_student["first_name"] == new_student["first_name"]
     assert updated_student["last_name"] == new_student["last_name"]
 
 

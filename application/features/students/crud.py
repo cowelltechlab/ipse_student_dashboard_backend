@@ -143,7 +143,7 @@ def create_record(data):
         return {"error": str(e)}
     finally:
         conn.close()
-
+'''
 def update_student_record(student_id: int, update_data: dict):
     conn = get_sql_db_connection()
     with conn.cursor() as cursor:
@@ -207,6 +207,71 @@ def update_student_record(student_id: int, update_data: dict):
             student_values.append(v)
         student_values.append(student_id)
 
+        student_update_query = f"UPDATE Students SET {', '.join(student_set_clauses)} WHERE id = ?"
+        cursor.execute(student_update_query, student_values)
+
+        conn.commit()
+
+        # 7. Return updated student record
+        cursor.execute("""
+            SELECT s.id, s.user_id, s.year_id, s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
+                   u.email, u.first_name, u.last_name, u.gt_email
+            FROM Students s
+            JOIN Users u ON s.user_id = u.id
+            WHERE s.id = ?
+        """, (student_id,))
+        updated_record = cursor.fetchone()
+        columns = [column[0] for column in cursor.description]
+        return dict(zip(columns, updated_record))
+'''
+
+def update_student_record(student_id: int, update_data: dict):
+    conn = get_sql_db_connection()
+    with conn.cursor() as cursor:
+        # 1. Fetch existing user and student records
+        cursor.execute("""
+            SELECT u.id as user_id, u.email, u.first_name, u.last_name, u.gt_email,
+                   s.id as student_id, s.year_id, s.reading_level, s.writing_level, s.profile_picture_url, s.active_status
+            FROM Students s
+            JOIN Users u ON s.user_id = u.id
+            WHERE s.id = ?
+        """, (student_id,))
+        existing = cursor.fetchone()
+        if not existing:
+            raise ValueError("Student not found")
+
+        columns = [col[0] for col in cursor.description]
+        existing_record = dict(zip(columns, existing))
+
+        # 2. Separate user and student fields
+        user_fields = {"email", "first_name", "last_name", "gt_email"}
+        student_fields = {"year_id", "reading_level", "writing_level", "profile_picture_url", "active_status"}
+
+        # 3. Merge update_data with existing data (retain original if not updated)
+        user_update_data = {field: update_data.get(field, existing_record[field]) for field in user_fields}
+        student_update_data = {field: update_data.get(field, existing_record[field]) for field in student_fields}
+
+        # 4. Validate required fields individually in their respective dicts
+        required_user_fields = ["first_name", "last_name"]
+        required_student_fields = ["writing_level", "active_status"]
+
+        for field in required_user_fields:
+            if user_update_data.get(field) is None:
+                raise ValueError(f"Required field '{field}' cannot be None")
+
+        for field in required_student_fields:
+            if student_update_data.get(field) is None:
+                raise ValueError(f"Required field '{field}' cannot be None")
+
+        # 5. Update Users table
+        user_set_clauses = [f"{k} = ?" for k in user_update_data]
+        user_values = list(user_update_data.values()) + [existing_record["user_id"]]
+        user_update_query = f"UPDATE Users SET {', '.join(user_set_clauses)} WHERE id = ?"
+        cursor.execute(user_update_query, user_values)
+
+        # 6. Update Students table
+        student_set_clauses = [f"{k} = ?" for k in student_update_data]
+        student_values = list(student_update_data.values()) + [student_id]
         student_update_query = f"UPDATE Students SET {', '.join(student_set_clauses)} WHERE id = ?"
         cursor.execute(student_update_query, student_values)
 
