@@ -354,12 +354,13 @@ def add_student(data):
 ''' 
 *** UPDATE STUDENT ENDPOINT *** 
 Update existing Student in Students table
+Update values can be student fields or user fields
 '''
 def update_student(student_id, data):
     return update_student_record(student_id, data)
 
 ''' 
-*** UPDATE STUDENT ENDPOINT *** 
+*** DELETE STUDENT ENDPOINT *** 
 Delete a Student Record
 Delete all student related records:
 - StudentAssignments
