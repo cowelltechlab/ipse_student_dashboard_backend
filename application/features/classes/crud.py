@@ -1,3 +1,4 @@
+from application.database.mssql_connection import get_sql_db_connection
 from application.database.mssql_crud_helpers import (
     create_record, 
     delete_record, 
@@ -5,8 +6,6 @@ from application.database.mssql_crud_helpers import (
     update_record,
     fetch_all
 )
-import pyodbc
-from application.database.mssql_connection import get_sql_db_connection
 
 TABLE_NAME = "Classes"
 
@@ -18,9 +17,8 @@ def get_all_classes():
     return fetch_all(TABLE_NAME)
 
 ''' 
-*** GET STUDENTS BY ID ENDPOINT *** 
-Fetch students in Students table based on ID
-Joins from Users table to retrieve the first and last name
+*** GET CLASSES BY ID ENDPOINT *** 
+Fetch class in Classes table based on ID
 '''
 def get_class_by_id(class_id):
     return fetch_by_id(TABLE_NAME, class_id)

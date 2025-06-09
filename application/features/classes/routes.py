@@ -8,7 +8,6 @@ from fastapi import HTTPException, APIRouter, Depends, status, Query, Body
 from application.features.auth.permissions import require_user_access
 from application.features.classes.crud import get_all_classes, add_class, delete_class, update_class as crud_update_class
 from application.features.classes.schemas import ClassesResponse , ClassesCreate, ClassesUpdate 
-from application.features.students.crud import  get_students_by_year,  delete_student_records
 from application.features.classes.crud import get_class_by_id
 
 
@@ -55,9 +54,9 @@ def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data
 
 
 @router.delete("/{class_id}")
-def delete_student(class_id: int, user_data: dict = Depends(require_user_access())):
-    """Delete a student."""
+def delete_class(class_id: int, user_data: dict = Depends(require_user_access())):
+    """Delete a class."""
     result = delete_class(class_id)
     if "error" in result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
-    return {"message": f"Student with id {class_id} deleted successfully."}
+    return {"message": f"Class with id {class_id} deleted successfully."}
