@@ -1,5 +1,5 @@
-#  SQL pulling generic student information from Students table
-#  To be used, for example, in an admin's login page to view a list of all students 
+#  SQL pulling generic classes information from Classes table
+#  To be used, for example, in an admin's login page to view a list of all classes
 
 from http.client import HTTPException
 from typing import List, Optional
@@ -12,7 +12,7 @@ from application.features.classes.crud import get_class_by_id
 
 
 # router = APIRouter()
-''' Prepend all student routes with /students and collect all student-relevant endpoints under Students tag in SwaggerUI'''
+''' Prepend all classes routes with /classess and collect all classes-relevant endpoints under classes tag in SwaggerUI'''
 router = APIRouter()
 
 @router.get("/", response_model=List[ClassesResponse])
@@ -35,8 +35,8 @@ def fetch_class_by_id(
 
 
 @router.post("/", response_model=ClassesResponse, status_code=status.HTTP_201_CREATED)
-def create_student(class_data: ClassesCreate, user_data: dict = Depends(require_user_access())):
-    """Create a new student."""
+def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_user_access())):
+    """Create a new classes."""
     created_class = add_class(class_data.dict())
     if "error" in created_class:
         print(f"Creation error: {created_class['error']}")

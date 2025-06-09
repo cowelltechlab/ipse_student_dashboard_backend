@@ -9,19 +9,19 @@ class ClassesBase(BaseModel):
 
 
 class ClassesCreate(BaseModel):
-    """Schema for creating a new student record."""
+    """Schema for creating a new class record."""
     ''' all fields except email and year_id are nullable'''
     name: str
     type: Optional[str]
     pass
 
 class ClassesUpdate(BaseModel):
-    """Schema for updating a student record."""
+    """Schema for updating a class record."""
     name: Optional[str] = None
     type: Optional[str] = None
 
 class ClassesResponse(ClassesBase):
-    """Schema for returning a student record."""
+    """Schema for returning a class record."""
 
     id: int
     name: Optional[str]
