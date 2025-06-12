@@ -1,0 +1,17 @@
+{
+  "student_id": 42,
+  "assignment_id": "HCI_Homework2",
+  "versions": [
+    {
+      "version": 1,
+      "modified_by": "GPT-4",
+      "date": "2024-11-26",
+      "content": "...",
+      "rating": {
+        "difficulty": "Just Right",
+        "best_changes": [1, 3, 4],
+        "disliked_changes": [2]
+      }
+    }
+  ]
+}
