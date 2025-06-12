@@ -1,0 +1,18 @@
+{
+  "assignment_id": "2",
+  "version_number": 3,
+  "modifier_id": 17,
+  "date_modified": "2024-11-26T01:16:00Z",
+  "content": "...modified text here...",
+  "udl_reasons": {
+    "Engagement": "Used visual timeline",
+    "Expression": "Offered video submission"
+  },
+  "rating": {
+    "difficulty": "Just Right",
+    "best_changes": [1, 2],
+    "disliked_changes": [3]
+  },
+  "finalized": false,
+  "starred": true
+}
