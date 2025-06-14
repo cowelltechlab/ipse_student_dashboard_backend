@@ -78,9 +78,9 @@ def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
 
     try:
         query = """
-        SELECT u.id
-        FROM Users u
-        WHERE u.refresh_token = ?
+        SELECT rt.user_id
+        FROM RefreshTokens rt
+        WHERE rt.refresh_token = ?
         """
         cursor.execute(query, (refresh_token,))
 

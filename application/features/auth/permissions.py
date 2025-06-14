@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException
 from auth.jwt_handler import verify_jwt_token
 from typing import Callable
 
+# TODO: bring back required access per role
 
 def require_access(app_name: str, role_name: str) -> Callable[[dict], dict]:
     """
@@ -9,7 +10,7 @@ def require_access(app_name: str, role_name: str) -> Callable[[dict], dict]:
     implemented as a FastAPI dependency that will be called by FastAPI. Role 
     examples include student, teacher, and admin.
 
-    TODO: revisit need to check app name. Add check for specific role names
+    TODO: check if role exists in role table. Then check if user has that role
 
     :param app_name: name of app to be accessed
     :type app_name: str

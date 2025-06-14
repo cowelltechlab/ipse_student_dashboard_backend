@@ -22,7 +22,7 @@ def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     :return: encoded JWT token
     :rtype: str
     """
-    expire = datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=expires_delta)
+    expire = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=expires_delta)
     data_to_encode = data.copy()
     data_to_encode.update({"exp": expire})
 
