@@ -9,7 +9,8 @@ from application.database.mssql_connection import get_sql_db_connection
 
 def get_user_by_email(user_email: str) -> Optional[Dict]:
     """
-    DB helper function to fetch a single student record using their email.
+    DB helper function to fetch a single student record using their email. 
+    Does not retrieve sensitive information like password or tokens.
 
     TODO: choose which info is required to be passed back.
     
@@ -21,11 +22,10 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
 
     try:
         query = """
-        SELECT s.id, s.user_id, s.active_status,
+        SELECT u.id, u.email, u.gt_email,
                u.first_name, u.last_name
-        FROM students s
-        JOIN users u ON s.user_id = u.id
-        WHERE s.email = ?
+        FROM Users u
+        WHERE u.email = ?
         """
         cursor.execute(query, (user_email,))
 
@@ -62,7 +62,7 @@ def update_user_password(user_id: int, new_hashed_password: str):
 
 def store_refresh_token(user_id: int) -> str:
     """
-    TODO: add refresh token to user data before implementation.
+    TODO: add refresh token to user data before implementation. Must be hashed.
     """
     return ""
 

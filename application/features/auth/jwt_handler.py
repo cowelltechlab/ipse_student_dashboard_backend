@@ -13,6 +13,8 @@ def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     """
     Generate a JSON Web Token (JWT)
 
+    TODO: Update secret key
+
     :param data: Dictionary containing payload in JWT. Ex: {"user_id": "1", "role": "student"}
     :type data: dict
     :param expires_delta: time span in minutes for token to expire. Defaults to 60 (1hr)
@@ -20,11 +22,12 @@ def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     :return: encoded JWT token
     :rtype: str
     """
-    expire = datetime.datetime.utcnow() + datetime.timedelta(minutes=expires_delta)
-    data.update({"exp": expire})
+    expire = datetime.now(datetime.timezone.utc) + datetime.timedelta(minutes=expires_delta)
+    data_to_encode = data.copy()
+    data_to_encode.update({"exp": expire})
 
     # TODO: look into generating a secret key
-    return jwt.encode(data, CONFIG["JWT_SECRET_KEY"], algorithm="HS256")
+    return jwt.encode(data_to_encode, CONFIG["JWT_SECRET_KEY"], algorithm="HS256")
 
 
 def verify_jwt_token(token: str = Depends(oauth2_scheme)) -> dict:

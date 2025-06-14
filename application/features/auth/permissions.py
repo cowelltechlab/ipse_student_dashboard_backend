@@ -9,7 +9,7 @@ def require_access(app_name: str, role_name: str) -> Callable[[dict], dict]:
     implemented as a FastAPI dependency that will be called by FastAPI. Role 
     examples include student, teacher, and admin.
 
-    TODO: revisit need to check app name
+    TODO: revisit need to check app name. Add check for specific role names
 
     :param app_name: name of app to be accessed
     :type app_name: str
