@@ -5,27 +5,46 @@ Sources:
 """
 import requests
 from config import CONFIG
-from typing import Any, Dict
+from fastapi import HTTPException
+from typing import Any, Dict, List
 
 
-def get_google_oauth_url() -> str:
+def get_google_oauth_url(
+        frontend_redirect_uri: str = "http://localhost:8000") -> str:
     """
-    Generate Google SSO OAuth URL based on config file.
+    Generate Google SSO OAuth URL based on config file. This is the first step 
+    in the OAuth 2.0 Authorization Code flow. 
 
+    :param frontend_redirect_uri: The URI where Google redirects after 
+                                  authentication. Must be a registered URI.
+    :type frontend_redirect_uri: str
     :returns: Google OAuth URL
     :rtype: str
+    :raises HTTPException: 400 if the provided frontend_redirect_uri is not 
+                           allowed.
     """
+    allowed_redirect_uris: List[str] = CONFIG["google"]["redirect_uris"]
+
+    if frontend_redirect_uri not in allowed_redirect_uris:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid redirect URI provided."
+        )
+
     return (
-        f"https://accounts.google.com/o/oauth2/auth"
-        f"?client_id={CONFIG["google"]['GOOGLE_CLIENT_ID']}"
-        f"&redirect_uri={CONFIG["google"]['GOOGLE_REDIRECT_URI']}"
+        f"{CONFIG["google"]["auth_uri"]}" # "https://accounts.google.com/o/oauth2/auth"
+        f"?client_id={CONFIG["google"]['client_id']}"
+        f"&redirect_uri={frontend_redirect_uri}"
         f"&response_type=code"
         f"&scope=email profile openid"
         f"&access_type=offline"
     )
 
 
-def exchange_code_for_token(code: str) -> Dict[str, Any]:
+def exchange_code_for_token(
+        code: str,
+        frontend_redirect_uri: str = "http://localhost:8000"
+    ) -> Dict[str, Any]:
     """
     Exchange authorization codes for access tokens from Google's OAuth 2.0 
     endpoint. 
@@ -38,6 +57,9 @@ def exchange_code_for_token(code: str) -> Dict[str, Any]:
     :param code: OAuth 2.0 authorization code. It is a temporary code issued by
                  Google identifying signed-in individual users.
     :type code: str
+    :param frontend_redirect_uri: The URI where Google redirects after 
+                                  authentication. Must be a registered URI.
+    :type frontend_redirect_uri: str
     :return: Dictionary representing JSON response from Google's token 
              endpoint. This typically includes 'access_token' (used to access 
              Google APIs), 'expires_in', 'token_type', and often 'id_token' (a 
@@ -48,12 +70,20 @@ def exchange_code_for_token(code: str) -> Dict[str, Any]:
                                                   code. Typically a network or
                                                   invalid response.
     """
-    token_url = "https://oauth2.googleapis.com/token"
+    allowed_redirect_uris: List[str] = CONFIG["google"]["redirect_uris"]
+
+    if frontend_redirect_uri not in allowed_redirect_uris:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid redirect URI provided."
+        )
+
+    token_url = CONFIG["google"]["token_uri"] # "https://oauth2.googleapis.com/token"
     token_data = {
         "code": code,
-        "client_id": CONFIG["google"]["GOOGLE_CLIENT_ID"],
-        "client_secret": CONFIG["google"]["GOOGLE_CLIENT_SECRET"],
-        "redirect_uri": CONFIG["google"]["GOOGLE_REDIRECT_URI"],
+        "client_id": CONFIG["google"]["client_id"],
+        "client_secret": CONFIG["google"]["client_secret"],
+        "redirect_uri": frontend_redirect_uri,
         "grant_type": "authorization_code",
     }
 

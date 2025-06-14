@@ -2,6 +2,7 @@
 Sources:
 - https://developers.google.com/identity/oauth2/web/guides/how-user-authz-works
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
+- Google Gemini
 """
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 from fastapi.security import OAuth2PasswordBearer
@@ -68,6 +69,27 @@ def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     :rtype: Dict[str, Any]
     :raises HTTPException: if User is not found or current refresh token is 
                            either invalid or expired.
+    """
+    return {}
+
+
+@router.get("/google/callback")
+def google_auth_callback(code: str) -> Dict[str, str]:
+    """
+    Handles callback from Google OAuth that redirects back to current app. 
+    Order of events: 
+    1. Encoded auth code is exchanged for a token.
+    2. Token is sent to Google for verification.
+    3. Google returns an access token and refresh token. 
+    4. Use access token to get Google profile info
+    5. Update user info in DB, including newly issued JWT 
+
+    TODO: Implement
+    :param code: OAuth 2.0 authorization code. It is a temporary code issued by
+                 Google identifying signed-in individual users.
+    :type code: str
+    :return: Access and refresh tokens stored in dictionary.
+    :rtype: Dict[str, str]
     """
     return {}
 
