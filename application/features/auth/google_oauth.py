@@ -1,9 +1,13 @@
+"""
+Sources: 
+- https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
+- Google Gemini
+"""
 import requests
 from config import CONFIG
 from typing import Any, Dict
 
 
-# ✅ Generate Google OAuth URL
 def get_google_oauth_url() -> str:
     """
     Generate Google SSO OAuth URL based on config file.
@@ -58,10 +62,29 @@ def exchange_code_for_token(code: str) -> Dict[str, Any]:
     return response.json()
 
 
-# ✅ Get User Info from Google
-def get_google_user_info(access_token: str):
+def get_google_user_info(access_token: str) -> Dict[str, Any]:
+    """
+    Retrieves authenticated Google user's profile information.
+    
+    The Google API's the /userinfo endpoint returns basic profile data for user
+    associated with an access token. This function can be called after 
+    successful exchange of an authorization code for an access token.
+
+    :param access_token: OAuth 2.0 access token obtained from Google's API. It 
+                         grants app permission to access specific user data.
+    :type access_token: str
+    :return: A dictionary representing the JSON response from Google's userinfo
+             endpoint. Common keys include 'id', 'email', 'verified_email',
+             'name', 'given_name', 'family_name', and 'picture'.
+    :rtype: Dict[str, Any]
+    :raises requests.exceptions.RequestException: If Google returns an error 
+                                                  response, returns its status 
+                                                  code. Typically a network or
+                                                  invalid response.
+    """
     response = requests.get(
         "https://www.googleapis.com/oauth2/v2/userinfo",
         headers={"Authorization": f"Bearer {access_token}"},
     )
+    response.raise_for_status()
     return response.json()
