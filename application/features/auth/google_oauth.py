@@ -4,9 +4,23 @@ Sources:
 - Google Gemini
 """
 import requests
-from config import CONFIG
 from fastapi import HTTPException
 from typing import Any, Dict, List
+from dotenv import load_dotenv
+import os 
+import json
+
+load_dotenv()
+google_auth_str = os.getenv("GOOGLE_OAUTH")
+CONFIG: Dict[str, Any] = {}
+
+if google_auth_str:
+    try:
+        CONFIG = json.loads(google_auth_str)
+    except json.JSONDecodeError as e:
+        CONFIG = { "error": str(e) }
+else:
+    CONFIG = { "error": "GOOGLE_OAUTH not present in environment variables." }
 
 
 def get_google_oauth_url(
@@ -23,7 +37,7 @@ def get_google_oauth_url(
     :raises HTTPException: 400 if the provided frontend_redirect_uri is not 
                            allowed.
     """
-    allowed_redirect_uris: List[str] = CONFIG["google"]["redirect_uris"]
+    allowed_redirect_uris: List[str] = CONFIG["redirect_uris"]
 
     if frontend_redirect_uri not in allowed_redirect_uris:
         raise HTTPException(
@@ -32,8 +46,8 @@ def get_google_oauth_url(
         )
 
     return (
-        f"{CONFIG["google"]["auth_uri"]}" # "https://accounts.google.com/o/oauth2/auth"
-        f"?client_id={CONFIG["google"]['client_id']}"
+        f"{CONFIG["auth_uri"]}" # "https://accounts.google.com/o/oauth2/auth"
+        f"?client_id={CONFIG['client_id']}"
         f"&redirect_uri={frontend_redirect_uri}"
         f"&response_type=code"
         f"&scope=email profile openid"

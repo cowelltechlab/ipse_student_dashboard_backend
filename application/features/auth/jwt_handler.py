@@ -2,12 +2,14 @@ import jwt
 import datetime
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
-from config import CONFIG
+from dotenv import load_dotenv
+import os 
 
+load_dotenv()
 
 # Utility for handling OAuth bearer tokens. Accessed through /token endpoint
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
-
+JWT_SECRET_KEY = str(os.getenv("JWT_SECRET_KEY"))
 
 def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     """
@@ -27,7 +29,7 @@ def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     data_to_encode.update({"exp": expire})
 
     # TODO: look into generating a secret key
-    return jwt.encode(data_to_encode, CONFIG["JWT_SECRET_KEY"], algorithm="HS256")
+    return jwt.encode(data_to_encode, JWT_SECRET_KEY, algorithm="HS256")
 
 
 def verify_jwt_token(token: str = Depends(oauth2_scheme)) -> dict:
@@ -41,7 +43,7 @@ def verify_jwt_token(token: str = Depends(oauth2_scheme)) -> dict:
     :raises HTTPException: 401 error if token is expired or invalid
     """
     try:
-        payload = jwt.decode(token, CONFIG["JWT_SECRET_KEY"], algorithms=["HS256"])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=["HS256"])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")

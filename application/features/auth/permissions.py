@@ -1,10 +1,10 @@
 from fastapi import Depends, HTTPException
-from auth.jwt_handler import verify_jwt_token
+from application.features.auth.jwt_handler import verify_jwt_token
 from typing import Callable
 
 # TODO: bring back required access per role
 
-def require_access(app_name: str, role_name: str) -> Callable[[dict], dict]:
+def require_user_access() -> Callable[[dict], dict]:
     """
     Confirms users' access to an app based on their role and app name. This is 
     implemented as a FastAPI dependency that will be called by FastAPI. Role 
@@ -24,16 +24,13 @@ def require_access(app_name: str, role_name: str) -> Callable[[dict], dict]:
                            the app or the appropriate role for it.
     """
     def dependency(user_data: dict = Depends(verify_jwt_token)):
-        if app_name not in user_data["apps"]:
-            raise HTTPException(
-                status_code=403, detail=f"Access denied to app: {app_name}"
-            )
-        
-        if role_name not in user_data["apps"][app_name]["roles"]:
-            raise HTTPException(
-                status_code=403, detail=f"{role_name} role required for {app_name}"
-            )
-        
-        return user_data
+        return {}
     
     return dependency
+
+
+def require_teacher_access():
+    pass
+
+def require_admin_access():
+    pass

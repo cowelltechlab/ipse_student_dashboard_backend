@@ -6,8 +6,10 @@ Sources:
 """
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 from fastapi.security import OAuth2PasswordBearer
-from auth.google_oauth import *
-from auth.jwt_handler import *
+from application.features.auth.google_oauth import *
+from application.features.auth.jwt_handler import *
+from application.features.auth.db_crud import (
+    get_user_email_by_id, get_user_id_from_refresh_token)
 from typing import Dict
 
 
@@ -60,7 +62,7 @@ def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     Retrieves current refresh token and generates a new JWT with new 
     expiration date.
 
-    TODO: Implement
+    TODO: Implement. Add ability to update token in DB
 
     :param refresh_token: encoded refresh token
     :type refresh_token: str
@@ -70,6 +72,16 @@ def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     :raises HTTPException: if User is not found or current refresh token is 
                            either invalid or expired.
     """
+    user_id = get_user_id_from_refresh_token(refresh_token)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    
+    email = get_user_email_by_id(user_id)
+    if not email:
+        raise HTTPException(status_code=401, detail="User not found")
+    
+
+
     return {}
 
 
