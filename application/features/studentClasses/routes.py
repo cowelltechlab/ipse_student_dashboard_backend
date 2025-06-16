@@ -9,7 +9,7 @@ router = APIRouter()
 def get_student_classes(student_id: int):
     classes = get_classes_for_student(student_id)
     if not classes:
-        raise HTTPException(status_code=404, detail="Student or classes not found")
+        print(f"Student or classes not found")
     return classes
 
 @router.post("/students/{student_id}/classes", status_code=201)
