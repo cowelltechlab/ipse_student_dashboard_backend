@@ -20,7 +20,7 @@ class ClassesUpdate(BaseModel):
     """Schema for updating a class record."""
     name: Optional[str] = None
     type: Optional[str] = None
-    term: Optional[str]
+    term: Optional[str] = None
 
 class ClassesResponse(ClassesBase):
     """Schema for returning a class record."""
