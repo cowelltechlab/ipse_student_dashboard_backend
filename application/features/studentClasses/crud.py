@@ -27,10 +27,10 @@ def add_student_to_class(student_id: int, association: StudentClassAssociation):
         if cursor.fetchone() is None:
             raise Exception(f"Student {student_id} not found")
 
-        # Check if class exists in ClassesUpdated table
-        cursor.execute("SELECT 1 FROM ClassesUpdated WHERE id = ?", (association.class_id,))
+        # Check if class exists in Classes table
+        cursor.execute("SELECT 1 FROM Classes WHERE id = ?", (association.class_id,))
         if cursor.fetchone() is None:
-            raise Exception(f"Class {association.class_id} not found in ClassesUpdated")
+            raise Exception(f"Class {association.class_id} not found in Classes")
 
         # Insert association record into StudentClasses table
         insert_query = """
