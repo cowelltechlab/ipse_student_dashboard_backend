@@ -8,7 +8,7 @@ from application.database.mssql_crud_helpers import (
 )
 
 #TABLE_NAME = "Classes"
-TABLE_NAME = "ClassesUpdated"
+TABLE_NAME = "Classes"
 
 ''' 
 *** GET CLASSES ENDPOINT *** 
