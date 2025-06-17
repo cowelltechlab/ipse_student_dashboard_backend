@@ -8,7 +8,6 @@ import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
-from application.features.auth.auth_helpers import verify_password, hash_password
 
 def get_user_by_email(user_email: str) -> Optional[Dict]:
     """
@@ -109,6 +108,41 @@ def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
         WHERE rt.refresh_token = ?
         """
         cursor.execute(query, (refresh_token,))
+
+        record = cursor.fetchone()
+        if not record:
+            return None
+
+        return record[0]
+
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {str(e)}")
+        return None
+    finally:
+        conn.close()
+
+
+def get_refresh_token_from_user_id(user_id: int) -> Optional[str]:
+    """
+    Retrieves refresh token associated with user from DB.
+
+    :param user_id: ID corresponding to a user in the database
+    :type user_id: int
+    :returns: refresh token
+    :rtype: str
+    :raises pyodbc.Error: If error occurs when calling database
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        SELECT rt.refresh_token
+        FROM RefreshTokens rt
+        WHERE rt.user_id = ?
+        """
+        cursor.execute(query, (user_id,))
 
         record = cursor.fetchone()
         if not record:

@@ -7,16 +7,17 @@ Sources:
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
-from application.features.auth.jwt_handler import *
+from application.features.auth.jwt_handler import (create_jwt_token, verify_jwt_token)
 from application.features.auth.db_crud import (
     get_user_email_by_id, 
     get_user_id_from_refresh_token, 
     get_user_role_names, 
     get_user_by_email,
     store_refresh_token,
-    delete_refresh_token
+    delete_refresh_token,
 )
 from typing import Dict
+from auth_helpers import validate_user_email_login
 
 
 # This should include a way to log in through Google and generic username/password
@@ -29,12 +30,20 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
 @router.get("login/email")
-def email_login():
+def email_login(email: str, password: str):
     """
     Log user in via email and password without SSO.
 
-    TODO: implement
+    TODO: implement. Authenticate email and password, handle access tokens.
     """
+    user_id = -1
+
+    try:
+        user_id = validate_user_email_login(email, password)
+    except HTTPException as e:
+        return {"error": e}
+    
+    access_token = get_t
     return { "email_auth": "Email log-in functionality not yet implemented." }
 
 

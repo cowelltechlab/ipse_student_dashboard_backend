@@ -1,4 +1,5 @@
 from passlib.context import CryptContext
+from fastapi import HTTPException
 
 from application.features.auth.db_crud import get_user_by_email
 
@@ -31,20 +32,30 @@ def hash_password(password: str) -> str:
     return pwd_context.hash(password)
 
 
-def authenticate_user_email_login(email: str, password: str):
+def validate_user_email_login(email: str, password: str) -> int:
     """
     TODO: implement
     """
     user = get_user_by_email(email)
 
     if not user:
-        # TODO: raise exception
-        return False
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized. User not found."
+        )
+    
+    if "password_hash" not in user or "id" not in user:
+        raise HTTPException(
+            status_code=400,
+            detail="Bad Request. Database request did not return a password."
+        )
 
     hashed_password = hash_password(password)
     if not verify_password(password, hash_password) and \
         user["password_hash"] != hashed_password:
-        # TODO: raise exception
-        return False
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized. Incorrect email or password."
+        )
 
-    return True
+    return user["id"]
