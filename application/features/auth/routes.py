@@ -64,8 +64,8 @@ def logout(refresh_token: str) -> Dict[str, str]:
 @router.get("/refresh_token")
 def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     """
-    Retrieves current refresh token and generates a new JWT with new 
-    expiration date.
+    Retrieves current refresh token and generates a new access token (JWT) with
+    new expiration date.
 
     TODO: Implement. Add ability to update token in DB
 
@@ -158,7 +158,8 @@ def google_auth_callback(code: str) -> Dict[str, str]:
 @router.get("/me")
 def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     """
-    Retrieve identifying and access data for current user. 
+    Retrieve identifying and access data for current user. Expects token to be 
+    passed in by front-end, then uses that to determine who is logged in.
 
     :param token: Encoded JSON Web Token (JWT)
     :type token: str

@@ -8,6 +8,7 @@ import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
+from application.features.auth.auth_helpers import verify_password, hash_password
 
 def get_user_by_email(user_email: str) -> Optional[Dict]:
     """
@@ -62,7 +63,6 @@ def update_user_password(user_id: int, new_hashed_password: str):
 
 def store_refresh_token(user_id: int) -> str:
     """
-    TODO: add refresh token to user data before implementation. Must be hashed.
     TODO: choose expiration time for generated refresh token. Default: 30 days
     """
     # Generate token
