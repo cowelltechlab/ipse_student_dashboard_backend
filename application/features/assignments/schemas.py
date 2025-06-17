@@ -13,14 +13,13 @@ class AssignmentBase(BaseModel):
 
 
 class AssignmentCreate(BaseModel):
-    """Schema for creating a new assignment record."""
-    ''' all fields except email and year_id are nullable'''
     student_id: Optional[int] = None
     title: Optional[str] = None
     class_id: Optional[int] = None
     content: Optional[str] = None
+    blob_url: Optional[str] = None
+    source_format: Optional[str] = None
     date_created: Optional[datetime] = None
-    pass
 
 class AssignmentUpdate(BaseModel):
     """Schema for updating an assignment record."""
@@ -33,12 +32,9 @@ class AssignmentUpdate(BaseModel):
 
 class AssignmentResponse(AssignmentBase):
     """Schema for returning an assignment record."""
-    id: int
-    student_id: Optional[int] = None
-    title: Optional[str] = None
-    class_id: Optional[int] = None
-    content: Optional[str] = None
-    date_created: Optional[datetime] = None
+    blob_url: Optional[str] = None
+    source_format: Optional[str] = None
+
 
 
     class Config:
