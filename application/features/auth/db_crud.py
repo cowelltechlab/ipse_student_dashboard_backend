@@ -1,4 +1,4 @@
-from typing import Optional, Dict
+from typing import Optional, Dict, List
 from application.database.mssql_crud_helpers import (
     create_record, 
     delete_record, 
@@ -44,9 +44,7 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
 
 def create_user():
     """
-    TODO: determine if needed. Likely not needed for auth workflow specifically
-          Alternatively, implement only for Google / SSO users. Determine if 
-          implementing here or under module such as students.
+    TODO: Implement user registration
     """
     pass
 
@@ -137,4 +135,37 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
         conn.close()
 
 
+def get_user_role_names(user_id: int) -> List[str]:
+    """
+    Retrieves list of roles associated with a user from DB using user ID.
 
+    :param user_id: ID of user in the Users database table
+    :type user_id: int
+    :returns: list of roles associated with the user
+    :rtype: List[str]
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+    roles = []
+
+    try:
+        query = """
+        SELECT r.role_name
+        FROM Roles r
+        JOIN UserRoles ur ON r.id = ur.role_id
+        WHERE ur.user_id = ?
+        """
+        cursor.execute(query, (user_id,))
+
+        records = cursor.fetchall()
+        for role_name in records:
+            roles.append(role_name)
+
+        return roles
+
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {str(e)}")
+        return []
+    finally:
+        conn.close()
