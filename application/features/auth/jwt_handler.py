@@ -15,8 +15,6 @@ def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
     """
     Generate a JSON Web Token (JWT)
 
-    TODO: Update secret key
-
     :param data: Dictionary containing payload in JWT. Ex: {"user_id": "1", "role": "student"}
     :type data: dict
     :param expires_delta: time span in minutes for token to expire. Defaults to 60 (1hr)

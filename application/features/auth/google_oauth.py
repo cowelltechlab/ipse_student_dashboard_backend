@@ -84,7 +84,7 @@ def exchange_code_for_token(
                                                   code. Typically a network or
                                                   invalid response.
     """
-    allowed_redirect_uris: List[str] = CONFIG["google"]["redirect_uris"]
+    allowed_redirect_uris: List[str] = CONFIG["redirect_uris"]
 
     if frontend_redirect_uri not in allowed_redirect_uris:
         raise HTTPException(
@@ -95,8 +95,8 @@ def exchange_code_for_token(
     token_url = CONFIG["google"]["token_uri"] # "https://oauth2.googleapis.com/token"
     token_data = {
         "code": code,
-        "client_id": CONFIG["google"]["client_id"],
-        "client_secret": CONFIG["google"]["client_secret"],
+        "client_id": CONFIG["client_id"],
+        "client_secret": CONFIG["client_secret"],
         "redirect_uri": frontend_redirect_uri,
         "grant_type": "authorization_code",
     }

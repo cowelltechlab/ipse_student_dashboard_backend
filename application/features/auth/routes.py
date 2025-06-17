@@ -146,7 +146,6 @@ def google_auth_callback(code: str) -> Dict[str, str]:
         }
     )
     
-    # TODO: Implement store_refresh_token
     refresh_token = store_refresh_token(user_id)
 
     return {
@@ -161,11 +160,9 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     """
     Retrieve identifying and access data for current user. 
 
-    TODO: Implement
-
     :param token: Encoded JSON Web Token (JWT)
     :type token: str
-    :returns: Current user's ID, email, name, and apps they can access
+    :returns: Current user's ID, email, name, and access roles
     :rtype: Dict[str, str]
     :raises HTTPException: When user not found, token is invalid or expired, or
                            token payload (from decoded JWT) is invalid.
@@ -174,18 +171,20 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
 
-    email = payload.get("sub")
-    if not email:
+    email = payload.get("email")
+    id = payload.get("user_id")
+    roles = payload.get("roles")
+    if not email or not id or not roles:
         raise HTTPException(status_code=401, detail="Invalid token payload")
+    
+    user = get_user_by_email(email)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
 
-    return {}
-    # user = get_user_with_apps(email)
-    # if not user:
-    #     raise HTTPException(status_code=404, detail="User not found")
-
-    # return {
-    #     "id": user["id"],
-    #     "email": user["email"],
-    #     "name": user.get("name", ""),
-    #     "apps": user["apps"],
-    # }
+    return {
+        "id": id,
+        "email": email,
+        "roles": roles,
+        "first_name": user["first_name"],
+        "last_name": user["last_name"]
+    }

@@ -6,24 +6,26 @@ from application.database.mssql_crud_helpers import (
 )
 import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
+from secrets import token_urlsafe
+from datetime import datetime, timedelta
 
 def get_user_by_email(user_email: str) -> Optional[Dict]:
     """
-    DB helper function to fetch a single student record using their email. 
-    Does not retrieve sensitive information like password or tokens.
+    DB helper function to fetch a single user record via their email. 
 
-    TODO: choose which info is required to be passed back.
+    TODO: choose which columns are required to be passed back.
     
     :param user_email: email address of the user
     :type user_email: str
+    :returns: user's record in database
+    :rtype: Optional[Dict]
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
     try:
         query = """
-        SELECT u.id, u.email, u.gt_email,
-               u.first_name, u.last_name
+        SELECT *
         FROM Users u
         WHERE u.email = ?
         """
@@ -61,15 +63,41 @@ def update_user_password(user_id: int, new_hashed_password: str):
 def store_refresh_token(user_id: int) -> str:
     """
     TODO: add refresh token to user data before implementation. Must be hashed.
+    TODO: choose expiration time for generated refresh token. Default: 30 days
     """
-    return ""
+    # Generate token
+    app_refresh_token = token_urlsafe(64)
+    expires_at = datetime.now() + timedelta(days=30)
+
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        INSERT INTO RefreshTokens (user_id, refresh_token, expires_at)
+        VALUES (?, ?, ?)
+        """
+        
+        # Execute the query with the corresponding values
+        cursor.execute(
+            query,
+            (user_id, app_refresh_token, expires_at)
+        )
+        
+        conn.commit()
+
+        return app_refresh_token
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {e}")
+        return ""
+    finally:
+        conn.close()
 
 
 def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
     """
     Retrieve user ID based on refresh token.
-
-    TODO: add refresh token to Users table.
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
@@ -96,19 +124,38 @@ def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
         conn.close()
 
 
-def delete_refresh_token(refresh_token: str):
+def delete_refresh_token(refresh_token: str) -> Dict:
     """
     Delete a user's refresh token from DB, effectively signing them out via
     Google SSO.
-    
-    TODO: add refresh token to user data before implementation.
+
+    :param refresh_token: string token to be deleted from RefreshToken database
+    :type refresh_token: str
+    :returns: delete message
+    :rtype: Dict
+    :raises pyodbc.Error: When delete action in database fails. 
     """
-    pass
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        DELETE FROM RefreshTokens
+        WHERE refresh_token = ?
+        """
+        cursor.execute(query, (refresh_token,))
+        conn.commit()
+        return {"message": f"Record deleted from RefreshTokens"}
+    except pyodbc.Error as e:
+        conn.rollback()
+        return {"error": str(e)}
+    finally:
+        conn.close()
 
 
 def get_user_email_by_id(user_id: int) -> Optional[str]:
     """
-    Retrieves user record from DB using ID.
+    Retrieves user's email address from their DB record via user ID.
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
