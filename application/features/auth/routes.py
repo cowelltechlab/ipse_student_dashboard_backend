@@ -9,7 +9,13 @@ from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import *
 from application.features.auth.db_crud import (
-    get_user_email_by_id, get_user_id_from_refresh_token)
+    get_user_email_by_id, 
+    get_user_id_from_refresh_token, 
+    get_user_role_names, 
+    get_user_by_email,
+    store_refresh_token,
+    delete_refresh_token
+)
 from typing import Dict
 
 
@@ -45,15 +51,14 @@ def logout(refresh_token: str) -> Dict[str, str]:
     """
     Logs user out of app by deleting refresh token from DB.
 
-    TODO: Implement
-
     :param refresh_token: long-lived per user credential securely stored in 
                           database.
     :type refresh_token: str
     :return: log-out message
     :rtype: Dict[str, str]
     """
-    return {"message": "Log-out functionality not yet implemented."}
+    delete_refresh_token(refresh_token)
+    return {"message": "Log-out successful."}
 
 
 @router.get("/refresh_token")
@@ -80,9 +85,17 @@ def refresh_access_token(refresh_token: str) -> Dict[str, Any]:
     if not email:
         raise HTTPException(status_code=401, detail="User not found")
     
+    roles = get_user_role_names(user_id)
 
+    new_access_token = create_jwt_token(
+        {
+            "user_id": user_id,
+            "email": email,
+            "roles": roles
+        }
+    )
 
-    return {}
+    return {"access_token": new_access_token, "token_type": "bearer"}
 
 
 @router.get("/google/callback")
@@ -96,14 +109,51 @@ def google_auth_callback(code: str) -> Dict[str, str]:
     4. Use access token to get Google profile info
     5. Update user info in DB, including newly issued JWT 
 
-    TODO: Implement
     :param code: OAuth 2.0 authorization code. It is a temporary code issued by
                  Google identifying signed-in individual users.
     :type code: str
     :return: Access and refresh tokens stored in dictionary.
     :rtype: Dict[str, str]
     """
-    return {}
+    token_response_json: Dict = exchange_code_for_token(code)
+    user_info = get_google_user_info(token_response_json["access_token"])
+
+    email = user_info.get("email")
+    name = user_info.get("name")
+
+    if not email:
+        raise HTTPException(
+            status_code=403, 
+            detail="No email passed back. Error from Google servers."
+        )
+    
+    # TODO: Add ability to create a user.
+    # TODO: double-check status code
+    user = get_user_by_email(email)
+    if not user:
+        raise HTTPException(
+            status_code=403, 
+            detail="User does not exist in system."
+        )
+    
+    user_id = user["id"]
+    roles = get_user_role_names(user_id)
+    access_token = create_jwt_token(
+        {
+            "user_id": user_id,
+            "email": email,
+            "roles": roles
+        }
+    )
+    
+    # TODO: Implement store_refresh_token
+    refresh_token = store_refresh_token(user_id)
+
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "token_type": "bearer",
+    }
 
 
 @router.get("/me")
