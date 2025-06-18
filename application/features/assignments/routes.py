@@ -1,9 +1,11 @@
 from http.client import HTTPException
 from typing import List, Optional
-from fastapi import HTTPException, APIRouter, Depends, status, Query, Body
+from fastapi import File, Form, HTTPException, APIRouter, Depends, UploadFile, status, Query, Body
 
 from application.features.assignments.schemas import AssignmentCreate , AssignmentResponse, AssignmentUpdate 
 from application.features.assignments.crud import get_assignments_by_id, get_all_assignments, add_assignment, update_assignment
+from application.services.upload_to_blob import upload_to_blob
+from application.services.text_extractors import extract_text_from_file
 
 
 # router = APIRouter()
@@ -32,6 +34,30 @@ def create_assignment(assignment_data: AssignmentCreate):
         print(f"Creation error: {created_assignment['error']}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_assignment["error"])
     return created_assignment
+
+@router.post("/upload", response_model=AssignmentResponse)
+async def upload_assignment_file(
+    student_id: int = Form(...),
+    title: str = Form(...),
+    class_id: int = Form(...),
+    file: UploadFile = File(...)
+):
+    # 1. Upload file to Azure Blob Storage
+    blob_url = await upload_to_blob(file)
+
+    # 2. Parse content from file
+    content = await extract_text_from_file(file)
+
+    # 3. Store in database
+    assignment_data = AssignmentCreate(
+        student_id=student_id,
+        title=title,
+        class_id=class_id,
+        content=content,
+        blob_url=blob_url,
+        source_format=file.filename.split(".")[-1].lower()
+    )
+    return create_assignment(assignment_data)
 
 
 @router.put("/{assignment_id}", response_model=AssignmentResponse)
