@@ -3,6 +3,8 @@ import fitz  # PyMuPDF
 import mammoth
 import tempfile
 
+from application.services.html_normalizer import normalize_bullet_points
+
 async def extract_html_from_file(filename: str, file_bytes: bytes) -> str:
     ext = filename.split(".")[-1].lower()
 
@@ -22,7 +24,8 @@ def extract_html_from_pdf(path: str) -> str:
     html = ""
     for page in doc:
         html += page.get_text("html")
-    return html
+    return normalize_bullet_points(html)
+
 
 def extract_html_from_docx(path: str) -> str:
     with open(path, "rb") as docx_file:
