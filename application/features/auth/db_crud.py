@@ -239,8 +239,8 @@ def get_user_role_names(user_id: int) -> List[str]:
         cursor.execute(query, (user_id,))
 
         records = cursor.fetchall()
-        for role_name in records:
-            roles.append(role_name)
+        roles = [row[0] for row in records]
+
 
         return roles
 
