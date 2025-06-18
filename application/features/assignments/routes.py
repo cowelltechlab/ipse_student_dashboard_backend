@@ -1,3 +1,4 @@
+import datetime
 from http.client import HTTPException
 from typing import List, Optional
 from fastapi import File, Form, HTTPException, APIRouter, Depends, UploadFile, status, Query, Body
@@ -42,20 +43,24 @@ async def upload_assignment_file(
     class_id: int = Form(...),
     file: UploadFile = File(...)
 ):
-    # 1. Upload file to Azure Blob Storage
-    blob_url = await upload_to_blob(file)
+    # 1. Read file content once
+    file_bytes = await file.read()
 
-    # 2. Parse content from file
-    content = await extract_text_from_file(file)
+    # 2. Upload to Azure
+    blob_url = await upload_to_blob(file, file_bytes)
 
-    # 3. Store in database
+    # 3. Extract text
+    content = await extract_text_from_file(file.filename, file_bytes)
+
+    # 4. Store in database
     assignment_data = AssignmentCreate(
         student_id=student_id,
         title=title,
         class_id=class_id,
         content=content,
         blob_url=blob_url,
-        source_format=file.filename.split(".")[-1].lower()
+        source_format=file.filename.split(".")[-1].lower(),
+        date_created=datetime.datetime.now(datetime.UTC)
     )
     return create_assignment(assignment_data)
 

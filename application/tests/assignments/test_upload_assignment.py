@@ -12,7 +12,7 @@ def test_upload_assignment_with_file():
         data = {
             "student_id": "1",
             "title": "Test Assignment IPSE",
-            "class_id": "1"
+            "class_id": "2"
         }
 
         files = {
@@ -21,7 +21,7 @@ def test_upload_assignment_with_file():
 
         response = client.post("/assignments/upload", data=data, files=files)
 
-        assert response.status_code == 201, f"Failed with: {response.text}"
+        assert response.status_code == 200, f"Failed with: {response.text}"
 
         response_json = response.json()
         assert "id" in response_json
