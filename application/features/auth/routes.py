@@ -19,7 +19,7 @@ from application.features.auth.db_crud import (
 from typing import Dict
 from application.features.auth.auth_helpers import validate_user_email_login
 from datetime import datetime
-from application.features.auth.schemas import UserLogin, TokenResponse
+from application.features.auth.schemas import UserLogin, TokenResponse, UserResponse
 
 
 # This should include a way to log in through Google and generic username/password
@@ -230,7 +230,7 @@ async def google_auth_callback(code: str) -> TokenResponse: # Dict[str, str]:
 
 
 @router.get("/me")
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, str]:
+async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
     """
     Retrieve identifying and access data for current user. Expects token to be 
     passed in by front-end, then uses that to determine who is logged in.
