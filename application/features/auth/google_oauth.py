@@ -9,6 +9,7 @@ from typing import Any, Dict, List
 from dotenv import load_dotenv
 import os 
 import json
+import httpx
 
 load_dotenv()
 google_auth_str = os.getenv("GOOGLE_OAUTH")
@@ -24,14 +25,14 @@ else:
 
 
 def get_google_oauth_url(
-        frontend_redirect_uri: str = "http://localhost:8000") -> str:
+        backend_callback_uri: str = "http://localhost:8000") -> str:
     """
     Generate Google SSO OAuth URL based on config file. This is the first step 
     in the OAuth 2.0 Authorization Code flow. 
 
-    :param frontend_redirect_uri: The URI where Google redirects after 
+    :param backend_callback_uri: The URI where Google redirects after 
                                   authentication. Must be a registered URI.
-    :type frontend_redirect_uri: str
+    :type backend_callback_uri: str
     :returns: Google OAuth URL
     :rtype: str
     :raises HTTPException: 400 if the provided frontend_redirect_uri is not 
@@ -39,7 +40,7 @@ def get_google_oauth_url(
     """
     allowed_redirect_uris: List[str] = CONFIG["redirect_uris"]
 
-    if frontend_redirect_uri not in allowed_redirect_uris:
+    if backend_callback_uri not in allowed_redirect_uris:
         raise HTTPException(
             status_code=400,
             detail="Invalid redirect URI provided."
@@ -48,16 +49,16 @@ def get_google_oauth_url(
     return (
         f"{CONFIG["auth_uri"]}" # "https://accounts.google.com/o/oauth2/auth"
         f"?client_id={CONFIG['client_id']}"
-        f"&redirect_uri={frontend_redirect_uri}"
+        f"&redirect_uri={backend_callback_uri}"
         f"&response_type=code"
         f"&scope=email profile openid"
         f"&access_type=offline"
     )
 
 
-def exchange_code_for_token(
+async def exchange_code_for_token(
         code: str,
-        frontend_redirect_uri: str = "http://localhost:8000"
+        backend_redirect_uri: str = "http://localhost:8000"
     ) -> Dict[str, Any]:
     """
     Exchange authorization codes for access tokens from Google's OAuth 2.0 
@@ -71,7 +72,7 @@ def exchange_code_for_token(
     :param code: OAuth 2.0 authorization code. It is a temporary code issued by
                  Google identifying signed-in individual users.
     :type code: str
-    :param frontend_redirect_uri: The URI where Google redirects after 
+    :param backend_redirect_uri: The URI where Google redirects after 
                                   authentication. Must be a registered URI.
     :type frontend_redirect_uri: str
     :return: Dictionary representing JSON response from Google's token 
@@ -86,7 +87,7 @@ def exchange_code_for_token(
     """
     allowed_redirect_uris: List[str] = CONFIG["redirect_uris"]
 
-    if frontend_redirect_uri not in allowed_redirect_uris:
+    if backend_redirect_uri not in allowed_redirect_uris:
         raise HTTPException(
             status_code=400,
             detail="Invalid redirect URI provided."
@@ -97,13 +98,26 @@ def exchange_code_for_token(
         "code": code,
         "client_id": CONFIG["client_id"],
         "client_secret": CONFIG["client_secret"],
-        "redirect_uri": frontend_redirect_uri,
+        "redirect_uri": backend_redirect_uri,
         "grant_type": "authorization_code",
     }
 
-    response = requests.post(token_url, data=token_data)
-    response.raise_for_status()
-    return response.json()
+    # response = requests.post(token_url, data=token_data)
+    # response.raise_for_status()
+    # return response.json()
+    ### Borrowed from Google Gemini ###
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(token_url, data=token_data)
+            response.raise_for_status() # Raises an exception for 4xx/5xx responses
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            print(f"Error exchanging code for token: {e.response.text}")
+            raise HTTPException(status_code=e.response.status_code, detail=f"Google token exchange failed: {e.response.text}")
+        except httpx.RequestError as e:
+            print(f"Network error during token exchange: {e}")
+            raise HTTPException(status_code=500, detail="Network error during Google token exchange.")
+    ### End borrowed code. ###
 
 
 def get_google_user_info(access_token: str) -> Dict[str, Any]:

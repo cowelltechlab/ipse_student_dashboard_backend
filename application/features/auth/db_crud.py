@@ -1,4 +1,4 @@
-from typing import Optional, Dict, List
+from typing import Any, Optional, Dict, List
 from application.database.mssql_crud_helpers import (
     create_record, 
     delete_record, 
@@ -94,7 +94,7 @@ def store_refresh_token(user_id: int) -> str:
         conn.close()
 
 
-def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
+def get_refresh_token_details(refresh_token: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve user ID based on refresh token.
     """
@@ -103,7 +103,7 @@ def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
 
     try:
         query = """
-        SELECT rt.user_id
+        SELECT rt.user_id, rt.expires_at
         FROM RefreshTokens rt
         WHERE rt.refresh_token = ?
         """
@@ -113,7 +113,7 @@ def get_user_id_from_refresh_token(refresh_token: str) -> Optional[int]:
         if not record:
             return None
 
-        return record[0]
+        return {"user_id": record[0], "expires_at": record[1]}
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
