@@ -17,7 +17,7 @@ from application.features.auth.db_crud import (
     delete_refresh_token,
 )
 from typing import Dict
-from auth_helpers import validate_user_email_login
+from application.features.auth.auth_helpers import validate_user_email_login
 from datetime import datetime
 from application.features.auth.schemas import UserLogin, TokenResponse
 
@@ -31,7 +31,7 @@ router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 
-@router.post("login/email")
+@router.post("/login/email")
 async def email_login(user_credentials: UserLogin) -> TokenResponse:
     """
     Log user in via email and password without SSO.
