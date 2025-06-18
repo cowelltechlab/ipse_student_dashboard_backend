@@ -14,7 +14,7 @@ class TokenResponse(BaseModel):
 
 
 class UserResponse(BaseModel):
-    id: str
+    id: int
     email: str
     roles: List[str] 
     first_name: str
