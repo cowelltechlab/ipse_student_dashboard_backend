@@ -5,6 +5,7 @@ from fastapi import File, Form, HTTPException, APIRouter, Depends, UploadFile, s
 
 from application.features.assignments.schemas import AssignmentCreate , AssignmentResponse, AssignmentUpdate 
 from application.features.assignments.crud import get_assignments_by_id, get_all_assignments, add_assignment, update_assignment
+from application.services.html_extractors import extract_html_from_file
 from application.services.upload_to_blob import upload_to_blob
 from application.services.text_extractors import extract_text_from_file
 
@@ -49,8 +50,9 @@ async def upload_assignment_file(
     # 2. Upload to Azure
     blob_url = await upload_to_blob(file, file_bytes)
 
-    # 3. Extract text
+    # 3. Extract raw text and HTML
     content = await extract_text_from_file(file.filename, file_bytes)
+    html_content = await extract_html_from_file(file.filename, file_bytes)
 
     # 4. Store in database
     assignment_data = AssignmentCreate(
@@ -58,9 +60,10 @@ async def upload_assignment_file(
         title=title,
         class_id=class_id,
         content=content,
+        html_content=html_content,
         blob_url=blob_url,
         source_format=file.filename.split(".")[-1].lower(),
-        date_created=datetime.datetime.now(datetime.UTC)
+        date_created=datetime.datetime.now(datetime.timezone.utc)
     )
     return create_assignment(assignment_data)
 
