@@ -19,6 +19,8 @@ async def extract_html_from_file(filename: str, file_bytes: bytes) -> str:
     else:
         return "<p>Unsupported file format.</p>"
 
+
+# TODO: Add ChatGPT API to enhance HTML extraction after beautiful soup normalization
 def extract_html_from_pdf(path: str) -> str:
     doc = fitz.open(path)
     html = ""
