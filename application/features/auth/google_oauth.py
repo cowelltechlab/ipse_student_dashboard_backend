@@ -93,7 +93,7 @@ async def exchange_code_for_token(
             detail="Invalid redirect URI provided."
         )
 
-    token_url = CONFIG["google"]["token_uri"] # "https://oauth2.googleapis.com/token"
+    token_url = CONFIG["token_uri"] # "https://oauth2.googleapis.com/token"
     token_data = {
         "code": code,
         "client_id": CONFIG["client_id"],
