@@ -9,17 +9,27 @@ from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import (create_jwt_token, verify_jwt_token)
 from application.features.auth.db_crud import (
+    create_user,
+    get_multiple_role_names_from_ids,
     get_user_email_by_id, 
     get_refresh_token_details, 
     get_user_role_names, 
     get_user_by_email,
     store_refresh_token,
     delete_refresh_token,
+    get_all_role_ids
 )
-from typing import Dict
-from application.features.auth.auth_helpers import validate_user_email_login
+from typing import Dict, Optional
+from application.features.auth.auth_helpers import hash_password, validate_user_email_login
 from datetime import datetime
-from application.features.auth.schemas import UserLogin, TokenResponse, UserResponse
+from application.features.auth.schemas import Role, UserLogin, TokenResponse, UserResponse
+from application.features.auth.permissions import (
+    require_admin_access, 
+    require_teacher_access, 
+    require_user_access
+)
+from application.database.mssql_crud_helpers import fetch_all
+import re
 
 
 # This should include a way to log in through Google and generic username/password
@@ -172,6 +182,7 @@ async def google_auth_callback(code: str) -> TokenResponse: # Dict[str, str]:
     5. Update user info in DB, including newly issued JWT
 
     Code in this function includes heavy borrowing from Google Gemini. 
+    TODO: add in 400 status error for bad request, such as reusing old one-time token
 
     :param code: OAuth 2.0 authorization code. It is a temporary code issued by
                  Google identifying signed-in individual users.
@@ -256,13 +267,120 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return {
-        "id": id,
-        "email": email,
-        "roles": roles,
-        "first_name": user["first_name"],
-        "last_name": user["last_name"]
-    }
+    return UserResponse(
+        id=id,
+        email=email,
+        roles=roles,
+        first_name=user["first_name"],
+        last_name=user["last_name"],
+        school_email=user["gt_email"],
+        role_ids=None
+    )
+
+
+@router.get("/roles", dependencies=Depends(require_admin_access))
+async def get_roles():
+    """
+    Retrieves and returns a list of all types of roles.
+
+    :returns: all roles in database
+    :rtype: List[Role]
+    """
+    return fetch_all("Roles")
+
+
+@router.post("/register", dependencies=Depends(require_admin_access))
+async def register_new_user(
+    first_name: str,
+    last_name: str,
+    password: str,
+    role_ids: List[int],
+    school_email: str,
+    google_email: Optional[str] = None
+) -> UserResponse:
+    """
+    Add a user to the database. Must include identifying information and a 
+    password. All information is expected to be inputted by an administrator. 
+    The password is hashed before being added to the database. Roles associated
+    with the new user must be passed in as IDs.
+
+    :param first_name: User's given name.
+    :type first_name: str
+    :param last_name: User's family / surname
+    :type last_name: str
+    :param password: plan password for future log-in
+    :type password: str
+    :param role_ids: List of IDs of all roles associated with the new user. 
+                     Must match ID values of matching roles in Roles SQL table.
+    :type role_ids: List[int]
+    :param school_email: School email address (e.g. GT email). Should match any
+                         email address used for that same school's SSO login.
+    :type school_email: str
+    :param google_email: Email address associated with Google account. Used for
+                         Google SSO.
+    :type google_email: str
+    :returns: New User's data (except password) after successful addition to 
+              database.
+    :rtype: UserResponse
+    """
+    # Ensure role_ids all exist in database
+    all_roles = set(get_all_role_ids())
+    if not set(role_ids).issubset(all_roles):
+        bad_ids = set(role_ids).difference(all_roles)
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Invalid role IDs: {bad_ids}"
+        )
+
+    # Check email formatting 
+    EMAIL_REGEX = re.compile(
+        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    )
+
+    if not school_email.endswith(".edu") or \
+        EMAIL_REGEX.fullmatch(school_email):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid School email format."
+        )
+
+    if google_email and \
+        (not google_email.endswith("@gmail.com") or \
+         not EMAIL_REGEX.fullmatch(google_email)):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid Google email format."
+        )
+    
+    # Hash password
+    hashed_password = hash_password(password)
+
+    # Create user and retrieve ID
+    new_user = create_user(
+        first_name,
+        last_name,
+        school_email,
+        hashed_password,
+        role_ids,
+        google_email
+    )
+    
+    if not new_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Error creating new user"
+        )
+    
+    return UserResponse(
+        id=new_user["id"],
+        email=new_user["email"],
+        school_email=school_email,
+        first_name=first_name,
+        last_name=last_name,
+        roles=None,
+        role_ids=None
+    )
+
 
 '''
 TODO: Incorporate user creation into a later deliverable. 

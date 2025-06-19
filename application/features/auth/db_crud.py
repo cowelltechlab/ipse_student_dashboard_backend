@@ -25,7 +25,8 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
 
     try:
         query = """
-        SELECT *
+        SELECT u.id, u.email, u.gt_email, u.first_name, u.last_name, 
+               u.created_at
         FROM Users u
         WHERE u.email = ?
         """
@@ -44,11 +45,93 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
         conn.close()
 
 
-def create_user():
+def create_user(
+    first_name: str,
+    last_name: str,
+    school_email: str,
+    password_hash: str,
+    role_ids: List[int],
+    google_email: Optional[str] = None
+) -> Optional[Dict[str, Any]]:
     """
     TODO: Implement user registration
     """
-    pass
+    conn = None
+
+    try:
+        # Create new user
+        email = google_email or school_email
+        new_user: Dict = create_record("Users", {
+            "email": email,
+            "first_name": first_name,
+            "last_name": last_name,
+            "gt_email": school_email,
+            "password_hash": password_hash,
+            "created_at": datetime.now()
+        })
+
+        # Add user and newly associated roles to UserRoles table
+        user_id = new_user["id"]
+        insert_roles = [(user_id, role_id) for role_id in role_ids]
+
+        conn = get_sql_db_connection()
+        cursor = conn.cursor()
+
+        insert_query = "INSERT INTO UserRoles (user_id, role_id) VALUES (?, ?)"
+        cursor.executemany(insert_query, insert_roles)
+        conn.commit()
+
+        return {
+            "id": user_id,
+            "email": new_user["email"],
+            "first_name": new_user["first_name"],
+            "last_name": new_user["last_name"],
+            "school_email": new_user["gt_email"]
+        }
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_multiple_role_names_from_ids(role_ids: List[int]) -> Optional[List[str]]:
+    """
+    Converts role IDs into role names based on corresponding values in Roles 
+    SQL table.
+
+    :param role_ids: List of role IDs 
+    :type role_ids: List[int]
+    :returns: list of role names matching role IDs
+    :rtype: List[str]
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        placeholders = ','.join(['?' for _ in role_ids])
+        get_query = f"""
+        SELECT r.role_name 
+        FROM Roles r 
+        WHERE r.id IN ({placeholders})
+        """
+
+        cursor.execute(get_query, tuple(role_ids))
+
+        role_name_rows = cursor.fetchall()
+        return [row[0] for row in role_name_rows]
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {e}")
+        return None
+    except Exception as e:
+        print(f"""An unexpected error occured in 
+              get_multiple_role_names_from_ids: {e}""")
+        return None
+    finally:
+        conn.close() 
 
 
 def update_user_password(user_id: int, new_hashed_password: str):
@@ -243,6 +326,31 @@ def get_user_role_names(user_id: int) -> List[str]:
 
 
         return roles
+
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {str(e)}")
+        return []
+    finally:
+        conn.close()
+
+
+def get_all_role_ids() -> List[int]:
+    """
+    Retrieves all unique ID values from Roles SQL table.
+
+    :returns: all IDs
+    :rtype: List[int]
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = "SELECT r.id from Roles r"
+        cursor.execute(query)
+
+        all_role_ids = [row[0] for row in cursor.fetchall()]
+        return all_role_ids
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality

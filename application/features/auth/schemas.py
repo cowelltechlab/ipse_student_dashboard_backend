@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 
@@ -15,7 +15,15 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    email: str
-    roles: List[str] 
     first_name: str
     last_name: str
+    school_email: str
+    email: Optional[str]
+    roles: Optional[List[str]] 
+    role_ids: Optional[List[int]]
+
+
+class Role(BaseModel):
+    id: int
+    role_name: str
+    description: str
