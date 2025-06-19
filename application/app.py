@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from application.features.students.routes import router as student_router
 from application.features.classes.routes import router as classes_router
+from application.features.studentProfile.routes import router as  profile_router
 
 
 
@@ -23,3 +24,4 @@ application.add_middleware(
 
 application.include_router(student_router, tags=["Students"], prefix="/students")
 application.include_router(classes_router, tags=["Classes"], prefix="/classes")
+application.include_router(profile_router, tags=["Profile"], prefix="/profile")
