@@ -128,10 +128,15 @@ def delete_record(table_name, record_id):
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
+    print(f"Attempting to delete from {table_name} where id = {record_id}")  # DEBUG
+
     try:
         cursor.execute(f"DELETE FROM {table_name} WHERE id = ?", (record_id,))
+        rows_deleted = cursor.rowcount
         conn.commit()
 
+        if rows_deleted == 0:
+            return {"error": f"No record with id {record_id} found in {table_name}"}
         return {"message": f"Record deleted from {table_name}"}
     except pyodbc.Error as e:
         conn.rollback()

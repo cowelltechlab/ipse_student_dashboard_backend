@@ -5,6 +5,7 @@ from application.database.mssql_crud_helpers import (
 )
 import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
+from application.features.students.schemas import StudentUpdate
 
 TABLE_NAME = "Students"
 
@@ -298,3 +299,43 @@ The User is not deleted
 '''
 def delete_student(student_id):
     return delete_student_records(student_id)
+
+
+def update_student_profile_pic(student_id: int, profile_pic_url: str):
+    conn = get_sql_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Check if student exists
+            cursor.execute("SELECT id FROM Students WHERE id = ?", student_id)
+            if not cursor.fetchone():
+                print("Student not found")
+
+            # Update profile picture URL
+            update_query = "UPDATE Students SET profile_picture_url = ? WHERE id = ?"
+            cursor.execute(update_query, (profile_pic_url, student_id))
+
+            conn.commit()
+
+            # Optionally fetch updated record to return (optional)
+            cursor.execute("""
+                SELECT 
+                    s.id, s.user_id, s.year_id, y.name AS year_name,
+                    s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
+                    u.email, u.first_name, u.last_name, u.gt_email
+                FROM Students s
+                JOIN Users u ON s.user_id = u.id
+                JOIN Years y ON s.year_id = y.id
+                WHERE s.id = ?
+            """, (student_id,))
+            updated_student = cursor.fetchone()
+            if updated_student:
+                columns = [col[0] for col in cursor.description]
+                return dict(zip(columns, updated_student))
+            else:
+                return {"message": "Profile picture updated, but failed to fetch updated record"}
+
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()

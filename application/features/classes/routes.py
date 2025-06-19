@@ -54,9 +54,20 @@ def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data
 
 
 @router.delete("/{class_id}")
-def delete_class(class_id: int, user_data: dict = Depends(require_user_access())):
+def delete_class_route(class_id: int, user_data: dict = Depends(require_user_access())):
     """Delete a class."""
     result = delete_class(class_id)
     if "error" in result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
+        error_msg = result["error"].lower()
+        print(error_msg)
+        # Detect foreign key constraint error (SQL Server error code 547)
+        if "547" in error_msg or "foreign key" in error_msg or "fk" in error_msg:
+            return {"message": f"Class with id {class_id} cannot be deleted. Students are enrolled in this class."}
+        
+        # Detect "not found" or missing class error (you may need to customize this based on your actual error)
+        if "not found" in error_msg or "invalid object name" in error_msg or "does not exist" in error_msg:
+            return {"message": f"Class with id {class_id} does not exist and cannot be deleted."}
+        
+        # Generic fallback
+        return {"message": f"Failed to delete class with id {class_id}: {result['error']}"}
     return {"message": f"Class with id {class_id} deleted successfully."}

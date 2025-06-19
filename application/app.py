@@ -5,8 +5,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from application.features.students.routes import router as student_router
 from application.features.classes.routes import router as classes_router
-
-
+from application.features.studentClasses.routes import router as student_classes_router
+from application.features.assignments.routes import router as assignments_router
+from application.features.blob.routes import router as blob_router
 
 application = FastAPI()
 
@@ -23,3 +24,6 @@ application.add_middleware(
 
 application.include_router(student_router, tags=["Students"], prefix="/students")
 application.include_router(classes_router, tags=["Classes"], prefix="/classes")
+application.include_router(student_classes_router, tags=["StudentClasses"], prefix="") 
+application.include_router(assignments_router, tags=["Assignments"], prefix="/assignments") 
+application.include_router(blob_router, tags=["Blob"], prefix="/blob")
