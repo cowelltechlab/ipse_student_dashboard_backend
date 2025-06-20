@@ -37,7 +37,7 @@ def validate_user_email_login(email: str, password: str) -> int:
     Check for email and password. The email must exist in the database and 
     have a matching hashed password with what is passed in.
     """
-    user = get_user_by_email(email)
+    user = get_user_by_email(email, True)
 
     if not user:
         raise HTTPException(
@@ -45,6 +45,7 @@ def validate_user_email_login(email: str, password: str) -> int:
             detail="Unauthorized. User not found."
         )
     
+    print(user)
     if "password_hash" not in user or "id" not in user:
         raise HTTPException(
             status_code=400,
@@ -52,7 +53,7 @@ def validate_user_email_login(email: str, password: str) -> int:
         )
 
     hashed_password = hash_password(password)
-    if not verify_password(password, hash_password) and \
+    if not verify_password(password, hashed_password) and \
         user["password_hash"] != hashed_password:
         raise HTTPException(
             status_code=401,

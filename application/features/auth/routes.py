@@ -282,7 +282,7 @@ async def get_current_user(
         roles=roles,
         first_name=user["first_name"],
         last_name=user["last_name"],
-        school_email=user["gt_email"],
+        school_email=email,
     )
 
 
@@ -303,7 +303,13 @@ async def get_roles(user_data: dict = Depends(require_admin_access)):
     response_model=UserResponse
 )
 async def register_new_user(
-    request_data: RegisterUserRequest,
+    # request_data: RegisterUserRequest,
+    first_name: str,
+    last_name: str,
+    password: str,
+    role_ids: List[int],
+    school_email: str, 
+    google_email: Optional[str] = None,
     user_data: dict = Depends(require_admin_access)
 ) -> UserResponse:
     """
@@ -312,10 +318,6 @@ async def register_new_user(
     The password is hashed before being added to the database. Roles associated
     with the new user must be passed in as IDs.
 
-    :param request_data: JSON data passed in via POST request
-    :type request_data: UserResponse
-
-    Breakdown of request_data:
     :param first_name: User's given name.
     :type first_name: str
     :param last_name: User's family / surname
@@ -336,12 +338,12 @@ async def register_new_user(
               database.
     :rtype: UserResponse
     """
-    first_name = request_data.first_name
-    last_name = request_data.last_name
-    password = request_data.password
-    role_ids = request_data.role_ids
-    school_email = request_data.school_email
-    google_email = request_data.google_email
+    # first_name = request_data.first_name
+    # last_name = request_data.last_name
+    # password = request_data.password
+    # role_ids = request_data.role_ids
+    # school_email = request_data.school_email
+    # google_email = request_data.google_email
 
     # Ensure role_ids all exist in database
     all_roles = set(get_all_role_ids())

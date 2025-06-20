@@ -9,7 +9,7 @@ from application.database.mssql_connection import get_sql_db_connection
 from secrets import token_urlsafe
 from datetime import datetime, timedelta
 
-def get_user_by_email(user_email: str) -> Optional[Dict]:
+def get_user_by_email(user_email: str, get_password = False) -> Optional[Dict]:
     """
     DB helper function to fetch a single user record via their email. 
 
@@ -17,6 +17,8 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
     
     :param user_email: email address of the user
     :type user_email: str
+    :param get_password: True if including password in response, False if not
+    :type get_password: bool
     :returns: user's record in database
     :rtype: Optional[Dict]
     """
@@ -24,9 +26,9 @@ def get_user_by_email(user_email: str) -> Optional[Dict]:
     cursor = conn.cursor()
 
     try:
-        query = """
+        query = f"""
         SELECT u.id, u.email, u.gt_email, u.first_name, u.last_name, 
-               u.created_at
+               u.created_at{", u.password_hash" if get_password else ""}
         FROM Users u
         WHERE u.email = ?
         """
