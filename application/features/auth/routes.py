@@ -278,8 +278,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
     )
 
 
-@router.get("/roles", dependencies=Depends(require_admin_access))
-async def get_roles():
+@router.get("/roles", response_model=List[Role])
+async def get_roles(
+    dependencies=Depends(require_admin_access)
+):
     """
     Retrieves and returns a list of all types of roles.
 
@@ -289,14 +291,15 @@ async def get_roles():
     return fetch_all("Roles")
 
 
-@router.post("/register", dependencies=Depends(require_admin_access))
+@router.post("/register", response_model=UserResponse)
 async def register_new_user(
     first_name: str,
     last_name: str,
     password: str,
     role_ids: List[int],
     school_email: str,
-    google_email: Optional[str] = None
+    google_email: Optional[str] = None,
+    user_data: dict = Depends(require_admin_access)
 ) -> UserResponse:
     """
     Add a user to the database. Must include identifying information and a 
