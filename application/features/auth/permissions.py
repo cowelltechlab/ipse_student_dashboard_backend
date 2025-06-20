@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from application.features.auth.jwt_handler import verify_jwt_token
 from typing import Dict, Optional, Set, List
 
@@ -17,7 +17,8 @@ def _check_user_roles(user_data: dict, required_roles: Optional[List[str]] = Non
     # Check that JWT includes roles and is appropriately formatted
     if "roles" not in user_data or not isinstance(user_data["roles"], list):
         raise HTTPException(
-            status_code=403, detail="Role information missing from token."
+            status_code=status.HTTP_403_FORBIDDEN, 
+            detail="Role information missing from token."
         )
     
     user_roles: Set[str] = set(user_data["roles"])
@@ -26,7 +27,7 @@ def _check_user_roles(user_data: dict, required_roles: Optional[List[str]] = Non
     if not required_roles:
         if not user_roles:
             raise HTTPException(
-                status_code=403, 
+                status_code=status.HTTP_403_FORBIDDEN, 
                 detail="Authenticated user has no assigned roles in token."
             )
         
@@ -35,7 +36,7 @@ def _check_user_roles(user_data: dict, required_roles: Optional[List[str]] = Non
     # Default: Check for specific roles
     if not set(required_roles).issubset(user_roles):
         raise HTTPException(
-            status_code=403, 
+            status_code=status.HTTP_403_FORBIDDEN, 
             detail=f"Access Denied. Required roles: {required_roles}. \
                     Your roles: {user_roles}"
         )
@@ -86,4 +87,19 @@ def require_admin_access(user_data: Dict = Depends(verify_jwt_token)):
                            appropriate role for it, or JWT missing role data.
     """
     _check_user_roles(user_data, required_roles=["Admin"])
+    return user_data
+
+
+def require_peer_tutor_access(user_data: Dict = Depends(verify_jwt_token)):
+    """
+    Confirms users' RBAC access as a peer tutor user.
+
+    :param user_data: User data stored in JSON Web Token (JWT)
+    :type user_data: Dict
+    :returns: User data in verified JWT token if access is approved.
+    :rtype: Dict
+    :raises HTTPException: 403 Forbidden if the user does not have the 
+                           appropriate role for it, or JWT missing role data.
+    """
+    _check_user_roles(user_data, required_roles=["Peer Tutor"])
     return user_data

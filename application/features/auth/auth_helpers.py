@@ -34,7 +34,8 @@ def hash_password(password: str) -> str:
 
 def validate_user_email_login(email: str, password: str) -> int:
     """
-    TODO: implement
+    Check for email and password. The email must exist in the database and 
+    have a matching hashed password with what is passed in.
     """
     user = get_user_by_email(email)
 

@@ -4,13 +4,12 @@ Sources:
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
 - Google Gemini
 """
-from fastapi import HTTPException, APIRouter, Depends
+from fastapi import HTTPException, APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
-from application.features.auth.jwt_handler import (create_jwt_token, verify_jwt_token)
+from application.features.auth.jwt_handler import create_jwt_token
 from application.features.auth.db_crud import (
     create_user,
-    get_multiple_role_names_from_ids,
     get_user_email_by_id, 
     get_refresh_token_details, 
     get_user_role_names, 
@@ -20,12 +19,19 @@ from application.features.auth.db_crud import (
     get_all_role_ids
 )
 from typing import Dict, Optional
-from application.features.auth.auth_helpers import hash_password, validate_user_email_login
+from application.features.auth.auth_helpers import (
+    hash_password, 
+    validate_user_email_login
+)
 from datetime import datetime
-from application.features.auth.schemas import Role, UserLogin, TokenResponse, UserResponse
+from application.features.auth.schemas import (
+    RegisterUserRequest, 
+    UserLogin, 
+    TokenResponse, 
+    UserResponse
+)
 from application.features.auth.permissions import (
-    require_admin_access, 
-    require_teacher_access, 
+    require_admin_access,  
     require_user_access
 )
 from application.database.mssql_crud_helpers import fetch_all
@@ -45,8 +51,6 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 async def email_login(user_credentials: UserLogin) -> TokenResponse:
     """
     Log user in via email and password without SSO.
-
-    TODO: implement. Authenticate email and password, handle access tokens.
     """
     user_id = -1
 
@@ -104,7 +108,10 @@ async def google_login():
 
 
 @router.post("/logout")
-async def logout(refresh_token: str) -> Dict[str, str]:
+async def logout(
+    refresh_token: str, 
+    user_data: Dict = Depends(require_user_access)
+) -> Dict[str, str]:
     """
     Logs user out of app by deleting refresh token from DB.
 
@@ -171,7 +178,7 @@ async def refresh_access_token(refresh_token: str) -> TokenResponse:
 
 
 @router.get("/google/callback") # TODO: This URI must be registered in Google Cloud Console
-async def google_auth_callback(code: str) -> TokenResponse: # Dict[str, str]:
+async def google_auth_callback(code: str) -> TokenResponse: 
     """
     Handles callback from Google OAuth that redirects back to current app. 
     Order of events: 
@@ -206,8 +213,6 @@ async def google_auth_callback(code: str) -> TokenResponse: # Dict[str, str]:
                 detail="No email passed back. Error from Google servers."
             )
         
-        # TODO: Add ability to create a user.
-        # TODO: double-check status code
         user = get_user_by_email(email)
         if not user:
             raise HTTPException(
@@ -240,32 +245,36 @@ async def google_auth_callback(code: str) -> TokenResponse: # Dict[str, str]:
         )
 
 
-@router.get("/me")
-async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    user_data: Dict = Depends(require_user_access)
+) -> UserResponse:
     """
     Retrieve identifying and access data for current user. Expects token to be 
-    passed in by front-end, then uses that to determine who is logged in.
+    passed in as part of API request, then uses that to determine who is logged
+    in.
 
-    :param token: Encoded JSON Web Token (JWT)
-    :type token: str
     :returns: Current user's ID, email, name, and access roles
-    :rtype: Dict[str, str]
+    :rtype: UserResponse
     :raises HTTPException: When user not found, token is invalid or expired, or
                            token payload (from decoded JWT) is invalid.
     """
-    payload = verify_jwt_token(token)
-    if not payload:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    email = user_data.get("email")
+    id = user_data.get("user_id")
+    roles = user_data.get("roles")
 
-    email = payload.get("email")
-    id = payload.get("user_id")
-    roles = payload.get("roles")
     if not email or not id or not roles:
-        raise HTTPException(status_code=401, detail="Invalid token payload")
+        raise HTTPException(
+            status_code=401, 
+            detail="Invalid token payload: missing email, user_id, or roles."
+        )
     
     user = get_user_by_email(email)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise HTTPException(
+            status_code=404, 
+            detail="User found in token but not in database"
+        )
 
     return UserResponse(
         id=id,
@@ -274,12 +283,11 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> UserResponse:
         first_name=user["first_name"],
         last_name=user["last_name"],
         school_email=user["gt_email"],
-        role_ids=None
     )
 
 
-@router.get("/roles", dependencies=Depends(require_admin_access))
-async def get_roles():
+@router.get("/roles")
+async def get_roles(user_data: dict = Depends(require_admin_access)):
     """
     Retrieves and returns a list of all types of roles.
 
@@ -289,14 +297,14 @@ async def get_roles():
     return fetch_all("Roles")
 
 
-@router.post("/register", dependencies=Depends(require_admin_access))
+@router.post(
+    "/register", 
+    status_code=status.HTTP_201_CREATED,
+    response_model=UserResponse
+)
 async def register_new_user(
-    first_name: str,
-    last_name: str,
-    password: str,
-    role_ids: List[int],
-    school_email: str,
-    google_email: Optional[str] = None
+    request_data: RegisterUserRequest,
+    user_data: dict = Depends(require_admin_access)
 ) -> UserResponse:
     """
     Add a user to the database. Must include identifying information and a 
@@ -304,6 +312,10 @@ async def register_new_user(
     The password is hashed before being added to the database. Roles associated
     with the new user must be passed in as IDs.
 
+    :param request_data: JSON data passed in via POST request
+    :type request_data: UserResponse
+
+    Breakdown of request_data:
     :param first_name: User's given name.
     :type first_name: str
     :param last_name: User's family / surname
@@ -319,10 +331,18 @@ async def register_new_user(
     :param google_email: Email address associated with Google account. Used for
                          Google SSO.
     :type google_email: str
+
     :returns: New User's data (except password) after successful addition to 
               database.
     :rtype: UserResponse
     """
+    first_name = request_data.first_name
+    last_name = request_data.last_name
+    password = request_data.password
+    role_ids = request_data.role_ids
+    school_email = request_data.school_email
+    google_email = request_data.google_email
+
     # Ensure role_ids all exist in database
     all_roles = set(get_all_role_ids())
     if not set(role_ids).issubset(all_roles):
@@ -338,7 +358,7 @@ async def register_new_user(
     )
 
     if not school_email.endswith(".edu") or \
-        EMAIL_REGEX.fullmatch(school_email):
+        not EMAIL_REGEX.fullmatch(school_email):
         raise HTTPException(
             status_code=400,
             detail=f"Invalid School email format."
@@ -376,15 +396,11 @@ async def register_new_user(
         email=new_user["email"],
         school_email=school_email,
         first_name=first_name,
-        last_name=last_name,
-        roles=None,
-        role_ids=None
+        last_name=last_name
     )
 
 
 '''
-TODO: Incorporate user creation into a later deliverable. 
-
 Suggested code from Google Gemini:
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_auth_requests 
