@@ -1,83 +1,89 @@
-from azure.cosmos.exceptions import CosmosResourceNotFoundError, CosmosHttpResponseError
 from azure.cosmos import ContainerProxy
-from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionUpdate
+from fastapi import HTTPException
+from uuid import uuid4
+from application.features.versionHistory.schemas import AssignmentVersionCreate
+from datetime import datetime
+from azure.cosmos import PartitionKey
+from application.features.versionHistory.schemas import AssignmentVersionResponse
+from fastapi.responses import JSONResponse
+from azure.cosmos import exceptions
 
-def get_doc_id(student_id: int, assignment_id: str) -> str:
-    return f"{student_id}:{assignment_id}"
-
-def create_or_append_version(container: ContainerProxy, student_id: int, assignment_id: str, new_version: AssignmentVersionCreate):
-    doc_id = get_doc_id(student_id, assignment_id)
-    version_dict = new_version.model_dump()
-    
-    partition_key = str(student_id)  # make sure this matches your container's partition key type
+def create_version(data: AssignmentVersionCreate, container):
+    doc = data.model_dump()
+    doc["modifier_id"] = str(doc["modifier_id"])  # Convert to string if partition key is string
+    if isinstance(doc.get("date_modified"), datetime):
+        doc["date_modified"] = doc["date_modified"].isoformat()
+    doc["id"] = str(uuid4())
 
     try:
-        doc = container.read_item(item=doc_id, partition_key=partition_key)
-        versions = doc.get("versions", [])
+        container.create_item(body=doc)
+        # Convert back to int for response if needed
+        doc["modifier_id"] = int(doc["modifier_id"])
+        return AssignmentVersionResponse(**doc)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create version: {str(e)}")
 
-        # check for duplicate version_number
-        for v in versions:
-            if v.get("version_number") == version_dict.get("version_number"):
-                raise ValueError(f"Version {version_dict.get('version_number')} already exists")
+def get_versions_by_assignment(container, assignment_id: str) -> list[AssignmentVersionResponse]:
+    # Since modifier_id is partition key, but we want to query by assignment_id (not PK),
+    # we must enable cross-partition query.
+    query = "SELECT * FROM c WHERE c.assignment_id = @assignment_id"
+    parameters = [{"name": "@assignment_id", "value": assignment_id}]
 
-        versions.append(version_dict)
-        doc["versions"] = versions
-        container.replace_item(item=doc_id, body=doc)
-    except CosmosResourceNotFoundError:
-        doc = {
-            "id": doc_id,
-            "student_id": partition_key,
-            "assignment_id": assignment_id,
-            "versions": [version_dict]
-        }
-        container.create_item(doc)
-    return doc
-
-def get_all_versions(container: ContainerProxy, student_id: int, assignment_id: str):
-    doc_id = get_doc_id(student_id, assignment_id)
     try:
-        doc = container.read_item(item=doc_id, partition_key=student_id)
-        return doc.get("versions", [])
-    except CosmosResourceNotFoundError:
-        return []
+        items = list(container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+        return [AssignmentVersionResponse(**item) for item in items]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch versions: {str(e)}")
 
-def get_version(container: ContainerProxy, student_id: int, assignment_id: str, version_number: int):
-    doc_id = get_doc_id(student_id, assignment_id)
-    doc = container.read_item(item=doc_id, partition_key=student_id)
-    versions = doc.get("versions", [])
-    for v in versions:
-        if v.get("version_number") == version_number:
-            return v
-    raise CosmosResourceNotFoundError(f"Version {version_number} not found")
 
-def update_version(container: ContainerProxy, student_id: int, assignment_id: str, version_number: int, update_data: AssignmentVersionUpdate):
-    doc_id = get_doc_id(student_id, assignment_id)
-    doc = container.read_item(item=doc_id, partition_key=student_id)
-    versions = doc.get("versions", [])
+def get_version(container, assignment_id: str, version_number: int) -> AssignmentVersionResponse:
+    query = ("SELECT * FROM c WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number")
+    parameters = [
+        {"name": "@assignment_id", "value": assignment_id},
+        {"name": "@version_number", "value": version_number}
+    ]
 
-    updated = False
-    for idx, v in enumerate(versions):
-        if v.get("version_number") == version_number:
-            update_dict = update_data.model_dump(exclude_unset=True)
-            versions[idx].update(update_dict)
-            updated = True
-            break
+    try:
+        items = list(container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+        if not items:
+            raise HTTPException(status_code=404, detail="Version not found")
+        return AssignmentVersionResponse(**items[0])
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch version: {str(e)}")
 
-    if not updated:
-        raise CosmosResourceNotFoundError(f"Version {version_number} not found")
 
-    doc["versions"] = versions
-    container.replace_item(item=doc_id, body=doc)
-    return versions[idx]
+def delete_version_by_assignment_version(container, assignment_id: str, version_number: int):
+    try:
+        # Step 1: Find document by assignment_id and version_number
+        query = """
+        SELECT * FROM c 
+        WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number
+        """
+        params = [
+            {"name": "@assignment_id", "value": assignment_id},
+            {"name": "@version_number", "value": version_number}
+        ]
+        items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
 
-def delete_version(container: ContainerProxy, student_id: int, assignment_id: str, version_number: int):
-    doc_id = get_doc_id(student_id, assignment_id)
-    doc = container.read_item(item=doc_id, partition_key=student_id)
-    versions = doc.get("versions", [])
+        if not items:
+            raise HTTPException(status_code=404, detail="Document not found")
 
-    new_versions = [v for v in versions if v.get("version_number") != version_number]
-    if len(new_versions) == len(versions):
-        raise CosmosResourceNotFoundError(f"Version {version_number} not found")
+        item = items[0]
+        doc_id = item["id"]
+        modifier_id = item["modifier_id"]
 
-    doc["versions"] = new_versions
-    container.replace_item(item=doc_id, body=doc)
+        # Step 2: Delete using partition key
+        container.delete_item(item=doc_id, partition_key=str(modifier_id))
+
+    except exceptions.CosmosResourceNotFoundError:
+        raise HTTPException(status_code=404, detail="Document not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete version: {str(e)}")
