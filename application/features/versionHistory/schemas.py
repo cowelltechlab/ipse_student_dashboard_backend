@@ -16,7 +16,7 @@ class UDLReasons(BaseModel):
 class AssignmentVersionBase(BaseModel):
     assignment_id: str
     version_number: int
-    modifier_id: int   # <-- change this from int to str
+    modifier_id: int  
     date_modified: datetime
     content: str
     udl_reasons: UDLReasons
