@@ -1,4 +1,3 @@
-import pytest
 from fastapi.testclient import TestClient
 from application.app import application
 from application.database.mssql_connection import get_sql_db_connection
