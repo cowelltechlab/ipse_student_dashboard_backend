@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/", response_model=List[ClassesResponse])
 def fetch_classes(
     class_id: Optional[int] = Query(None),
-    user_data: dict = Depends(require_user_access())
+    user_data: dict = Depends(require_user_access)
 ):
     """Retrieve all classes or filter by class_id."""
     return get_all_classes()
@@ -26,7 +26,7 @@ def fetch_classes(
 @router.get("/{class_id}", response_model=ClassesResponse)
 def fetch_class_by_id(
     class_id: int,
-    user_data: dict = Depends(require_user_access())
+    user_data: dict = Depends(require_user_access)
 ):
     class_record = get_class_by_id(class_id)
     if not class_record:
@@ -35,7 +35,7 @@ def fetch_class_by_id(
 
 
 @router.post("/", response_model=ClassesResponse, status_code=status.HTTP_201_CREATED)
-def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_user_access())):
+def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_user_access)):
     """Create a new classes."""
     created_class = add_class(class_data.dict())
     if "error" in created_class:
@@ -45,7 +45,7 @@ def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_
 
 
 @router.put("/{class_id}", response_model=ClassesResponse)
-def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data: dict = Depends(require_user_access())):
+def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data: dict = Depends(require_user_access)):
     """Update a class."""
     updated_class = crud_update_class(class_id, data.dict(exclude_unset=True))
     if "error" in updated_class:
