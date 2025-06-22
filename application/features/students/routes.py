@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/", response_model=List[StudentResponse])
 def fetch_students(
     year_id: Optional[int] = Query(None),
-    user_data: dict = Depends(require_user_access)
+    user_data: dict = Depends(require_user_access())
 ):
     """Retrieve all students or filter by year_id."""
     if year_id is not None:
@@ -26,7 +26,7 @@ def fetch_students(
     return get_all_students()
 
 @router.get("/{student_id}", response_model=StudentResponse)
-def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_access)):
+def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_access())):
     """Retrieve a student by ID."""
     student = get_student_by_id(student_id)
     if not student:
@@ -34,7 +34,7 @@ def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_
     return student
 
 @router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
-def create_student(student_data: StudentCreate, user_data: dict = Depends(require_user_access)):
+def create_student(student_data: StudentCreate, user_data: dict = Depends(require_user_access())):
     """Create a new student."""
     created_student = add_student(student_data.dict())
     if "error" in created_student:
@@ -43,7 +43,7 @@ def create_student(student_data: StudentCreate, user_data: dict = Depends(requir
     return created_student
 
 @router.put("/{student_id}", response_model=StudentResponse)
-def update_student_route(student_id: int, update_data: StudentUpdate, user_data: dict = Depends(require_user_access)):
+def update_student_route(student_id: int, update_data: StudentUpdate, user_data: dict = Depends(require_user_access())):
     """Update a student."""
     updated_student = crud_update_student(student_id, update_data.dict(exclude_unset=True))
     if "error" in updated_student:
@@ -52,7 +52,7 @@ def update_student_route(student_id: int, update_data: StudentUpdate, user_data:
 
 
 @router.delete("/{student_id}")
-def delete_student(student_id: int, user_data: dict = Depends(require_user_access)):
+def delete_student(student_id: int, user_data: dict = Depends(require_user_access())):
     """Delete a student."""
     result = delete_student_records(student_id)
     if "error" in result:

@@ -8,13 +8,13 @@ class Settings(BaseSettings):
     project_name: str = "ipse_dashboard"
     key_vault_name: str = "cowell-tech-lab-secrets"
     db_url: str = (
-        "Driver={ODBC Driver 18 for SQL Server};"
-        "Server=tcp:ai-for-higher-learning.database.windows.net,1433;"
-        "Database=ai-for-higher-learning;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Authentication=ActiveDirectoryInteractive;"
-    )
+    "Driver={ODBC Driver 18 for SQL Server};"
+    "Server=tcp:ai-for-higher-learning.database.windows.net,1433;"
+    "Database=ai-for-higher-learning;"
+    "Encrypt=yes;"
+    "TrustServerCertificate=no;"
+    "Authentication=ActiveDirectoryInteractive;"
+)
     # db_url: str = None
     # api_key: str = None
     jwt_secret: Optional[str] = None
