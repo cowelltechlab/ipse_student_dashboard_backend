@@ -1,7 +1,7 @@
 from passlib.context import CryptContext
 from fastapi import HTTPException
 
-from application.features.auth.db_crud import get_user_by_email
+from application.features.auth.crud import get_user_by_email
 
 pwd_context = CryptContext(schemes=["bcrypt"])
 

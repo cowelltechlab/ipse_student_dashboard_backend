@@ -88,7 +88,9 @@ def create_user(
             "email": new_user["email"],
             "first_name": new_user["first_name"],
             "last_name": new_user["last_name"],
-            "school_email": new_user["gt_email"]
+            "school_email": new_user["gt_email"],
+            "role_ids": role_ids,
+            
         }
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
@@ -99,41 +101,6 @@ def create_user(
             conn.close()
 
 
-def get_multiple_role_names_from_ids(role_ids: List[int]) -> Optional[List[str]]:
-    """
-    Converts role IDs into role names based on corresponding values in Roles 
-    SQL table.
-
-    :param role_ids: List of role IDs 
-    :type role_ids: List[int]
-    :returns: list of role names matching role IDs
-    :rtype: List[str]
-    """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        placeholders = ','.join(['?' for _ in role_ids])
-        get_query = f"""
-        SELECT r.role_name 
-        FROM Roles r 
-        WHERE r.id IN ({placeholders})
-        """
-
-        cursor.execute(get_query, tuple(role_ids))
-
-        role_name_rows = cursor.fetchall()
-        return [row[0] for row in role_name_rows]
-    except pyodbc.Error as e:
-        # TODO: integrate into future logging functionality
-        print(f"Error: {e}")
-        return None
-    except Exception as e:
-        print(f"""An unexpected error occured in 
-              get_multiple_role_names_from_ids: {e}""")
-        return None
-    finally:
-        conn.close() 
 
 
 def update_user_password(user_id: int, new_hashed_password: str):
