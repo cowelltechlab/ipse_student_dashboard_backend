@@ -3,7 +3,7 @@ from http.client import HTTPException
 from typing import List, Optional
 from fastapi import File, Form, HTTPException, APIRouter, Depends, UploadFile, status, Query, Body
 
-from application.features.assignments.schemas import AssignmentCreate , AssignmentResponse, AssignmentUpdate 
+from application.features.assignments.schemas import AssignmentCreate, AssignmentListResponse , AssignmentDetailResponse, AssignmentUpdate 
 from application.features.assignments.crud import get_assignments_by_id, get_all_assignments, add_assignment, update_assignment
 from application.services.html_extractors import extract_html_from_file
 from application.services.upload_to_blob import upload_to_blob
@@ -14,12 +14,12 @@ from application.services.text_extractors import extract_text_from_file
 ''' Prepend all classes routes with /assignments and collect all assignment-relevant endpoints under assignments tag in SwaggerUI'''
 router = APIRouter()
 
-@router.get("/", response_model=List[AssignmentResponse])
+@router.get("/", response_model=List[AssignmentListResponse])
 def fetch_assignments():
     """Retrieve all assignments"""
     return get_all_assignments()
 
-@router.get("/{assignment_id}", response_model=AssignmentResponse)
+@router.get("/{assignment_id}", response_model= AssignmentDetailResponse)
 def fetch_assignment_by_id(
     assignment_id: int,
 ):
@@ -28,7 +28,7 @@ def fetch_assignment_by_id(
         raise HTTPException(status_code=404, detail="Assignment not found")
     return assignment_record
 
-@router.post("/", response_model=AssignmentResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
 def create_assignment(assignment_data: AssignmentCreate):
     """Create a new assignment."""
     created_assignment = add_assignment(assignment_data.dict())
@@ -37,7 +37,7 @@ def create_assignment(assignment_data: AssignmentCreate):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_assignment["error"])
     return created_assignment
 
-@router.post("/upload", response_model=AssignmentResponse)
+@router.post("/upload", response_model=AssignmentDetailResponse)
 async def upload_assignment_file(
     student_id: int = Form(...),
     title: str = Form(...),
@@ -68,7 +68,7 @@ async def upload_assignment_file(
     return create_assignment(assignment_data)
 
 
-@router.put("/{assignment_id}", response_model=AssignmentResponse)
+@router.put("/{assignment_id}", response_model=AssignmentDetailResponse)
 def update_class_route(assignment_id: int, data: AssignmentUpdate = Body(...)):
     """Update a class."""
     updated_assignment = update_assignment(assignment_id, data.dict(exclude_unset=True))
