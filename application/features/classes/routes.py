@@ -18,7 +18,7 @@ router = APIRouter()
 @router.get("/", response_model=List[ClassesResponse])
 def fetch_classes(
     class_id: Optional[int] = Query(None),
-    user_data: dict = Depends(require_user_access())
+    user_data: dict = Depends(require_user_access)
 ):
     """Retrieve all classes or filter by class_id."""
     return get_all_classes()
@@ -26,7 +26,7 @@ def fetch_classes(
 @router.get("/{class_id}", response_model=ClassesResponse)
 def fetch_class_by_id(
     class_id: int,
-    user_data: dict = Depends(require_user_access())
+    user_data: dict = Depends(require_user_access)
 ):
     class_record = get_class_by_id(class_id)
     if not class_record:
@@ -35,7 +35,7 @@ def fetch_class_by_id(
 
 
 @router.post("/", response_model=ClassesResponse, status_code=status.HTTP_201_CREATED)
-def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_user_access())):
+def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_user_access)):
     """Create a new classes."""
     created_class = add_class(class_data.dict())
     if "error" in created_class:
@@ -45,7 +45,7 @@ def create_classes(class_data: ClassesCreate, user_data: dict = Depends(require_
 
 
 @router.put("/{class_id}", response_model=ClassesResponse)
-def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data: dict = Depends(require_user_access())):
+def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data: dict = Depends(require_user_access)):
     """Update a class."""
     updated_class = crud_update_class(class_id, data.dict(exclude_unset=True))
     if "error" in updated_class:
@@ -54,9 +54,20 @@ def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data
 
 
 @router.delete("/{class_id}")
-def delete_class(class_id: int, user_data: dict = Depends(require_user_access())):
+def delete_class_route(class_id: int, user_data: dict = Depends(require_user_access())):
     """Delete a class."""
     result = delete_class(class_id)
     if "error" in result:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
+        error_msg = result["error"].lower()
+        print(error_msg)
+        # Detect foreign key constraint error (SQL Server error code 547)
+        if "547" in error_msg or "foreign key" in error_msg or "fk" in error_msg:
+            return {"message": f"Class with id {class_id} cannot be deleted. Students are enrolled in this class."}
+        
+        # Detect "not found" or missing class error (you may need to customize this based on your actual error)
+        if "not found" in error_msg or "invalid object name" in error_msg or "does not exist" in error_msg:
+            return {"message": f"Class with id {class_id} does not exist and cannot be deleted."}
+        
+        # Generic fallback
+        return {"message": f"Failed to delete class with id {class_id}: {result['error']}"}
     return {"message": f"Class with id {class_id} deleted successfully."}

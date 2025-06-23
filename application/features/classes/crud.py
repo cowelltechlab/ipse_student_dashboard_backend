@@ -7,6 +7,7 @@ from application.database.mssql_crud_helpers import (
     fetch_all
 )
 
+#TABLE_NAME = "Classes"
 TABLE_NAME = "Classes"
 
 ''' 
