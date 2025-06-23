@@ -1,5 +1,5 @@
 from azure.cosmos import CosmosClient
-from application.features.studentProfile.schemas import StudentProfileCreate, StudentProfileUpdate
+from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
 from application.database.nosql_connection import get_cosmos_db_connection  
 
 DATABASE_NAME = "ai-prompt-storage"

@@ -54,7 +54,7 @@ def update_class_route(class_id: int, data: ClassesUpdate = Body(...), user_data
 
 
 @router.delete("/{class_id}")
-def delete_class_route(class_id: int, user_data: dict = Depends(require_user_access())):
+def delete_class_route(class_id: int, user_data: dict = Depends(require_user_access)):
     """Delete a class."""
     result = delete_class(class_id)
     if "error" in result:

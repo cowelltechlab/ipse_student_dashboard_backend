@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Body
-from application.features.studentProfile.crud import (
+from application.features.student_profile.crud import (
     create_profile, get_profile, update_profile, delete_profile
 )
-from application.features.studentProfile.schemas import (
+from application.features.student_profile.schemas import (
     StudentProfileCreate, StudentProfileResponse, StudentProfileUpdate
 )
 
