@@ -6,7 +6,7 @@ from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 
 from application.features.auth.permissions import require_user_access
-from application.features.students.crud import get_all_students, get_student_by_id, add_student, delete_student, update_student as crud_update_student
+from application.features.students.crud import get_all_students, add_student, get_student_by_student_id, get_student_by_user_id, update_student as crud_update_student
 from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate 
 from application.features.students.crud import  get_students_by_year,  delete_student_records
 
@@ -25,13 +25,22 @@ def fetch_students(
         return get_students_by_year(year_id)
     return get_all_students()
 
-@router.get("/{student_id}", response_model=StudentResponse)
+@router.get("/student-id/{student_id}", response_model=StudentResponse)
 def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_access)):
     """Retrieve a student by ID."""
-    student = get_student_by_id(student_id)
+    student = get_student_by_student_id(student_id)
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Student with id {student_id} not found.")
     return student
+
+@router.get("/user-id/{user_id}", response_model=StudentResponse)
+def fetch_students_by_user_id(user_id: int, user_data: dict = Depends(require_user_access)):
+    """Retrieve student by user ID."""
+    student = get_student_by_user_id(user_id=user_id)
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No student found for user with id {user_id}.")
+    return student
+
 
 @router.post("/", response_model=StudentResponse, status_code=status.HTTP_201_CREATED)
 def create_student(student_data: StudentCreate, user_data: dict = Depends(require_user_access)):
