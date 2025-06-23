@@ -25,20 +25,21 @@ def fetch_students(
         return get_students_by_year(year_id)
     return get_all_students()
 
-@router.get("/student-id/{student_id}", response_model=StudentResponse)
-def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_access)):
-    """Retrieve a student by ID."""
-    student = get_student_by_student_id(student_id)
-    if not student:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Student with id {student_id} not found.")
-    return student
-
-@router.get("/user-id/{user_id}", response_model=StudentResponse)
+@router.get("/user/{user_id}", response_model=StudentResponse)
 def fetch_students_by_user_id(user_id: int, user_data: dict = Depends(require_user_access)):
     """Retrieve student by user ID."""
     student = get_student_by_user_id(user_id=user_id)
     if not student:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"No student found for user with id {user_id}.")
+    return student
+
+
+@router.get("/{student_id}", response_model=StudentResponse)
+def fetch_student_by_id(student_id: int, user_data: dict = Depends(require_user_access)):
+    """Retrieve a student by ID."""
+    student = get_student_by_student_id(student_id)
+    if not student:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Student with id {student_id} not found.")
     return student
 
 
