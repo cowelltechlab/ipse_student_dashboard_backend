@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from application.features.students.routes import router as student_router
 from application.features.classes.routes import router as classes_router
-from application.features.studentProfile.routes import router as  profile_router
+from application.features.student_profile.routes import router as  profile_router
 from application.features.versionHistory.routes import router as versions_router
 from application.features.auth.routes import router as auth_router
 from application.features.roles.routes import router as roles_router
