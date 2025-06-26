@@ -366,3 +366,24 @@ def update_student_profile_pic(student_id: int, profile_pic_url: str):
         raise e
     finally:
         conn.close()
+
+
+def get_student_profile_picture(student_id: int):
+    conn = get_sql_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            SELECT profile_picture_url
+            FROM Students
+            WHERE id = ?
+            """
+            cursor.execute(query, (student_id,))
+            result = cursor.fetchone()
+            if result:
+                return {"student_id": student_id, "profile_picture_url": result[0]}
+            else:
+                return None
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()

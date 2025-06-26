@@ -45,3 +45,7 @@ class StudentResponse(StudentBase):
 
     class Config:
         orm_mode = True
+
+class StudentProfilePictureResponse(BaseModel):
+    student_id: int
+    profile_picture_url: Optional[str]
