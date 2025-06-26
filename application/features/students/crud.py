@@ -367,7 +367,11 @@ def update_student_profile_pic(student_id: int, profile_pic_url: str):
     finally:
         conn.close()
 
-
+''' 
+*** GET STUDENT PROFILE PICTURE *** 
+Get a student's profile picture url from Student Record
+Based on id (Student_id)
+'''
 def get_student_profile_picture(student_id: int):
     conn = get_sql_db_connection()
     try:
