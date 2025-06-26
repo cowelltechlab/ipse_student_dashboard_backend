@@ -37,11 +37,14 @@ class StudentUpdate(BaseModel):
     active_status: Optional[bool] = True
 
 class StudentResponse(StudentBase):
-    """Schema for returning a student record."""
-
     id: int
+    first_name: str
+    last_name: str
+    reading_level: int
+    writing_level: int
     active_status: Optional[bool] = None
     year_name: str
+    profile_picture_url: Optional[str] = None  
 
     class Config:
         orm_mode = True
