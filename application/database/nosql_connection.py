@@ -9,3 +9,9 @@ def get_cosmos_db_connection():
     key = os.getenv("COSMOS_KEY")
     client = CosmosClient(endpoint, key)
     return client
+
+def get_container():
+    client = get_cosmos_db_connection()
+    database = client.get_database_client("ai-prompt-storage")
+    container = database.get_container_client("ai-assignment-versions")
+    return container
