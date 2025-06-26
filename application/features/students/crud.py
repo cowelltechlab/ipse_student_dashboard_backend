@@ -265,8 +265,35 @@ def get_all_students():
 Fetch students in Students table based on ID
 Joins from Users table to retrieve the first and last name
 '''
-def get_student_by_id(student_id):
+def get_student_by_student_id(student_id):
     return fetch_by_id(TABLE_NAME, student_id)
+
+
+def get_student_by_user_id(user_id: int):
+    """Fetch a student record by user_id."""
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        SELECT s.id, s.user_id, s.year_id, y.name AS year_name,
+               s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
+               u.email, u.first_name, u.last_name, u.gt_email
+        FROM Students s
+        JOIN Users u ON s.user_id = u.id
+        JOIN Years y ON s.year_id = y.id
+        WHERE s.user_id = ?
+        """
+        cursor.execute(query, (user_id,))
+        record = cursor.fetchone()
+        if not record:
+            return None
+        column_names = [column[0] for column in cursor.description]
+        return dict(zip(column_names, record))
+    except pyodbc.Error as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
 
 ''' 
 *** POST STUDENT ENDPOINT *** 
