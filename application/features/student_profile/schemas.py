@@ -7,7 +7,8 @@ class StudentProfileBase(BaseModel):
     short_term_goals: str
     long_term_goals: str
     best_ways_to_help: List[str]
-    summaries: Dict[str, str]
+    summaries: Optional[Dict[str, str]] = None
+
 
 class StudentProfileCreate(StudentProfileBase):
     student_id: int

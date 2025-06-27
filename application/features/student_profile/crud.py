@@ -1,6 +1,7 @@
 from azure.cosmos import CosmosClient
 from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
 from application.database.nosql_connection import get_cosmos_db_connection  
+from uuid import uuid4
 
 DATABASE_NAME = "ai-prompt-storage"
 CONTAINER_NAME = "ai-student-profile"
@@ -11,7 +12,7 @@ container = db.get_container_client(CONTAINER_NAME)
 
 def create_profile(data: StudentProfileCreate):
     doc = data.dict()
-    doc["id"] = str(doc["student_id"])
+    doc["id"] = str(uuid4())
     response = container.create_item(body=doc)
     return response
 
