@@ -1,7 +1,7 @@
 from azure.cosmos import CosmosClient
 from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
 from application.database.nosql_connection import get_cosmos_db_connection  
-from application.features.gpt.crud import summarize_strengths, summarize_goals
+from application.features.gpt.crud import summarize_strengths, summarize_goals, generate_vision_statement
 from uuid import uuid4
 
 DATABASE_NAME = "ai-prompt-storage"
@@ -18,6 +18,7 @@ def create_profile(data: StudentProfileCreate):
         "strength_short": summarize_strengths(doc["strengths"]),
         "goals_short": summarize_goals(doc["short_term_goals"], doc["long_term_goals"])
     }
+    doc["vision"] = generate_vision_statement(str(doc))
     response = container.create_item(body=doc)
     return response
 
