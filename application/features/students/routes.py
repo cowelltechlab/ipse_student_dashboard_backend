@@ -1,6 +1,3 @@
-#  SQL pulling generic student information from Students table
-#  To be used, for example, in an admin's login page to view a list of all students 
-
 from http.client import HTTPException
 from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query
@@ -11,7 +8,6 @@ from application.features.students.schemas import StudentResponse, StudentCreate
 from application.features.students.crud import  get_students_by_year,  delete_student_records
 
 
-# router = APIRouter()
 ''' Prepend all student routes with /students and collect all student-relevant endpoints under Students tag in SwaggerUI'''
 router = APIRouter()
 
