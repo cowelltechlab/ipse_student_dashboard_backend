@@ -1,14 +1,16 @@
 
 
+import hashlib
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, Query, status, HTTPException
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
 from typing import List, Optional, Dict
+from application.database.mssql_connection import get_sql_db_connection
 from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
 from application.features.auth.permissions import require_admin_access, require_teacher_access
 from application.features.auth.schemas import RegisterUserRequest, UserResponse
-from application.features.users.crud import complete_user_invite, create_invited_user, get_all_users_with_roles
+from application.features.users.crud import complete_user_invite, create_invited_user, get_all_users_with_roles, get_user_id_from_invite_token
 
 import re
 
@@ -147,21 +149,31 @@ async def invite_user(
 
 
 @router.post("/complete-invite", status_code=200)
-async def complete_invite(data: CompleteInviteRequest):
-    """
-    Endpoint for invited user to complete account setup.
-    """
-    hashed_pw = hash_password(data.password)
+async def complete_invite(
+    token: str = Form(...),
+    first_name: str = Form(...),
+    last_name: str = Form(...),
+    password: str = Form(...),
+    profile_picture: UploadFile = File(...)
+):
+    from application.utils.blob_upload import upload_profile_picture
+    hashed_pw = hash_password(password)
+
+    user_id = get_user_id_from_invite_token(token)
+    if not user_id:
+        raise HTTPException(400, "Invalid or expired token")
+
+    blob_url = await upload_profile_picture(user_id, profile_picture)
 
     success = complete_user_invite(
-        token=data.token,
-        first_name=data.first_name,
-        last_name=data.last_name,
+        token=token,
+        first_name=first_name,
+        last_name=last_name,
         password_hash=hashed_pw,
-        profile_picture_url=data.profile_picture_url
+        profile_picture_url=blob_url,
     )
 
     if not success:
-        raise HTTPException(400, "Invalid or expired token")
+        raise HTTPException(400, "Failed to complete invite")
 
     return {"message": "Account setup complete"}

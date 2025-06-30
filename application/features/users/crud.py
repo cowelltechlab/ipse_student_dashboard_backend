@@ -103,6 +103,30 @@ def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> D
         conn.close()
 
 
+
+def get_user_id_from_invite_token(token: str) -> Optional[int]:
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT u.id
+            FROM AccountInvites ai
+            JOIN Users u ON ai.user_id = u.id
+            WHERE ai.token_hash = ? AND ai.expires_at > GETDATE() AND ai.used_at IS NULL
+        """, (token_hash,))
+
+        record = cursor.fetchone()
+        return record[0] if record else None
+
+    except pyodbc.Error as e:
+        print(f"Error fetching user from token: {str(e)}")
+        return None
+    finally:
+        conn.close()
+
+
 def complete_user_invite(token: str, first_name: str, last_name: str, password_hash: str, profile_picture_url: Optional[str]) -> bool:
     token_hash = hashlib.sha256(token.encode()).hexdigest()
     conn = get_sql_db_connection()
