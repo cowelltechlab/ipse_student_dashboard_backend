@@ -9,7 +9,7 @@ class InviteUserRequest(BaseModel):
 
 class CompleteInviteRequest(BaseModel):
     token: str
-    first_name: str
-    last_name: str
+    first_name: Optional[str]
+    last_name: Optional[str]
     password: str
     profile_picture_url: Optional[str]

@@ -73,7 +73,7 @@ def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> D
             OUTPUT INSERTED.id
             VALUES (?, ?, 0, ?)
             """,
-            (email, school_email, datetime.now())
+            (email, school_email, datetime.datetime.now())
         )
         user_id = cursor.fetchone()[0]
 
@@ -84,7 +84,7 @@ def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> D
 
         raw_token = token_urlsafe(32)
         token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-        expires = datetime.utcnow() + datetime.timedelta(days=3)
+        expires = datetime.datetime.utcnow() + datetime.timedelta(days=3)
 
         cursor.execute(
             "INSERT INTO AccountInvites (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
