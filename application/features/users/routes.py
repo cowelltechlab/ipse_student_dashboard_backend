@@ -125,7 +125,7 @@ async def invite_user(
     """
     Admin invites a new user to complete their account setup.
     """
-    email = request_data.google_email or request_data.school_email
+    email = request_data.google_email
 
     if get_user_by_email(email):
         raise HTTPException(409, "A user with this email already exists.")
