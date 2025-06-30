@@ -1,5 +1,7 @@
 
 
+import os
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, Query, status, HTTPException
 from typing import List, Optional, Dict
 from application.features.auth.auth_helpers import hash_password
@@ -11,6 +13,9 @@ from application.features.users.crud import complete_user_invite, create_invited
 import re
 
 from application.features.users.schemas import CompleteInviteRequest, InviteUserRequest
+from application.services.email_sender import send_invite_email
+
+load_dotenv()
 
 router = APIRouter()
 
@@ -131,12 +136,11 @@ async def invite_user(
         raise HTTPException(500, "Failed to create invited user")
 
     token = result["token"]
-    invite_url = f"https://your-frontend.com/complete-invite?token={token}"
+    invite_url = f"{os.getenv('FRONTEND_BASE_URL')}/complete-invite?token={token}"
 
-    send_email(
-        to=email,
-        subject="You're Invited!",
-        body=f"Welcome! Complete your setup here: {invite_url}"
+    send_invite_email(
+        to_email=email,
+        invite_url=invite_url
     )
 
     return {"message": f"Invite sent to {email}"}
