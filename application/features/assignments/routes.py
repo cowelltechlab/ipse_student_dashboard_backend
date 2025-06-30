@@ -1,7 +1,8 @@
 import datetime
 from http.client import HTTPException
-from typing import List, Optional
-from fastapi import File, Form, HTTPException, APIRouter, Depends, UploadFile, status, Query, Body
+from typing import List
+from fastapi import File, Form, HTTPException, APIRouter, UploadFile, status, Body
+
 
 from application.features.assignments.schemas import AssignmentCreate, AssignmentListResponse , AssignmentDetailResponse, AssignmentUpdate 
 from application.features.assignments.crud import get_assignments_by_id, get_all_assignments, add_assignment, update_assignment
