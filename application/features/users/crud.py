@@ -163,3 +163,29 @@ def complete_user_invite(token: str, first_name: str, last_name: str, password_h
 
     finally:
         conn.close()
+
+
+def delete_user_db(user_id: int) -> bool:
+    """
+    Deletes a user by ID. Returns True if successful, False otherwise.
+    
+    :param user_id: ID of the user to delete
+    :type user_id: int
+    :return: True if deletion was successful, False otherwise
+    :rtype: bool
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("DELETE FROM Users WHERE id = ?", (user_id,))
+        conn.commit()
+        return True
+
+    except pyodbc.Error as e:
+        print(f"Error deleting user: {str(e)}")
+        conn.rollback()
+        return False
+
+    finally:
+        conn.close()

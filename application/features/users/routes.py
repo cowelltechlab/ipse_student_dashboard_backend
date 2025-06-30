@@ -10,7 +10,7 @@ from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
 from application.features.auth.permissions import require_admin_access, require_teacher_access
 from application.features.auth.schemas import RegisterUserRequest, UserResponse
-from application.features.users.crud import complete_user_invite, create_invited_user, get_all_users_with_roles, get_user_id_from_invite_token
+from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token
 
 import re
 
@@ -117,8 +117,6 @@ async def get_users(
 #     )
 
 
-router = APIRouter()
-
 @router.post("/invite", status_code=status.HTTP_201_CREATED)
 async def invite_user(
     request_data: InviteUserRequest,
@@ -177,3 +175,24 @@ async def complete_invite(
         raise HTTPException(400, "Failed to complete invite")
 
     return {"message": "Account setup complete"}
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: int,
+    user_data: dict = Depends(require_admin_access)
+):
+    """
+    Deletes a user by ID. Only accessible to admins.
+    """
+    
+    result = delete_user_db(user_id)
+
+    if not result:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"User with ID {user_id} not found."
+        )
+    
+    return {"message": f"User with ID {user_id} deleted successfully."}
+
