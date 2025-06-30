@@ -1,3 +1,6 @@
+import datetime
+import hashlib
+from secrets import token_urlsafe
 from typing import List, Dict, Optional
 from application.database.mssql_connection import get_sql_db_connection
 import pyodbc
@@ -54,5 +57,85 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
     except pyodbc.Error as e:
         print(f"Error fetching users: {str(e)}")
         return []
+    finally:
+        conn.close()
+
+
+
+def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> Dict:
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            INSERT INTO Users (email, gt_email, is_active, created_at)
+            OUTPUT INSERTED.id
+            VALUES (?, ?, 0, ?)
+            """,
+            (email, school_email, datetime.now())
+        )
+        user_id = cursor.fetchone()[0]
+
+        cursor.executemany(
+            "INSERT INTO UserRoles (user_id, role_id) VALUES (?, ?)",
+            [(user_id, rid) for rid in role_ids]
+        )
+
+        raw_token = token_urlsafe(32)
+        token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+        expires = datetime.utcnow() + datetime.timedelta(days=3)
+
+        cursor.execute(
+            "INSERT INTO AccountInvites (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+            (user_id, token_hash, expires)
+        )
+
+        conn.commit()
+        return {"user_id": user_id, "token": raw_token}
+
+    except pyodbc.Error as e:
+        print(f"Error creating invited user: {str(e)}")
+        conn.rollback()
+        return {}
+
+    finally:
+        conn.close()
+
+
+def complete_user_invite(token: str, first_name: str, last_name: str, password_hash: str, profile_picture_url: Optional[str]) -> bool:
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT ai.id, u.id AS user_id
+            FROM AccountInvites ai
+            JOIN Users u ON ai.user_id = u.id
+            WHERE ai.token_hash = ? AND ai.expires_at > GETDATE() AND ai.used_at IS NULL
+        """, (token_hash,))
+
+        record = cursor.fetchone()
+        if not record:
+            return False
+
+        invite_id, user_id = record
+
+        cursor.execute("""
+            UPDATE Users SET
+                first_name = ?, last_name = ?, password_hash = ?, profile_picture_url = ?, is_active = 1
+            WHERE id = ?
+        """, (first_name, last_name, password_hash, profile_picture_url, user_id))
+
+        cursor.execute("UPDATE AccountInvites SET used_at = GETDATE() WHERE id = ?", (invite_id,))
+        conn.commit()
+        return True
+
+    except pyodbc.Error as e:
+        print(f"Error completing user invite: {str(e)}")
+        conn.rollback()
+        return False
+
     finally:
         conn.close()

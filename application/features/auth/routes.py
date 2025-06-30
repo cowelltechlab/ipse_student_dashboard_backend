@@ -4,38 +4,32 @@ Sources:
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
 - Google Gemini
 """
-from fastapi import HTTPException, APIRouter, Depends, status
+from fastapi import HTTPException, APIRouter, Depends
 from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import create_jwt_token
 from application.features.auth.crud import (
-    create_user,
     get_user_email_by_id, 
     get_refresh_token_details, 
     get_user_role_names, 
     get_user_by_email,
     store_refresh_token,
     delete_refresh_token,
-    get_all_role_ids
 )
-from typing import Dict, Optional
+from typing import Dict
 from application.features.auth.auth_helpers import (
-    hash_password, 
     validate_user_email_login
 )
 from datetime import datetime
 from application.features.auth.schemas import (
-    RegisterUserRequest, 
     UserLogin, 
     TokenResponse, 
     UserResponse
 )
 from application.features.auth.permissions import (
-    require_admin_access,  
     require_user_access
 )
-from application.database.mssql_crud_helpers import fetch_all
-import re
+
 
 
 # This should include a way to log in through Google and generic username/password
@@ -248,75 +242,5 @@ async def get_current_user(
         first_name=user["first_name"],
         last_name=user["last_name"],
         school_email=email,
-    )
-
-
-@router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)
-async def register_new_user(
-    request_data: RegisterUserRequest,
-    user_data: dict = Depends(require_admin_access)
-):
-    """
-    Add a user to the database. Must include identifying information and a 
-    password. All information is expected to be inputted by an administrator. 
-    The password is hashed before being added to the database. Roles associated
-    with the new user must be passed in as IDs.
-    """
-    # Ensure role_ids all exist in database
-    all_roles = set(get_all_role_ids())
-    if not set(request_data.role_ids).issubset(all_roles):
-        bad_ids = set(request_data.role_ids).difference(all_roles)
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Invalid role IDs: {bad_ids}"
-        )
-
-    # Check email formatting 
-    EMAIL_REGEX = re.compile(
-        r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-    )
-
-    if not request_data.school_email.endswith(".edu") or \
-        not EMAIL_REGEX.fullmatch(request_data.school_email):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid School email format."
-        )
-
-    if request_data.google_email and \
-        (not request_data.google_email.endswith("@gmail.com") or \
-         not EMAIL_REGEX.fullmatch(request_data.google_email)):
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid Google email format."
-        )
-    
-    # Hash password
-    hashed_password = hash_password(request_data.password)
-
-    # Create user and retrieve ID
-    new_user = create_user(
-        request_data.first_name,
-        request_data.last_name,
-        request_data.school_email,
-        hashed_password,
-        request_data.role_ids,
-        request_data.google_email
-    )
-    
-    if not new_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Error creating new user"
-        )
-    
-    return UserResponse(
-        id=new_user["id"],
-        email=new_user["email"],
-        school_email=new_user["school_email"],
-        first_name=new_user["first_name"],
-        last_name=new_user["last_name"],
-        roles=get_user_role_names(new_user["id"]),
-        role_ids=new_user["role_ids"] if "role_ids" in new_user else None
     )
 
