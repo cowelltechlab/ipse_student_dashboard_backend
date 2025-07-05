@@ -13,7 +13,8 @@ def get_all_tutor_students():
                 ts.student_id,
                 CONCAT(su.first_name, ' ', su.last_name) AS student_name,
                 su.email AS student_email,
-                y.name AS year_name
+                s.year_id AS student_year_id,
+                y.name AS student_year
             FROM TutorStudents ts
             JOIN Users tu ON ts.user_id = tu.id
             JOIN Students s ON ts.student_id = s.id
@@ -24,12 +25,14 @@ def get_all_tutor_students():
         rows = cursor.fetchall()
         if not rows:
             return []
-        
-        tutor_students = []
-        for row in rows:
-            tutor_students.append(dict(zip([col[0] for col in cursor.description], row)))
+
+        tutor_students = [
+            dict(zip([col[0] for col in cursor.description], row))
+            for row in rows
+        ]
 
         return tutor_students
+
 
 def get_students_by_tutor(tutor_id: int):
     conn = get_sql_db_connection()
@@ -43,7 +46,8 @@ def get_students_by_tutor(tutor_id: int):
                 ts.student_id,
                 CONCAT(su.first_name, ' ', su.last_name) AS student_name,
                 su.email AS student_email,
-                y.name AS year_name
+                s.year_id AS student_year_id,
+                y.name AS student_year
             FROM TutorStudents ts
             JOIN Users tu ON ts.user_id = tu.id
             JOIN Students s ON ts.student_id = s.id
@@ -51,7 +55,11 @@ def get_students_by_tutor(tutor_id: int):
             JOIN Years y ON s.year_id = y.id
             WHERE ts.user_id = ?
         """, (tutor_id,))
-        return [dict(zip([col[0] for col in cursor.description], row)) for row in cursor.fetchall()]
+        return [
+            dict(zip([col[0] for col in cursor.description], row))
+            for row in cursor.fetchall()
+        ]
+
 
 def add_tutor_student(user_id: int, student_id: int):
     conn = get_sql_db_connection()

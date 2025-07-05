@@ -139,11 +139,11 @@ def create_record(data):
             "email": data["email"],
             "first_name": data.get("first_name"),
             "last_name": data.get("last_name"),
-            "year_name": year_name,  # <-- Add this
+            "year_name": year_name,  
             "reading_level": data.get("reading_level"),
             "writing_level": data.get("writing_level"),
             "profile_picture_url": data.get("profile_picture_url"),
-            "active_status": True  # Optional: if you want to include this
+            "active_status": True  
         }
 
     except pyodbc.Error as e:

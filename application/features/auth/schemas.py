@@ -15,12 +15,16 @@ class TokenResponse(BaseModel):
 
 class UserResponse(BaseModel):
     id: int
-    first_name: str
-    last_name: str
-    school_email: str
-    email: Optional[str]
+
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    school_email: Optional[str] = None
+    email: Optional[str] = None
     roles: Optional[List[str]] = None
     role_ids: Optional[List[int]] = None
+    profile_picture_url: Optional[str] = None
+    is_active: Optional[bool] = None
+
 
 
 
