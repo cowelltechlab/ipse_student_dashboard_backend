@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict
+from typing import List, Optional
 from datetime import datetime
-import uuid
 
 class Rating(BaseModel):
     difficulty: str
@@ -18,14 +17,22 @@ class AssignmentVersionBase(BaseModel):
     version_number: int
     modifier_id: int  
     date_modified: datetime
-    content: str
-    udl_reasons: UDLReasons
-    rating: Rating
-    finalized: bool
-    starred: bool
+    content: Optional[str] = None
+    udl_reasons: Optional[UDLReasons] = None
+    rating: Optional[Rating] = None
+    finalized: Optional[bool] = False
+    starred: Optional[bool] = False
 
 class AssignmentVersionCreate(AssignmentVersionBase):
     pass
 
 class AssignmentVersionResponse(AssignmentVersionBase):
     id: str
+
+class AssignmentVersionUpdate(BaseModel):
+    content: Optional[str] = None
+    udl_reasons: Optional[UDLReasons] = None
+    rating: Optional[Rating] = None
+    finalized: Optional[bool] = None
+    starred: Optional[bool] = None
+    date_modified: Optional[datetime] = None
