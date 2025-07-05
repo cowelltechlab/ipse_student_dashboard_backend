@@ -155,7 +155,8 @@ async def complete_invite(
     first_name: str = Form(...),
     last_name: str = Form(...),
     password: str = Form(...),
-    profile_picture: UploadFile = File(...)
+    profile_picture: Optional[UploadFile] = File(None),
+    existing_blob_url: Optional[str] = Form(None),
 ):
     from application.utils.blob_upload import upload_profile_picture
     hashed_pw = hash_password(password)
@@ -164,7 +165,13 @@ async def complete_invite(
     if not user_id:
         raise HTTPException(400, "Invalid or expired token")
 
-    blob_url = await upload_profile_picture(user_id, profile_picture)
+    # Handle profile picture upload or use provided URL
+    if profile_picture:
+        blob_url = await upload_profile_picture(user_id, profile_picture)
+    elif existing_blob_url:
+        blob_url = existing_blob_url
+    else:
+        blob_url = None 
 
     success = complete_user_invite(
         token=token,
