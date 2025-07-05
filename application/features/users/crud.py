@@ -9,7 +9,7 @@ import pyodbc
 def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
     """
     Fetches all users and their associated roles. Optionally filters by role_id.
-    
+
     :param role_id: Optional role ID to filter users by
     :type role_id: Optional[int]
     :return: List of user records with roles and role_ids
@@ -21,7 +21,7 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
     try:
         if role_id is not None:
             query = """
-                SELECT u.id, u.first_name, u.last_name, u.email, u.gt_email
+                SELECT u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, u.is_active
                 FROM Users u
                 JOIN UserRoles ur ON u.id = ur.user_id
                 WHERE ur.role_id = ?
@@ -29,7 +29,7 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
             cursor.execute(query, (role_id,))
         else:
             query = """
-                SELECT u.id, u.first_name, u.last_name, u.email, u.gt_email
+                SELECT u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, u.is_active
                 FROM Users u
             """
             cursor.execute(query)

@@ -265,6 +265,33 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
     finally:
         conn.close()
 
+def get_user_profile_picture_url(user_id: int) -> Optional[str]:
+    """
+    Retrieves user's profile picture URL from their DB record via user ID.
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        SELECT u.profile_picture_url
+        FROM Users u
+        WHERE u.id = ?
+        """
+        cursor.execute(query, (user_id,))
+
+        record = cursor.fetchone()
+        if not record:
+            return None
+
+        return record[0]
+
+    except pyodbc.Error as e:
+        # TODO: integrate into future logging functionality
+        print(f"Error: {str(e)}")
+        return None
+    finally:
+        conn.close()
 
 def get_user_role_names(user_id: int) -> List[str]:
     """

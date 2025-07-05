@@ -3,14 +3,20 @@ import json
 
 SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-# Your config
+# Load your OAuth2 client secret JSON (downloaded from Google Cloud Console)
 with open("google_secret.json") as f:
     config = json.load(f)
 
 flow = InstalledAppFlow.from_client_config({"installed": config}, SCOPES)
-creds = flow.run_local_server(port=8000)
 
-# Save refresh token (you'll use this in your backend)
+# Force the flow to return a refresh token
+creds = flow.run_local_server(
+    port=8000,
+    access_type='offline',
+    prompt='consent'
+)
+
+# Save the refresh token and other required fields
 with open("gmail_refresh_token.json", "w") as f:
     json.dump({
         "refresh_token": creds.refresh_token,

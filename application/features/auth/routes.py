@@ -10,7 +10,8 @@ from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import create_jwt_token
 from application.features.auth.crud import (
     get_user_email_by_id, 
-    get_refresh_token_details, 
+    get_refresh_token_details,
+    get_user_profile_picture_url, 
     get_user_role_names, 
     get_user_by_email,
     store_refresh_token,
@@ -73,11 +74,14 @@ async def email_login(user_credentials: UserLogin) -> TokenResponse:
             detail="User email could not be retrieved after authentication."
         )
     
+    profile_picture_url = get_user_profile_picture_url(user_id)
+    
     access_token = create_jwt_token(
         {
             "user_id": user_id,
             "email": email,
-            "roles": roles
+            "roles": roles,
+            "profile_picture_url": profile_picture_url
         },
         expires_delta=15
     )
@@ -139,11 +143,14 @@ async def refresh_access_token(refresh_token: str) -> TokenResponse:
     
     roles = get_user_role_names(user_id)
 
+    profile_picture_url = get_user_profile_picture_url(user_id)
+
     new_access_token = create_jwt_token(
         {
             "user_id": user_id,
             "email": email,
-            "roles": roles
+            "roles": roles,
+            "profile_picture_url": profile_picture_url
         }
     )
 
@@ -185,14 +192,19 @@ async def google_auth_callback(code: str) -> TokenResponse:
                 status_code=403, 
                 detail="User does not exist in system."
             )
+
         
         user_id = user["id"]
         roles = get_user_role_names(user_id)
+
+        profile_picture_url = get_user_profile_picture_url(user_id)
+
         access_token = create_jwt_token(
             {
                 "user_id": user_id,
                 "email": email,
-                "roles": roles
+                "roles": roles,
+                "profile_picture_url": profile_picture_url
             }
         )
         
@@ -221,6 +233,7 @@ async def get_current_user(
     email = user_data.get("email")
     id = user_data.get("user_id")
     roles = user_data.get("roles")
+    profile_picture_url = user_data.get("profile_picture_url")
 
     if not email or not id or not roles:
         raise HTTPException(
@@ -242,5 +255,6 @@ async def get_current_user(
         first_name=user["first_name"],
         last_name=user["last_name"],
         school_email=email,
+        profile_picture_url=profile_picture_url
     )
 

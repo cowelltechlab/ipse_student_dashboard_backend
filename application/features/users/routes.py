@@ -39,7 +39,9 @@ async def get_users(
             email=user["email"],
             school_email=user["gt_email"],
             roles=user.get("roles"),
-            role_ids=user.get("role_ids")
+            role_ids=user.get("role_ids"),
+            profile_picture_url=user.get("profile_picture_url"),
+            is_active=user.get("is_active", True),
         )
         for user in users
     ]
