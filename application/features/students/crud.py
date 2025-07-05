@@ -23,6 +23,7 @@ def fetch_all_students_with_names():
             users.first_name,
             users.last_name,
             users.email,
+            users.profile_picture_url,
             years.name AS year_name
         FROM students
         JOIN users ON students.user_id = users.id
@@ -33,14 +34,14 @@ def fetch_all_students_with_names():
         return [dict(zip([column[0] for column in cursor.description], row)) for row in rows]
 
 def fetch_by_id(table_name, record_id):
-    """Generic function to fetch a single student record by ID, with joins for user and year name."""
+    """Fetch a single student record by student ID, with user and year joins."""
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
     try:
         query = """
         SELECT s.id, s.user_id, s.reading_level, s.writing_level, s.active_status,
-               u.first_name, u.last_name,
+               u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url,
                y.name AS year_name
         FROM students s
         JOIN users u ON s.user_id = u.id
@@ -61,6 +62,7 @@ def fetch_by_id(table_name, record_id):
     finally:
         conn.close()
 
+
 def get_students_by_year(year_id: int):
     conn = get_sql_db_connection()
     with conn.cursor() as cursor:
@@ -74,6 +76,7 @@ def get_students_by_year(year_id: int):
             users.first_name,
             users.last_name,
             users.email,
+            users.profile_picture_url,
             years.name AS year_name
         FROM students
         JOIN users ON students.user_id = users.id
@@ -364,5 +367,30 @@ def update_student_profile_pic(student_id: int, profile_pic_url: str):
     except Exception as e:
         conn.rollback()
         raise e
+    finally:
+        conn.close()
+
+''' 
+*** GET STUDENT PROFILE PICTURE *** 
+Get a student's profile picture url from Student Record
+Based on id (Student_id)
+'''
+def get_student_profile_picture(student_id: int):
+    conn = get_sql_db_connection()
+    try:
+        with conn.cursor() as cursor:
+            query = """
+            SELECT profile_picture_url
+            FROM Students
+            WHERE id = ?
+            """
+            cursor.execute(query, (student_id,))
+            result = cursor.fetchone()
+            if result:
+                return {"student_id": student_id, "profile_picture_url": result[0]}
+            else:
+                return None
+    except Exception as e:
+        return {"error": str(e)}
     finally:
         conn.close()

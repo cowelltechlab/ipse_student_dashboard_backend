@@ -6,7 +6,8 @@ from application.features.auth.permissions import require_user_access
 from application.features.students.crud import get_all_students, add_student, get_student_by_student_id, get_student_by_user_id, update_student as crud_update_student
 from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate 
 from application.features.students.crud import  get_students_by_year,  delete_student_records
-
+from application.features.students.crud import get_student_profile_picture
+from application.features.students.schemas import StudentProfilePictureResponse
 
 ''' Prepend all student routes with /students and collect all student-relevant endpoints under Students tag in SwaggerUI'''
 router = APIRouter()
@@ -64,3 +65,14 @@ def delete_student(student_id: int, user_data: dict = Depends(require_user_acces
     if "error" in result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=result["error"])
     return {"message": f"Student with id {student_id} deleted successfully."}
+
+@router.get("/{student_id}/profile-picture", response_model=StudentProfilePictureResponse)
+def fetch_student_profile_picture(student_id: int, user_data: dict = Depends(require_user_access)):
+    """Fetch only the profile picture URL of a student."""
+    result = get_student_profile_picture(student_id)
+    if not result or "error" in result:
+        raise HTTPException(
+            status_code=404, 
+            detail=result.get("error", f"Student with id {student_id} not found.")
+        )
+    return result

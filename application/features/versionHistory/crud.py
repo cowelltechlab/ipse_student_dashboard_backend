@@ -4,13 +4,13 @@ from uuid import uuid4
 from application.features.versionHistory.schemas import AssignmentVersionCreate
 from datetime import datetime
 from azure.cosmos import PartitionKey
-from application.features.versionHistory.schemas import AssignmentVersionResponse
+from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
 from fastapi.responses import JSONResponse
 from azure.cosmos import exceptions
 
 def create_version(data: AssignmentVersionCreate, container):
     doc = data.model_dump()
-    doc["modifier_id"] = str(doc["modifier_id"])  # Convert to string if partition key is string
+    doc["modifier_id"] = str(doc["modifier_id"]) 
     if isinstance(doc.get("date_modified"), datetime):
         doc["date_modified"] = doc["date_modified"].isoformat()
     doc["id"] = str(uuid4())
@@ -87,3 +87,41 @@ def delete_version_by_assignment_version(container, assignment_id: str, version_
         raise HTTPException(status_code=404, detail="Document not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete version: {str(e)}")
+    
+def update_version(container, assignment_id: str, version_number: int, update_data: AssignmentVersionUpdate) -> AssignmentVersionResponse:
+    # 1. Find existing document
+    query = """
+    SELECT * FROM c
+    WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number
+    """
+    params = [
+        {"name": "@assignment_id", "value": assignment_id},
+        {"name": "@version_number", "value": version_number}
+    ]
+    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+
+    if not items:
+        raise HTTPException(status_code=404, detail="Version not found")
+
+    existing = items[0]
+    doc_id = existing["id"]
+    partition_key = existing["modifier_id"]
+
+    # 2. Update only fields present in update_data (exclude unset)
+    update_dict = update_data.dict(exclude_unset=True)
+
+    # 3. If date_modified present and datetime, convert to ISO string
+    if "date_modified" in update_dict and isinstance(update_dict["date_modified"], datetime):
+        update_dict["date_modified"] = update_dict["date_modified"].isoformat()
+
+    for k, v in update_dict.items():
+        existing[k] = v
+
+    try:
+        container.replace_item(item=doc_id, body=existing)
+        # Convert back modifier_id to int for response if needed
+        existing["modifier_id"] = int(existing["modifier_id"])
+        return AssignmentVersionResponse(**existing)
+    except exceptions.CosmosHttpResponseError as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update version: {str(e)}")
+
