@@ -14,6 +14,7 @@ class AssignmentCreate(BaseModel):
     title: str
     class_id: int
     content: str
+    assignment_type_id: int
     html_content: Optional[str] = None
     blob_url: Optional[str] = None
     source_format: Optional[str] = None
@@ -24,6 +25,7 @@ class AssignmentUpdate(BaseModel):
     title: Optional[str] = None
     class_id: Optional[int] = None
     content: Optional[str] = None
+    assignment_type_id: Optional[int] = None
     date_created: Optional[datetime] = None
 
 class AssignmentListResponse(AssignmentBase):

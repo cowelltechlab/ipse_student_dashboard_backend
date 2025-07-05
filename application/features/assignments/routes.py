@@ -43,6 +43,7 @@ async def upload_assignment_file(
     student_id: int = Form(...),
     title: str = Form(...),
     class_id: int = Form(...),
+    assignment_type_id: int = Form(...),
     file: UploadFile = File(...)
 ):
     # 1. Read file content once
@@ -60,6 +61,7 @@ async def upload_assignment_file(
         student_id=student_id,
         title=title,
         class_id=class_id,
+        assignment_type_id=assignment_type_id,
         content=content,
         html_content=html_content,
         blob_url=blob_url,
