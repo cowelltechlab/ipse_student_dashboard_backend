@@ -13,3 +13,10 @@ class CompleteInviteRequest(BaseModel):
     last_name: Optional[str]
     password: str
     profile_picture_url: Optional[str]
+
+class DefaultProfilePicture(BaseModel):
+    id: int
+    url: str
+    
+    class Config:
+        orm_mode = True

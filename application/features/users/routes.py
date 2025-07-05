@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
 from typing import List, Optional, Dict
 from application.database.mssql_connection import get_sql_db_connection
+from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
 from application.features.auth.permissions import require_admin_access, require_teacher_access
@@ -14,7 +15,7 @@ from application.features.users.crud import complete_user_invite, create_invited
 
 import re
 
-from application.features.users.schemas import CompleteInviteRequest, InviteUserRequest
+from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
 
 load_dotenv()
@@ -198,3 +199,13 @@ async def delete_user(
     
     return {"message": f"User with ID {user_id} deleted successfully."}
 
+
+@router.get("/profile-picture-defaults", response_model=List[DefaultProfilePicture])
+async def get_profile_picture_defaults():
+
+   default_profile_pictures = fetch_all("ProfilePictureDefaults")
+
+   return [
+       DefaultProfilePicture(id=p["id"], url=p["profile_picture_url"])
+       for p in default_profile_pictures
+   ]
