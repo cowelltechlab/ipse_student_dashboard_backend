@@ -10,7 +10,7 @@ from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
 from application.features.auth.permissions import require_admin_access, require_teacher_access
-from application.features.auth.schemas import RegisterUserRequest, UserResponse
+from application.features.auth.schemas import RegisterUserRequest, StudentProfile, UserResponse
 from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token
 
 import re
@@ -32,6 +32,8 @@ async def get_users(
     """
     users = get_all_users_with_roles(role_id)
 
+    
+
     return [
         UserResponse(
             id=user["id"],
@@ -43,6 +45,12 @@ async def get_users(
             role_ids=user.get("role_ids"),
             profile_picture_url=user.get("profile_picture_url"),
             is_active=user.get("is_active", True),
+            profile_tag=user.get("profile_tag"),
+            
+            student_profile = StudentProfile(
+                student_id = user["student_id"],
+                year_name =  user["year_name"]
+            ) if "student_id" in user and "year_name" in user else None
         )
         for user in users
     ]

@@ -7,14 +7,6 @@ import pyodbc
 
 
 def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
-    """
-    Fetches all users and their associated roles. Optionally filters by role_id.
-
-    :param role_id: Optional role ID to filter users by
-    :type role_id: Optional[int]
-    :return: List of user records with roles and role_ids
-    :rtype: List[Dict]
-    """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
@@ -41,6 +33,7 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
         for user in user_dicts:
             uid = user["id"]
 
+            # Roles
             cursor.execute("""
                 SELECT r.id, r.role_name
                 FROM Roles r
@@ -48,9 +41,39 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
                 WHERE ur.user_id = ?
             """, (uid,))
             role_data = cursor.fetchall()
+            role_names = [r[1] for r in role_data]
+            role_ids = [r[0] for r in role_data]
 
-            user["roles"] = [r[1] for r in role_data]
-            user["role_ids"] = [r[0] for r in role_data]
+            user["roles"] = role_names
+            user["role_ids"] = role_ids
+
+            # Tags for home page display
+            # Default: No tag
+            tag = None
+
+            if not user.get("is_active", True):
+                tag = "Awaiting Activation"
+            elif "Peer Tutor" in role_names:
+                cursor.execute("""
+                    SELECT 1 FROM TutorStudents WHERE user_id = ?
+                """, (uid,))
+                if not cursor.fetchone():
+                    tag = "No Students Assigned"
+            elif "Student" in role_names:
+                cursor.execute("""
+                    SELECT s.id AS student_id, y.name AS year_name
+                    FROM Students s
+                    JOIN Years y ON s.year_id = y.id
+                    WHERE s.user_id = ?
+                """, (uid,))
+                row = cursor.fetchone()
+                if row:
+                    user["student_id"] = row[0]
+                    user["year_name"] = row[1]
+                else:
+                    tag = "Profile Incomplete"
+
+            user["profile_tag"] = tag
 
         return user_dicts
 
