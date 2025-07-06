@@ -13,9 +13,12 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
 
 
+class StudentProfile(BaseModel):
+    year_name: Optional[str] = None
+    student_id: Optional[int] = None
+
 class UserResponse(BaseModel):
     id: int
-
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     school_email: Optional[str] = None
@@ -25,7 +28,11 @@ class UserResponse(BaseModel):
     profile_picture_url: Optional[str] = None
     is_active: Optional[bool] = None
 
-
+    # Used in home page display
+    profile_tag: Optional[str] = None
+    
+    # Used only for students, for home page display / navigation
+    student_profile: Optional[StudentProfile] = None
 
 
 class RegisterUserRequest(BaseModel):
