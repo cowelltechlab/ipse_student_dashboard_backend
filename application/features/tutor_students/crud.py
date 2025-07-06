@@ -1,3 +1,4 @@
+from typing import List
 from application.database.mssql_connection import get_sql_db_connection
 
 
@@ -32,6 +33,47 @@ def get_all_tutor_students():
         ]
 
         return tutor_students
+
+
+def sync_tutor_students_relationships(tutor_id: int, new_student_ids: List[int]) -> dict:
+    conn = get_sql_db_connection()
+
+    with conn.cursor() as cursor:
+        # Step 1: Fetch current student IDs
+        cursor.execute("SELECT student_id FROM TutorStudents WHERE user_id = ?", (tutor_id,))
+        current_student_ids = {row[0] for row in cursor.fetchall()}
+
+        to_delete = current_student_ids - set(new_student_ids)
+        to_insert = set(new_student_ids) - current_student_ids
+
+        # Step 2: Delete removed relationships
+        if to_delete:
+            cursor.executemany(
+                "DELETE FROM TutorStudents WHERE user_id = ? AND student_id = ?",
+                [(tutor_id, sid) for sid in to_delete]
+            )
+
+        # Step 3: Add new relationships
+        inserted_ids = []
+        for sid in to_insert:
+            try:
+                cursor.execute("""
+                    INSERT INTO TutorStudents (user_id, student_id)
+                    OUTPUT INSERTED.id
+                    VALUES (?, ?)
+                """, (tutor_id, sid))
+                inserted_ids.append(cursor.fetchone()[0])
+            except Exception:
+                # Swallow duplicate or constraint errors
+                pass
+
+        conn.commit()
+
+        return {
+            "message": "Tutor-student relationships synced.",
+            "added_student_ids": list(to_insert),
+            "removed_student_ids": list(to_delete),
+        }
 
 
 def get_students_by_tutor(tutor_id: int):

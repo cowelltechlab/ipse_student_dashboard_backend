@@ -1,8 +1,13 @@
+from typing import List
 from pydantic import BaseModel
 
 class TutorStudentCreate(BaseModel):
     user_id: int       # Tutor user ID
     student_id: int
+
+class TutorStudentSyncRequest(BaseModel):
+    tutor_id: int
+    student_ids: List[int]
 
 class TutorStudentResponse(BaseModel):
     id: int
