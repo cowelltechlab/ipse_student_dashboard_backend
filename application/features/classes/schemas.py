@@ -14,6 +14,7 @@ class ClassesCreate(BaseModel):
     name: str
     term: Optional[str]
     type: Optional[str]
+    course_code: Optional[str]
     pass
 
 class ClassesUpdate(BaseModel):
@@ -21,6 +22,8 @@ class ClassesUpdate(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
     term: Optional[str] = None
+    course_code: Optional[str]
+
 
 class ClassesResponse(ClassesBase):
     """Schema for returning a class record."""
@@ -29,6 +32,8 @@ class ClassesResponse(ClassesBase):
     name: Optional[str]
     type: Optional[str]
     term: Optional[str]
+    course_code: Optional[str]
+
 
     class Config:
         orm_mode = True
