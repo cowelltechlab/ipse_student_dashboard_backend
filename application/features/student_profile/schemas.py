@@ -20,7 +20,7 @@ class StudentProfileUpdate(BaseModel):
     long_term_goals: Optional[str] = None
     best_ways_to_help: Optional[List[str]] = None
     summaries: Optional[Dict[str, str]] = None
-    ision: Optional[str] = None
+    vision: Optional[str] = None
 
 class StudentProfileResponse(StudentProfileCreate):
     id: str  # Cosmos document ID
