@@ -4,8 +4,20 @@ from typing import List
 from fastapi import File, Form, HTTPException, APIRouter, UploadFile, status, Body
 
 
-from application.features.assignments.schemas import AssignmentCreate, AssignmentListResponse , AssignmentDetailResponse, AssignmentUpdate 
-from application.features.assignments.crud import get_assignments_by_id, get_all_assignments, add_assignment, update_assignment
+from application.features.assignments.schemas import (
+    AssignmentCreate, 
+    AssignmentListResponse, 
+    AssignmentDetailResponse, 
+    AssignmentUpdate,
+    AssignmentTypeListResponse
+)
+from application.features.assignments.crud import (
+    get_all_assignment_types, 
+    get_assignments_by_id, 
+    get_all_assignments, 
+    add_assignment, 
+    update_assignment
+)
 from application.services.html_extractors import extract_html_from_file
 from application.services.upload_to_blob import upload_to_blob
 from application.services.text_extractors import extract_text_from_file
@@ -19,24 +31,6 @@ router = APIRouter()
 def fetch_assignments():
     """Retrieve all assignments"""
     return get_all_assignments()
-
-@router.get("/{assignment_id}", response_model= AssignmentDetailResponse)
-def fetch_assignment_by_id(
-    assignment_id: int,
-):
-    assignment_record = get_assignments_by_id(assignment_id)
-    if not assignment_record:
-        raise HTTPException(status_code=404, detail="Assignment not found")
-    return assignment_record
-
-@router.post("/", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
-def create_assignment(assignment_data: AssignmentCreate):
-    """Create a new assignment."""
-    created_assignment = add_assignment(assignment_data.dict())
-    if "error" in created_assignment:
-        print(f"Creation error: {created_assignment['error']}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_assignment["error"])
-    return created_assignment
 
 @router.post("/upload", response_model=AssignmentDetailResponse)
 async def upload_assignment_file(
@@ -67,6 +61,32 @@ async def upload_assignment_file(
         date_created=datetime.datetime.now(datetime.timezone.utc)
     )
     return create_assignment(assignment_data)
+
+
+@router.get(path="/types", response_model=List[AssignmentTypeListResponse])
+def fetch_assignment_types():
+    """Retrieve all assignment types"""
+    print("RECEIVED GET REQUEST: assignment-types")
+    return get_all_assignment_types()
+
+
+@router.get("/{assignment_id}", response_model= AssignmentDetailResponse)
+def fetch_assignment_by_id(
+    assignment_id: int,
+):
+    assignment_record = get_assignments_by_id(assignment_id)
+    if not assignment_record:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+    return assignment_record
+
+@router.post("/", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
+def create_assignment(assignment_data: AssignmentCreate):
+    """Create a new assignment."""
+    created_assignment = add_assignment(assignment_data.dict())
+    if "error" in created_assignment:
+        print(f"Creation error: {created_assignment['error']}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_assignment["error"])
+    return created_assignment
 
 
 @router.put("/{assignment_id}", response_model=AssignmentDetailResponse)

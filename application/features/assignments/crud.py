@@ -99,3 +99,9 @@ Update existing assignment in Assignments table
 '''
 def update_assignment(assignment_id, data):
     return update_record(TABLE_NAME, assignment_id, data)
+
+def get_all_assignment_types():
+    """ 
+    Fetch all types of assignments from AssigntmentTypes table 
+    """
+    return fetch_all(table_name="AssignmentTypes")

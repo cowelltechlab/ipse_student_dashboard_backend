@@ -46,3 +46,8 @@ class AssignmentDetailResponse(AssignmentBase):
 
     class Config:
         orm_mode = True
+
+
+class AssignmentTypeListResponse(BaseModel):
+    id: int
+    type: str
