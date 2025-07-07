@@ -9,9 +9,9 @@ from application.database.mssql_connection import get_sql_db_connection
 from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
-from application.features.auth.permissions import require_admin_access, require_teacher_access
+from application.features.auth.permissions import require_admin_access, require_teacher_access, require_user_access
 from application.features.auth.schemas import RegisterUserRequest, StudentProfile, UserResponse
-from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token
+from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token, get_user_with_roles_by_id
 
 import re
 
@@ -56,6 +56,32 @@ async def get_users(
     ]
 
 
+@router.get("/{user_id}", response_model=UserResponse)
+async def get_user_by_id(user_id: int, user_data: dict = Depends(require_teacher_access)):
+    """
+    Retrieves a user by ID
+    """
+    user = get_user_with_roles_by_id(user_id)
+
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return UserResponse(
+        id=user["id"],
+        first_name=user["first_name"],
+        last_name=user["last_name"],
+        email=user["email"],
+        school_email=user["gt_email"],
+        roles=user.get("roles"),
+        role_ids=user.get("role_ids"),
+        profile_picture_url=user.get("profile_picture_url"),
+        is_active=user.get("is_active", True),
+        profile_tag=user.get("profile_tag"),
+        student_profile=StudentProfile(
+            student_id=user["student_id"],
+            year_name=user["year_name"]
+        ) if "student_id" in user and "year_name" in user else None
+    )
 
 
 # @router.post("/register", status_code=status.HTTP_201_CREATED, response_model=UserResponse)

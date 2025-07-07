@@ -84,6 +84,75 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
         conn.close()
 
 
+def get_user_with_roles_by_id(user_id: int) -> Optional[Dict]:
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Fetch base user info
+        cursor.execute("""
+            SELECT u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, u.is_active
+            FROM Users u
+            WHERE u.id = ?
+        """, (user_id,))
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        column_names = [desc[0] for desc in cursor.description]
+        user = dict(zip(column_names, row))
+
+        # Fetch roles
+        cursor.execute("""
+            SELECT r.id, r.role_name
+            FROM Roles r
+            JOIN UserRoles ur ON r.id = ur.role_id
+            WHERE ur.user_id = ?
+        """, (user_id,))
+        role_data = cursor.fetchall()
+        role_names = [r[1] for r in role_data]
+        role_ids = [r[0] for r in role_data]
+
+        user["roles"] = role_names
+        user["role_ids"] = role_ids
+
+        # Profile tag logic
+        tag = None
+
+        if not user.get("is_active", True):
+            tag = "Awaiting Activation"
+        elif "Peer Tutor" in role_names:
+            cursor.execute("""
+                SELECT 1 FROM TutorStudents WHERE user_id = ?
+            """, (user_id,))
+            if not cursor.fetchone():
+                tag = "No Students Assigned"
+        elif "Student" in role_names:
+            cursor.execute("""
+                SELECT s.id AS student_id, y.name AS year_name
+                FROM Students s
+                JOIN Years y ON s.year_id = y.id
+                WHERE s.user_id = ?
+            """, (user_id,))
+            row = cursor.fetchone()
+            if row:
+                user["student_id"] = row[0]
+                user["year_name"] = row[1]
+            else:
+                tag = "Profile Incomplete"
+
+        user["profile_tag"] = tag
+
+        return user
+
+    except pyodbc.Error as e:
+        print(f"Error fetching user by ID: {str(e)}")
+        return None
+    finally:
+        conn.close()
+
+
 
 def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> Dict:
     conn = get_sql_db_connection()
