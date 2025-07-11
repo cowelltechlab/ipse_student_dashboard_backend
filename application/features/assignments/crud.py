@@ -1,13 +1,60 @@
 import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
+from application.database.nosql_connection import get_container
 from application.database.mssql_crud_helpers import (
     create_record, 
-    fetch_by_id, 
     update_record,
-    fetch_all
 )
+from datetime import datetime
 
 TABLE_NAME = "Assignments"
+def is_rating_meaningful(rating):
+    if not rating:
+        return False
+
+    difficulty = rating.get("difficulty", "")
+    best_changes = rating.get("best_changes", [])
+    disliked_changes = rating.get("disliked_changes", [])
+    return bool(difficulty.strip()) or bool(best_changes) or bool(disliked_changes)
+
+def analyze_assignment_versions(assignment_id: str):
+    container = get_container()
+
+    query = f"SELECT * FROM c WHERE c.assignment_id = '{assignment_id}'"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+
+    if not items:
+        return {
+            "finalized": False,
+            "rating_status": "Pending",
+            "date_modified": None
+        }
+
+    finalized = any(item.get("finalized") for item in items)
+    date_modified = max(
+        [datetime.fromisoformat(v["date_modified"]) for v in items if "date_modified" in v],
+        default=None
+    )
+
+    # Find the finalized version, if any
+    finalized_versions = [v for v in items if v.get("finalized")]
+    finalized_version = finalized_versions[0] if finalized_versions else None
+
+    # Check rating for finalized version
+    if finalized_version and is_rating_meaningful(finalized_version.get("rating")):
+        rating_status = "Rated"
+    else:
+        # Check any versions with meaningful rating
+        if any(is_rating_meaningful(v.get("rating")) for v in items):
+            rating_status = "Partially Rated"
+        else:
+            rating_status = "Pending"
+
+    return {
+        "finalized": finalized,
+        "rating_status": rating_status,
+        "date_modified": date_modified
+    }
 
 ''' 
 *** GET ASSIGNMENTS ENDPOINT *** 
@@ -15,7 +62,7 @@ Fetch all assignments in Assignments table
 '''
 def get_all_assignments():
     """
-    Fetch all assignments with student first and last names.
+    Fetch all assignments with student first and last names, and NoSQL-derived metadata.
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
@@ -39,7 +86,16 @@ def get_all_assignments():
         cursor.execute(query)
         records = cursor.fetchall()
         column_names = [column[0] for column in cursor.description]
-        return [dict(zip(column_names, row)) for row in records]
+
+        results = []
+        for row in records:
+            assignment = dict(zip(column_names, row))
+            nosql_fields = analyze_assignment_versions(str(assignment["id"]))
+            assignment.update(nosql_fields)
+            results.append(assignment)
+
+        return results
+
     except pyodbc.Error as e:
         return {"error": str(e)}
     finally:
@@ -49,14 +105,14 @@ def get_all_assignments():
 *** GET ASSIGNMENTS BY ID ENDPOINT *** 
 Fetch assignments in Assignments table based on ID
 '''
-def get_assignments_by_id(assignment_id):
+def get_assignments_by_id(assignment_id: int):
     """
-    Fetch a single assignment and include student first and last name.
+    Fetch a single assignment and include student first/last name and NoSQL metadata.
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
-
     try:
+        # 1. Fetch assignment from SQL
         query = """
         SELECT 
             a.id,
@@ -79,9 +135,46 @@ def get_assignments_by_id(assignment_id):
         record = cursor.fetchone()
         if not record:
             return None
+
         column_names = [column[0] for column in cursor.description]
-        return dict(zip(column_names, record))
-    except pyodbc.Error as e:
+        assignment_data = dict(zip(column_names, record))
+
+        # 2. Fetch all versions from CosmosDB
+        container = get_container()
+        query = f"SELECT * FROM c WHERE c.assignment_id = '{assignment_id}'"
+        versions = list(container.query_items(query=query, enable_cross_partition_query=True))
+
+        if versions:
+            # Sort by date_modified descending to get latest
+            versions_sorted = sorted(
+                versions,
+                key=lambda v: v.get("date_modified", ""),
+                reverse=True
+            )
+
+            assignment_data["date_modified"] = versions_sorted[0].get("date_modified")
+
+            # Finalized check
+            assignment_data["finalized"] = any(v.get("finalized") is True for v in versions)
+
+            # Rating status
+            ratings = [v.get("rating") for v in versions if v.get("rating")]
+            final_version = next((v for v in versions if v.get("finalized")), None)
+
+            if final_version and final_version.get("rating"):
+                assignment_data["rating_status"] = "Rated"
+            elif not ratings:
+                assignment_data["rating_status"] = "Pending"
+            else:
+                assignment_data["rating_status"] = "Partially Rated"
+        else:
+            assignment_data["finalized"] = False
+            assignment_data["rating_status"] = "Pending"
+            assignment_data["date_modified"] = None
+
+        return assignment_data
+
+    except Exception as e:
         return {"error": str(e)}
     finally:
         conn.close()

@@ -26,11 +26,17 @@ class AssignmentUpdate(BaseModel):
     content: Optional[str] = None
     date_created: Optional[datetime] = None
 
+# Updated Assignment List Response with issue#50 requirements
 class AssignmentListResponse(AssignmentBase):
     blob_url: Optional[str] = None
     source_format: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+
+    # Return NoSQL Fields
+    finalized: Optional[bool] = None
+    rating_status: Optional[str] = None
+    date_modified: Optional[datetime] = None
 
     class Config:
         orm_mode = True
@@ -43,6 +49,11 @@ class AssignmentDetailResponse(AssignmentBase):
     html_content: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+
+    # Return NoSQL Fields
+    finalized: Optional[bool] = None
+    rating_status: Optional[str] = None
+    date_modified: Optional[datetime] = None
 
     class Config:
         orm_mode = True
