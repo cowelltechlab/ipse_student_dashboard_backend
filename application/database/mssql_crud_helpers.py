@@ -85,6 +85,61 @@ def create_record(table_name, data):
         conn.close()
 
 
+def create_many_records(table_name, data_list):
+    """
+    Generic function to insert multiple new records into a metadata table and 
+    return the created records.
+    """
+    if not data_list:
+        return []
+    
+    conn = None 
+    cursor = None 
+
+    try:
+        conn = get_sql_db_connection()
+        cursor = conn.cursor()
+
+        columns = ", ".join(data_list[0].keys())
+        placeholders = ", ".join(["?" for _ in data_list[0]])
+
+        new_records = [tuple(data.values()) for data in data_list]
+
+        # Use OUTPUT INSERTED.* to fetch the newly inserted row
+        query = f"""
+        INSERT INTO {table_name} ({columns}) 
+        OUTPUT INSERTED.*
+        VALUES ({placeholders})
+        """
+
+        cursor.executemany(query, new_records)
+        inserted_records = cursor.fetchall()
+
+        # Get column names dynamically
+        column_names = [column[0] for column in cursor.description]
+        records_dicts = [dict(zip(column_names, row)) for row in inserted_records]
+
+        conn.commit()
+        return records_dicts # ✅ Return the inserted record instead of a message
+
+    except pyodbc.Error as e:
+        if conn:
+            conn.rollback()
+        return [{"error": str(e)}]
+    
+    except Exception as e:
+        if conn: 
+            conn.rollback()
+        return [{"error": f"An unexpected error occurred: {str(e)}"}]
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
+
+
 def update_record(table_name, record_id, update_data):
     """Generic function to update an existing metadata record and return the updated record."""
     conn = get_sql_db_connection()
