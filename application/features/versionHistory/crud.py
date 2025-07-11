@@ -166,3 +166,47 @@ def update_version(container, assignment_id: str, version_number: int, update_da
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update version: {str(e)}")
+    
+
+def finalize_by_id(container, assignment_version_id: str, finalized: bool) -> AssignmentVersionResponse:
+    # Step 1: Get the current document by ID
+    try:
+        items = list(container.query_items(
+            query="SELECT * FROM c WHERE c.id = @id",
+            parameters=[{"name": "@id", "value": assignment_version_id}],
+            enable_cross_partition_query=True
+        ))
+
+        if not items:
+            raise HTTPException(status_code=404, detail="Assignment version not found")
+
+        current = items[0]
+        assignment_id = current["assignment_id"]
+        current["finalized"] = finalized
+        container.replace_item(item=current["id"], body=current)
+
+        # Step 2: If setting to True, un-finalize all others
+        if finalized:
+            others = list(container.query_items(
+                query="""
+                SELECT * FROM c 
+                WHERE c.assignment_id = @assignment_id AND c.id != @id
+                """,
+                parameters=[
+                    {"name": "@assignment_id", "value": assignment_id},
+                    {"name": "@id", "value": assignment_version_id}
+                ],
+                enable_cross_partition_query=True
+            ))
+
+            for item in others:
+                if item.get("finalized") is True:
+                    item["finalized"] = False
+                    container.replace_item(item=item["id"], body=item)
+
+        # Return updated
+        current["modifier_id"] = int(current["modifier_id"])
+        return AssignmentVersionResponse(**current)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to finalize version: {str(e)}")
