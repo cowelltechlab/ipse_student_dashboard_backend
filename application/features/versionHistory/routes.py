@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from application.database.nosql_connection import get_container
 from application.features.versionHistory import crud
-from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate
+from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate, FinalizeVersionRequest
 from application.features.auth.permissions import require_user_access 
 
 router = APIRouter()
@@ -50,3 +50,11 @@ def update_version_route(
 ):
     container = get_container()
     return crud.update_version(container, assignment_id, version_number, update_data)
+
+@router.post("/assignment/finalize", response_model=AssignmentVersionResponse)
+def finalize_assignment_version(
+    request: FinalizeVersionRequest,
+    user_data: dict = Depends(require_user_access)
+):
+    container = get_container()
+    return crud.finalize_by_id(container, request.assignment_version_id, request.finalized)
