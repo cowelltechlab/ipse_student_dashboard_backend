@@ -56,13 +56,58 @@ def analyze_assignment_versions(assignment_id: str):
         "date_modified": date_modified
     }
 
+
+def get_all_assignment_versions_map():
+    """
+    Fetch all assignment versions from Cosmos DB and return a dict mapping assignment_id to its metadata.
+    """
+    container = get_container()
+
+    query = "SELECT * FROM c"
+    items = list(container.query_items(query=query, enable_cross_partition_query=True))
+
+    grouped = {}
+    for item in items:
+        aid = item.get("assignment_id")
+        if not aid:
+            continue
+        grouped.setdefault(aid, []).append(item)
+
+    result_map = {}
+
+    for assignment_id, versions in grouped.items():
+        finalized = any(v.get("finalized") for v in versions)
+        date_modified = max(
+            [datetime.fromisoformat(v["date_modified"]) for v in versions if "date_modified" in v],
+            default=None
+        )
+
+        finalized_versions = [v for v in versions if v.get("finalized")]
+        finalized_version = finalized_versions[0] if finalized_versions else None
+
+        if finalized_version and is_rating_meaningful(finalized_version.get("rating")):
+            rating_status = "Rated"
+        elif any(is_rating_meaningful(v.get("rating")) for v in versions):
+            rating_status = "Partially Rated"
+        else:
+            rating_status = "Pending"
+
+        result_map[str(assignment_id)] = {
+            "finalized": finalized,
+            "rating_status": rating_status,
+            "date_modified": date_modified
+        }
+
+    return result_map
+
+
 ''' 
 *** GET ASSIGNMENTS ENDPOINT *** 
 Fetch all assignments in Assignments table
 '''
 def get_all_assignments():
     """
-    Fetch all assignments with student first and last names, and NoSQL-derived metadata.
+    Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
     """
     conn = get_sql_db_connection()
     cursor = conn.cursor()
@@ -87,11 +132,17 @@ def get_all_assignments():
         records = cursor.fetchall()
         column_names = [column[0] for column in cursor.description]
 
+        assignment_versions = get_all_assignment_versions_map()
+
         results = []
         for row in records:
             assignment = dict(zip(column_names, row))
-            nosql_fields = analyze_assignment_versions(str(assignment["id"]))
-            assignment.update(nosql_fields)
+            version_data = assignment_versions.get(str(assignment["id"]), {
+                "finalized": False,
+                "rating_status": "Pending",
+                "date_modified": None
+            })
+            assignment.update(version_data)
             results.append(assignment)
 
         return results
