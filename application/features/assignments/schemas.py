@@ -20,6 +20,7 @@ class AssignmentCreate(BaseModel):
     blob_url: Optional[str] = None
     source_format: Optional[str] = None
     date_created: Optional[datetime] = None
+    assignment_type_id: Optional[int] = None
 
 
 class AssignmentUpdate(BaseModel):
@@ -47,6 +48,7 @@ class AssignmentDetailResponse(AssignmentBase):
     html_content: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    assignment_type_id: Optional[int] = None
 
     class Config:
         orm_mode = True

@@ -96,6 +96,7 @@ def create_many_records(table_name, data_list) -> List[Dict]:
     
     conn = None 
     cursor = None 
+    inserted_records = []
 
     try:
         conn = get_sql_db_connection()
@@ -104,8 +105,6 @@ def create_many_records(table_name, data_list) -> List[Dict]:
         columns = ", ".join(data_list[0].keys())
         placeholders = ", ".join(["?" for _ in data_list[0]])
 
-        new_records = [tuple(data.values()) for data in data_list]
-
         # Use OUTPUT INSERTED.* to fetch the newly inserted row
         query = f"""
         INSERT INTO {table_name} ({columns}) 
@@ -113,15 +112,17 @@ def create_many_records(table_name, data_list) -> List[Dict]:
         VALUES ({placeholders})
         """
 
-        cursor.executemany(query, new_records)
-        inserted_records = cursor.fetchall()
+        for i, data in enumerate(data_list):
+            cursor.execute(query, tuple(data.values()))
+            row = cursor.fetchone()
 
-        # Get column names dynamically
-        column_names = [column[0] for column in cursor.description]
-        records_dicts = [dict(zip(column_names, row)) for row in inserted_records]
+            if i == 0:  # Grab column names once
+                column_names = [desc[0] for desc in cursor.description]
+
+            inserted_records.append(dict(zip(column_names, row)))
 
         conn.commit()
-        return records_dicts # ✅ Return the inserted record instead of a message
+        return inserted_records # ✅ Return the inserted record instead of a message
 
     except pyodbc.Error as e:
         if conn:

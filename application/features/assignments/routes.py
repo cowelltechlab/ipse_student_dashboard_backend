@@ -37,23 +37,20 @@ async def upload_assignment_file(
     student_ids: List[int] = Form(...),
     title: str = Form(...),
     class_id: int = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    assignment_type_id: int = Form(...)
 ):
     # 1. Read file content once
-    print("Reading file content...")
     file_bytes = await file.read()
 
     # 2. Upload to Azure
-    print("Uploading to Azure...")
     blob_url = await upload_to_blob(file, file_bytes)
 
     # 3. Extract raw text and HTML
-    print("Extracting raw text and HTML...")
     content = await extract_text_from_file(file.filename, file_bytes)
     html_content = await extract_html_from_file(file.filename, file_bytes)
 
     # 4. Store in database
-    print("Storing in db...")
     assignment_data = [
         AssignmentCreate(
             student_id=student_id,
@@ -63,7 +60,8 @@ async def upload_assignment_file(
             html_content=html_content,
             blob_url=blob_url,
             source_format=file.filename.split(".")[-1].lower(),
-            date_created=datetime.datetime.now(datetime.timezone.utc)
+            date_created=datetime.datetime.now(datetime.timezone.utc),
+            assignment_type_id=assignment_type_id
         ) for student_id in student_ids
     ]
     return await create_assignment(assignment_data)
@@ -87,7 +85,7 @@ def fetch_assignment_by_id(
 @router.post("/", response_model=List[AssignmentDetailResponse], status_code=status.HTTP_201_CREATED)
 async def create_assignment(assignment_data: List[AssignmentCreate]) -> List:
     """Create a new assignment."""
-    assignment_data_dicts = [data.model_dump(mode='json') for data in assignment_data]
+    assignment_data_dicts = [data.model_dump() for data in assignment_data]
     created_assignment_records = await add_many_assignments(assignment_data_dicts)
     return created_assignment_records
 
