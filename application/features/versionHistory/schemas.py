@@ -36,3 +36,7 @@ class AssignmentVersionUpdate(BaseModel):
     finalized: Optional[bool] = None
     starred: Optional[bool] = None
     date_modified: Optional[datetime] = None
+
+class FinalizeVersionRequest(BaseModel):
+    assignment_version_id: str
+    finalized: bool
