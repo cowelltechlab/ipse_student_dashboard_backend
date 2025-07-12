@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
 from azure.cosmos import exceptions
 
-def create_version(data: AssignmentVersionCreate, container):
+def create_version(assignment_id:str, data: AssignmentVersionCreate, container):
     doc = data.model_dump()
 
     # Convert modifier_id to string for partition key
@@ -29,7 +29,7 @@ def create_version(data: AssignmentVersionCreate, container):
         WHERE c.assignment_id = @assignment_id AND c.modifier_id = @modifier_id
         """
         parameters = [
-            {"name": "@assignment_id", "value": doc["assignment_id"]},
+            {"name": "@assignment_id", "value": assignment_id},
             {"name": "@modifier_id", "value": doc["modifier_id"]}
         ]
         results = list(container.query_items(
@@ -39,7 +39,7 @@ def create_version(data: AssignmentVersionCreate, container):
         ))
 
         max_version = results[0] if results and results[0] is not None else 0
-        doc["version_number"] = max_version + 1
+        doc["version_number"] = max_version + 1      
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to calculate version number: {str(e)}")
     

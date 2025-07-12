@@ -24,7 +24,6 @@ class AssignmentVersionBase(BaseModel):
     starred: Optional[bool] = False
 
 class AssignmentVersionCreate(BaseModel):
-    assignment_id: str
     modifier_id: int
     content: str
     udl_reasons: Optional[UDLReasons] = None
@@ -36,9 +35,7 @@ class AssignmentVersionUpdate(BaseModel):
     content: Optional[str] = None
 
 class FinalizeVersionRequest(BaseModel):
-    assignment_version_id: str
     finalized: bool
 
 class StarVersionRequest(BaseModel):
-    assignment_version_id: str
     starred: bool
