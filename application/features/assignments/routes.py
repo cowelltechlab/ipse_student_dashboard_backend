@@ -15,7 +15,7 @@ from application.features.assignments.crud import (
     get_all_assignment_types, 
     get_assignments_by_id, 
     get_all_assignments, 
-    add_assignment, 
+    add_many_assignments, 
     update_assignment
 )
 from application.services.html_extractors import extract_html_from_file
@@ -32,41 +32,46 @@ def fetch_assignments():
     """Retrieve all assignments"""
     return get_all_assignments()
 
-@router.post("/upload", response_model=AssignmentDetailResponse)
+@router.post("/upload", response_model=List[AssignmentDetailResponse])
 async def upload_assignment_file(
-    student_id: int = Form(...),
+    student_ids: List[int] = Form(...),
     title: str = Form(...),
     class_id: int = Form(...),
     file: UploadFile = File(...)
 ):
     # 1. Read file content once
+    print("Reading file content...")
     file_bytes = await file.read()
 
     # 2. Upload to Azure
+    print("Uploading to Azure...")
     blob_url = await upload_to_blob(file, file_bytes)
 
     # 3. Extract raw text and HTML
+    print("Extracting raw text and HTML...")
     content = await extract_text_from_file(file.filename, file_bytes)
     html_content = await extract_html_from_file(file.filename, file_bytes)
 
     # 4. Store in database
-    assignment_data = AssignmentCreate(
-        student_id=student_id,
-        title=title,
-        class_id=class_id,
-        content=content,
-        html_content=html_content,
-        blob_url=blob_url,
-        source_format=file.filename.split(".")[-1].lower(),
-        date_created=datetime.datetime.now(datetime.timezone.utc)
-    )
-    return create_assignment(assignment_data)
+    print("Storing in db...")
+    assignment_data = [
+        AssignmentCreate(
+            student_id=student_id,
+            title=title,
+            class_id=class_id,
+            content=content,
+            html_content=html_content,
+            blob_url=blob_url,
+            source_format=file.filename.split(".")[-1].lower(),
+            date_created=datetime.datetime.now(datetime.timezone.utc)
+        ) for student_id in student_ids
+    ]
+    return await create_assignment(assignment_data)
 
 
 @router.get(path="/types", response_model=List[AssignmentTypeListResponse])
 def fetch_assignment_types():
     """Retrieve all assignment types"""
-    print("RECEIVED GET REQUEST: assignment-types")
     return get_all_assignment_types()
 
 
@@ -79,14 +84,12 @@ def fetch_assignment_by_id(
         raise HTTPException(status_code=404, detail="Assignment not found")
     return assignment_record
 
-@router.post("/", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
-def create_assignment(assignment_data: AssignmentCreate):
+@router.post("/", response_model=List[AssignmentDetailResponse], status_code=status.HTTP_201_CREATED)
+async def create_assignment(assignment_data: List[AssignmentCreate]) -> List:
     """Create a new assignment."""
-    created_assignment = add_assignment(assignment_data.dict())
-    if "error" in created_assignment:
-        print(f"Creation error: {created_assignment['error']}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=created_assignment["error"])
-    return created_assignment
+    assignment_data_dicts = [data.model_dump(mode='json') for data in assignment_data]
+    created_assignment_records = await add_many_assignments(assignment_data_dicts)
+    return created_assignment_records
 
 
 @router.put("/{assignment_id}", response_model=AssignmentDetailResponse)

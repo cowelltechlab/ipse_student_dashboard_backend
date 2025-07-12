@@ -1,5 +1,6 @@
 from application.database.mssql_connection import get_sql_db_connection
 import pyodbc
+from typing import List, Dict
 
 
 def fetch_all(table_name):
@@ -85,7 +86,7 @@ def create_record(table_name, data):
         conn.close()
 
 
-def create_many_records(table_name, data_list):
+def create_many_records(table_name, data_list) -> List[Dict]:
     """
     Generic function to insert multiple new records into a metadata table and 
     return the created records.

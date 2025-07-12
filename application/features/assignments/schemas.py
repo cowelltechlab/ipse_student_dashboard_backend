@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
 
 class AssignmentBase(BaseModel):
     id: Optional[int] = None
@@ -8,6 +9,7 @@ class AssignmentBase(BaseModel):
     title: str
     class_id: int
     date_created: Optional[datetime] = None
+
 
 class AssignmentCreate(BaseModel):
     student_id: int
@@ -19,12 +21,14 @@ class AssignmentCreate(BaseModel):
     source_format: Optional[str] = None
     date_created: Optional[datetime] = None
 
+
 class AssignmentUpdate(BaseModel):
     student_id: Optional[int] = None
     title: Optional[str] = None
     class_id: Optional[int] = None
     content: Optional[str] = None
     date_created: Optional[datetime] = None
+
 
 class AssignmentListResponse(AssignmentBase):
     blob_url: Optional[str] = None
