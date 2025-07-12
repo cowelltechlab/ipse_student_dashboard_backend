@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, status, Depends
 from application.database.nosql_connection import get_container
 from application.features.versionHistory import crud
-from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate, FinalizeVersionRequest
+from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate, FinalizeVersionRequest, StarVersionRequest
 from application.features.auth.permissions import require_user_access 
 
 router = APIRouter()
@@ -41,15 +41,19 @@ def delete_version_by_assignment_version(
     crud.delete_version_by_assignment_version(container, assignment_id, version_number)
     return None
 
-@router.put("/assignment/{assignment_id}/version/{version_number}", response_model=AssignmentVersionResponse)
+@router.put("/assignment/{assignment_id}/version/{version_number}/modifier/{modifier_id}", response_model=AssignmentVersionResponse)
 def update_version_route(
     assignment_id: str,
     version_number: int,
+    modifier_id: int,
     update_data: AssignmentVersionUpdate,
     user_data: dict = Depends(require_user_access)
 ):
+    """
+    Update content of a version document, and refresh date_modified.
+    """
     container = get_container()
-    return crud.update_version(container, assignment_id, version_number, update_data)
+    return crud.update_version(container, assignment_id, version_number, modifier_id, update_data)
 
 @router.post("/assignment/finalize", response_model=AssignmentVersionResponse)
 def finalize_assignment_version(
@@ -57,4 +61,12 @@ def finalize_assignment_version(
     user_data: dict = Depends(require_user_access)
 ):
     container = get_container()
-    return crud.finalize_by_id(container, request.assignment_version_id, request.finalized)
+    return crud.finalize_by_id(container, request.assignment_version_id, request.finalized, user_data)
+
+@router.post("/assignment/star", response_model=AssignmentVersionResponse)
+def finalize_assignment_version(
+    request: StarVersionRequest,
+    user_data: dict = Depends(require_user_access)
+):
+    container = get_container()
+    return crud.star_assignment(container, request.assignment_version_id, request.starred)

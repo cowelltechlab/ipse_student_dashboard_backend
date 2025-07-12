@@ -1,52 +1,64 @@
-from azure.cosmos import ContainerProxy
 from fastapi import HTTPException
 from uuid import uuid4
 from application.features.versionHistory.schemas import AssignmentVersionCreate
-from datetime import datetime
-from azure.cosmos import PartitionKey
+from datetime import datetime, timezone
 from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
-from fastapi.responses import JSONResponse
 from azure.cosmos import exceptions
 
 def create_version(data: AssignmentVersionCreate, container):
     doc = data.model_dump()
-    doc["modifier_id"] = str(doc["modifier_id"]) 
+
+    # Convert modifier_id to string for partition key
+    doc["modifier_id"] = str(doc["modifier_id"])
+    
+    # Generate a unique ID for the new document
     doc["id"] = str(uuid4())
 
-    if isinstance(doc.get("date_modified"), datetime):
-        doc["date_modified"] = doc["date_modified"].isoformat()
+    # Set date_modified to now (ISO 8601 UTC)
+    doc["date_modified"] = datetime.now(timezone.utc).isoformat()
 
-    # If this version is being finalized, unset all others for this assignment
-    if doc.get("finalized"):
-        # Fetch all previous versions of the assignment
-        query = "SELECT * FROM c WHERE c.assignment_id = @assignment_id"
-        parameters = [{"name": "@assignment_id", "value": doc["assignment_id"]}]
-        existing_versions = list(container.query_items(
+    # Set finalized and starred defaults if not provided
+    doc["finalized"] = doc.get("finalized", False)
+    doc["starred"] = doc.get("starred", False)
+
+    # Auto-increment version_number per assignment+modifier pair
+    try:
+        query = """
+        SELECT VALUE MAX(c.version_number)
+        FROM c
+        WHERE c.assignment_id = @assignment_id AND c.modifier_id = @modifier_id
+        """
+        parameters = [
+            {"name": "@assignment_id", "value": doc["assignment_id"]},
+            {"name": "@modifier_id", "value": doc["modifier_id"]}
+        ]
+        results = list(container.query_items(
             query=query,
             parameters=parameters,
             enable_cross_partition_query=True
         ))
 
-        for version in existing_versions:
-            if version.get("finalized"):
-                version["finalized"] = False
-                try:
-                    container.replace_item(item=version["id"], body=version)
-                except Exception as e:
-                    raise HTTPException(
-                        status_code=500, 
-                        detail=f"Failed to unset finalized on previous version {version['version_number']}: {str(e)}"
-                    )
-
-    # Create the new version
+        max_version = results[0] if results and results[0] is not None else 0
+        doc["version_number"] = max_version + 1
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to calculate version number: {str(e)}")
+    
+    # Default rating shape if missing or None
+    if "rating" not in doc or doc["rating"] is None:
+        doc["rating"] = {
+            "difficulty": "",
+            "best_changes": [],
+            "disliked_changes": []
+        }
+    # Create the new version document in Cosmos DB
     try:
         container.create_item(body=doc)
-        # Cast modifier_id back to int for response
+        # Cast modifier_id back to int for the response model
         doc["modifier_id"] = int(doc["modifier_id"])
         return AssignmentVersionResponse(**doc)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create version: {str(e)}")
-
+    
 def get_versions_by_assignment(container, assignment_id: str) -> list[AssignmentVersionResponse]:
     # Since modifier_id is partition key, but we want to query by assignment_id (not PK),
     # need to cross-partition query.
@@ -112,16 +124,18 @@ def delete_version_by_assignment_version(container, assignment_id: str, version_
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to delete version: {str(e)}")
 
-def update_version(container, assignment_id: str, version_number: int, update_data: AssignmentVersionUpdate) -> AssignmentVersionResponse:
-    # 1. Find existing version
+def update_version(container, assignment_id: str, version_number: int, modifier_id: int, update_data: AssignmentVersionUpdate) -> AssignmentVersionResponse:
+    # 1. Find existing version by assignment_id, version_number, AND modifier_id
     query = """
     SELECT * FROM c
-    WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number
+    WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number AND c.modifier_id = @modifier_id
     """
     params = [
         {"name": "@assignment_id", "value": assignment_id},
-        {"name": "@version_number", "value": version_number}
+        {"name": "@version_number", "value": version_number},
+        {"name": "@modifier_id", "value": str(modifier_id)}
     ]
+
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
     
     if not items:
@@ -129,25 +143,30 @@ def update_version(container, assignment_id: str, version_number: int, update_da
 
     existing = items[0]
     doc_id = existing["id"]
-    partition_key = existing["modifier_id"]
 
-    # 2. Prepare the update
+    # 2. Prepare update dict
     update_dict = update_data.dict(exclude_unset=True)
 
-    # Convert date_modified if provided
+    # Convert date_modified if present and datetime
     if "date_modified" in update_dict and isinstance(update_dict["date_modified"], datetime):
         update_dict["date_modified"] = update_dict["date_modified"].isoformat()
 
-    # Apply updates to existing doc
+    # Apply updates to the existing document
     for k, v in update_dict.items():
         existing[k] = v
 
+    # Always update date_modified if content updated or explicitly (optional)
+    if "content" in update_dict:
+        existing["date_modified"] = datetime.now(timezone.utc).isoformat()
+
     try:
-        # If this update sets finalized=True, unset others
+        # Unset finalized on others if this update finalizes this version
         if update_dict.get("finalized") is True:
-            # Find all versions for this assignment
-            query_all = "SELECT * FROM c WHERE c.assignment_id = @assignment_id"
-            params_all = [{"name": "@assignment_id", "value": assignment_id}]
+            query_all = "SELECT * FROM c WHERE c.assignment_id = @assignment_id AND c.modifier_id = @modifier_id"
+            params_all = [
+                {"name": "@assignment_id", "value": assignment_id},
+                {"name": "@modifier_id", "value": str(modifier_id)}
+            ]
             all_versions = list(container.query_items(
                 query=query_all,
                 parameters=params_all,
@@ -157,17 +176,16 @@ def update_version(container, assignment_id: str, version_number: int, update_da
             for v in all_versions:
                 if v["id"] != doc_id and v.get("finalized"):
                     v["finalized"] = False
-                    container.replace_item(item=v["id"], body=v)
+                    container.replace_item(item=v["id"], body=v, partition_key=str(modifier_id))
 
-        # Save the current version
-        container.replace_item(item=doc_id, body=existing)
-        existing["modifier_id"] = int(existing["modifier_id"])
+        # Save the updated document — provide partition_key!
+        container.replace_item(doc_id, existing, str(modifier_id))
+        existing["modifier_id"] = int(existing["modifier_id"])  # convert back for response
         return AssignmentVersionResponse(**existing)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update version: {str(e)}")
     
-
 def finalize_by_id(container, assignment_version_id: str, finalized: bool) -> AssignmentVersionResponse:
     # Step 1: Get the current document by ID
     try:
@@ -210,3 +228,33 @@ def finalize_by_id(container, assignment_version_id: str, finalized: bool) -> As
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to finalize version: {str(e)}")
+
+def star_assignment(container, assignment_version_id: str, starred: bool) -> AssignmentVersionResponse:
+    try:
+        # 1. Fetch the document by id (cross partition query)
+        items = list(container.query_items(
+            query="SELECT * FROM c WHERE c.id = @id",
+            parameters=[{"name": "@id", "value": assignment_version_id}],
+            enable_cross_partition_query=True
+        ))
+
+        if not items:
+            raise HTTPException(status_code=404, detail="Assignment version not found")
+
+        doc = items[0]
+
+        # 2. Update the starred field and date_modified timestamp
+        doc["starred"] = starred
+        doc["date_modified"] = datetime.now().astimezone().isoformat()
+
+        # 3. Save the updated document using replace_item
+        container.replace_item(item=doc["id"], body=doc)
+
+        # 4. Convert modifier_id back to int for response model consistency
+        doc["modifier_id"] = int(doc["modifier_id"])
+
+        return AssignmentVersionResponse(**doc)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update starred status: {str(e)}")
+
