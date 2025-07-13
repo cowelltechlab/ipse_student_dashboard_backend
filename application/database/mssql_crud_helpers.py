@@ -1,5 +1,6 @@
 from application.database.mssql_connection import get_sql_db_connection
 import pyodbc
+from typing import List, Dict
 
 
 def fetch_all(table_name):
@@ -83,6 +84,62 @@ def create_record(table_name, data):
 
     finally:
         conn.close()
+
+
+def create_many_records(table_name, data_list) -> List[Dict]:
+    """
+    Generic function to insert multiple new records into a metadata table and 
+    return the created records.
+    """
+    if not data_list:
+        return []
+    
+    conn = None 
+    cursor = None 
+    inserted_records = []
+
+    try:
+        conn = get_sql_db_connection()
+        cursor = conn.cursor()
+
+        columns = ", ".join(data_list[0].keys())
+        placeholders = ", ".join(["?" for _ in data_list[0]])
+
+        # Use OUTPUT INSERTED.* to fetch the newly inserted row
+        query = f"""
+        INSERT INTO {table_name} ({columns}) 
+        OUTPUT INSERTED.*
+        VALUES ({placeholders})
+        """
+
+        for i, data in enumerate(data_list):
+            cursor.execute(query, tuple(data.values()))
+            row = cursor.fetchone()
+
+            if i == 0:  # Grab column names once
+                column_names = [desc[0] for desc in cursor.description]
+
+            inserted_records.append(dict(zip(column_names, row)))
+
+        conn.commit()
+        return inserted_records # ✅ Return the inserted record instead of a message
+
+    except pyodbc.Error as e:
+        if conn:
+            conn.rollback()
+        return [{"error": str(e)}]
+    
+    except Exception as e:
+        if conn: 
+            conn.rollback()
+        return [{"error": f"An unexpected error occurred: {str(e)}"}]
+
+    finally:
+        if cursor:
+            cursor.close()
+
+        if conn:
+            conn.close()
 
 
 def update_record(table_name, record_id, update_data):

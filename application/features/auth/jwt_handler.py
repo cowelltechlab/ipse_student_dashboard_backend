@@ -11,7 +11,7 @@ load_dotenv()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
 JWT_SECRET_KEY = str(os.getenv("JWT_SECRET_KEY"))
 
-def create_jwt_token(data: dict, expires_delta: int = 60) -> str:
+def create_jwt_token(data: dict, expires_delta: int = 120) -> str:
     """
     Generate a JSON Web Token (JWT)
 

@@ -1,6 +1,7 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
 
 class AssignmentBase(BaseModel):
     id: Optional[int] = None
@@ -8,6 +9,7 @@ class AssignmentBase(BaseModel):
     title: str
     class_id: int
     date_created: Optional[datetime] = None
+
 
 class AssignmentCreate(BaseModel):
     student_id: int
@@ -18,6 +20,8 @@ class AssignmentCreate(BaseModel):
     blob_url: Optional[str] = None
     source_format: Optional[str] = None
     date_created: Optional[datetime] = None
+    assignment_type_id: Optional[int] = None
+
 
 class AssignmentUpdate(BaseModel):
     student_id: Optional[int] = None
@@ -49,6 +53,7 @@ class AssignmentDetailResponse(AssignmentBase):
     html_content: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    assignment_type_id: Optional[int] = None
 
     # Return NoSQL Fields
     finalized: Optional[bool] = None
@@ -57,3 +62,8 @@ class AssignmentDetailResponse(AssignmentBase):
 
     class Config:
         orm_mode = True
+
+
+class AssignmentTypeListResponse(BaseModel):
+    id: int
+    type: str

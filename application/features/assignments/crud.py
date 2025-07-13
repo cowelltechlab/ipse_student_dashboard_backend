@@ -1,11 +1,17 @@
+from fastapi import HTTPException, status
 import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
 from application.database.nosql_connection import get_container
 from application.database.mssql_crud_helpers import (
-    create_record, 
+    create_many_records,
+    create_record,
+    fetch_all, 
     update_record,
 )
 from datetime import datetime
+from typing import List, Dict
+
+from application.features.assignments.schemas import AssignmentDetailResponse
 
 TABLE_NAME = "Assignments"
 def is_rating_meaningful(rating):
@@ -235,7 +241,31 @@ def get_assignments_by_id(assignment_id: int):
 Add a new Assignment in Assignments table
 '''
 def add_assignment(data):
-    return create_record(TABLE_NAME, data)
+    new_record = create_record(TABLE_NAME, data)
+
+    if "error" in new_record:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=new_record["error"]
+        )
+    
+    return AssignmentDetailResponse(**new_record)
+
+'''
+*** POST ASSIGNMENT ENDPOINT *** 
+Add many new assignments in Assignments table
+'''
+async def add_many_assignments(data) -> List[Dict]:
+    new_records = create_many_records(TABLE_NAME, data)
+
+    if new_records and isinstance(new_records, list) and "error" in new_records[0]:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=new_records[0]["error"]
+        )
+    
+    response = [AssignmentDetailResponse(**record) for record in new_records]
+    return response
 
 ''' 
 *** UPDATE ASSIGNMENT ENDPOINT *** 
@@ -243,3 +273,9 @@ Update existing assignment in Assignments table
 '''
 def update_assignment(assignment_id, data):
     return update_record(TABLE_NAME, assignment_id, data)
+
+def get_all_assignment_types():
+    """ 
+    Fetch all types of assignments from AssigntmentTypes table 
+    """
+    return fetch_all(table_name="AssignmentTypes")
