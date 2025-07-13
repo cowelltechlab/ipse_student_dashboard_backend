@@ -241,7 +241,15 @@ def get_assignments_by_id(assignment_id: int):
 Add a new Assignment in Assignments table
 '''
 def add_assignment(data):
-    return create_record(TABLE_NAME, data)
+    new_record = create_record(TABLE_NAME, data)
+
+    if "error" in new_record:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=new_record["error"]
+        )
+    
+    return AssignmentDetailResponse(**new_record)
 
 '''
 *** POST ASSIGNMENT ENDPOINT *** 
