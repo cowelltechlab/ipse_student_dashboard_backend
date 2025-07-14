@@ -1,17 +1,21 @@
 import datetime
-from fastapi import HTTPException 
+from fastapi import HTTPException
 import json
 import uuid
 from application.database.mssql_connection import get_sql_db_connection
-from application.features.assignment_generation.helpers import generate_assignment_modification_suggestions
-from application.database.nosql_connection import get_cosmos_db_connection  
+from application.features.assignment_version_generation.helpers import generate_assignment_modification_suggestions
+from application.database.nosql_connection import get_cosmos_db_connection
 
+# Constants
 DATABASE_NAME = "ai-prompt-storage"
-CONTAINER_NAME = "ai-assignment-versions"
+PROFILE_CONTAINER_NAME = "ai-student-profile"
+VERSIONS_CONTAINER_NAME = "ai-assignment-versions"
 
+# Cosmos client and containers
 client = get_cosmos_db_connection()
 db = client.get_database_client(DATABASE_NAME)
-container = db.get_container_client(CONTAINER_NAME)
+profile_container = db.get_container_client(PROFILE_CONTAINER_NAME)
+versions_container = db.get_container_client(VERSIONS_CONTAINER_NAME)
 
 def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
     conn = get_sql_db_connection()
@@ -39,7 +43,7 @@ def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
         student_id = assignment["student_id"]
         class_id = assignment["class_id"]
 
-        # 2. Fetch student info
+        # 2. Fetch student info from SQL
         cursor.execute("""
             SELECT year_id, reading_level, writing_level
             FROM dbo.Students WHERE id = ?
@@ -69,13 +73,12 @@ def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
     finally:
         conn.close()
 
-    # 4. Fetch NoSQL student profile
-    profile_docs = list(container.query_items(
-    query="SELECT * FROM c WHERE c.student_id = @sid",
-    parameters=[{"name": "@sid", "value": student_id}],
-    enable_cross_partition_query=True
-))
-
+    # 4. Fetch student profile from CosmosDB
+    profile_docs = list(profile_container.query_items(
+        query="SELECT * FROM c WHERE c.student_id = @sid",
+        parameters=[{"name": "@sid", "value": student_id}],
+        enable_cross_partition_query=True
+    ))
 
     if not profile_docs:
         raise HTTPException(status_code=404, detail="Student profile not found in CosmosDB")
@@ -83,26 +86,27 @@ def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
     cosmos_profile = profile_docs[0]
     full_profile = {**student_info, **cosmos_profile}
 
-    # 5. GPT call
+    # 5. Generate GPT suggestions
     try:
         gpt_raw = generate_assignment_modification_suggestions(
             student_profile=full_profile,
             assignment=assignment,
             class_info=class_info
         )
-        gpt_data = json.loads(gpt_raw)
+        gpt_data = gpt_raw  
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 
-    # 6. Get next version number
-    existing_versions = list(container.query_items(
+    # 6. Determine next version number from versions container
+    existing_versions = list(versions_container.query_items(
         query="SELECT VALUE c.version_number FROM c WHERE c.assignment_id = @aid",
         parameters=[{"name": "@aid", "value": assignment_id}],
         enable_cross_partition_query=True
     ))
     next_version = max(existing_versions or [0]) + 1
 
-    # 7. Save new version document
+    # 7. Save new version to CosmosDB
     doc_id = str(uuid.uuid4())
     new_doc = {
         "id": doc_id,
@@ -112,10 +116,10 @@ def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
         "generated_options": gpt_data.get("learning_pathways", []),
         "skills_for_success": gpt_data.get("skills_for_success"),
         "finalized": False,
-        "date_modified": datetime.utcnow().isoformat()
+        "date_modified": datetime.datetime.utcnow().isoformat()
     }
 
-    container.create_item(body=new_doc)
+    versions_container.create_item(body=new_doc)
 
     return {
         "skills_for_success": new_doc["skills_for_success"],
