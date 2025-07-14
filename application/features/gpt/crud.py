@@ -8,12 +8,20 @@ def summarize_strengths(strengths: list[str]) -> str:
     prompt = f"Summarize these strengths in one sentence: {', '.join(strengths)}"
     return process_gpt_prompt(prompt, model="gpt-4")
 
-def summarize_goals(short_term: str, long_term: str) -> str:
-    prompt = f"Summarize these goals concisely: Short-term goal: {short_term}, Long-term goal: {long_term}"
+def summarize_short_term_goals(short_term: str) -> str:
+    prompt = f"Summarize these short term goals concisely: Short-term goal: {short_term}"
+    return process_gpt_prompt(prompt, model="gpt-4")
+
+def summarize_long_term_goals(long_term: str) -> str:
+    prompt = f"Summarize these short term goals concisely, Long-term goal: {long_term}"
+    return process_gpt_prompt(prompt, model="gpt-4")
+
+def summarize_best_ways_to_learn(best_ways: str) -> str:
+    prompt = f"Summarize these best ways to help a student into a comma separated list: {best_ways}"
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def generate_vision_statement(student_info: str) -> str:
-    prompt = f"“Create a vision statement using plain, simple language for this student {student_info}, focusing on what they are working toward and how they will get there. Word it as a goal-discrepancy challenges, in line with Wehmeyer’s causal agency theory, NOT weakness. Instead, focus on tools, self-monitoring, and growth toward goals."
+    prompt = f"“Create a vision statement using plain, simple language for this student {student_info}, focusing on what they are working toward and how they will get there. Word it as a goal-discrepancy challenges, in line with Wehmeyer’s causal agency theory, NOT weakness. Instead, focus on tools, self-monitoring, and growth toward goals. Limit to no more than 40 words."
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def generate_gpt_prompt(assignment, student, profile):

@@ -1,12 +1,36 @@
 {
-    "student_id": 42,
-    "strengths": ["Organized", "Good at writing"],
-    "challenges": ["Hard to focus", "Deadlines"],
-    "short_term_goals": "...",
-    "long_term_goals": "...",
-    "best_ways_to_help": ["Step-by-step", "Audio response"],
+    "id": "32946925-e94e-4a0a-be27-5c5939310851",
+    "student_id": 186,
+    "strengths": [
+        "Good at math",
+        "Great listener",
+        "Interested in learning",
+        "Good at speaking in a crowd"
+    ],
+    "challenges": [
+        "Reading for a long time",
+        "Time management",
+        "Staying encouraged"
+    ],
+    "hobbies_and_interests": "I like to hang out with my cats and play tennis. Sometimes I cook with my mom. ",
+    "short_term_goals": "This semester I would like to work on my reading skills so that I can read for a longer time. I would also like to be better at understanding what I am reading. I think I get bored because I get confused.",
+    "long_term_goals": "Open a school for disabled students.",
+    "best_ways_to_help": [
+        "Allow Video or Audio Response",
+        "Step-By-Step Directions",
+        "Projects that help me meet new people",
+        "being given a clear timeline"
+    ],
     "summaries": {
-      "strength_short": "...",
-      "goals_short": "..."
-    }
-  }
+        "strength_short": "This individual excels in mathematical problems, actively listens to others, has a strong desire for learning, and is proficient at public speaking.",
+        "short_term_goals": "Improve reading skills and comprehension this semester to read for longer periods without confusion or boredom.",
+        "long_term_goals": "1. Research on requirements for opening a school for disabled students.\n2. Complete necessary training or certifications for teaching disabled students.\n3. Develop a business plan for the school.\n4. Secure funding or investment for the project.\n5. Identify a suitable location for the school.\n6. Hire experienced staff and teachers.\n7. Develop a curriculum suited for disabled students.\n8. Obtain necessary permits and licenses.\n9. Promote the school in the community.\n10. Prepare the school for opening and enroll students.",
+        "best_ways_to_help": "Allow Video or Audio Response, Step-By-Step Directions, Projects that help me meet new people, being given a clear timeline"
+    },
+    "vision": "\"Jasmine Porter, a first-year student, is striving to enhance her reading skills and time management, while utilizing her strengths in math and public speaking. She is committed to learning, with a vision to open a school for disabled students, and enjoys making new connections through project-based learning.\"",
+    "_rid": "77ADAMg37+AQAAAAAAAAAA==",
+    "_self": "dbs/77ADAA==/colls/77ADAMg37+A=/docs/77ADAMg37+AQAAAAAAAAAA==/",
+    "_etag": "\"1a0007d9-0000-4d00-0000-687474b20000\"",
+    "_attachments": "attachments/",
+    "_ts": 1752462514
+}

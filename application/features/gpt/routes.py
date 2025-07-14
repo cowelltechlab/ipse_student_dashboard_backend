@@ -1,14 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
+
+from application.features.student_profile.crud import get_profile
 from .schemas import GPTRequest, GPTResponse
 from .crud import generate_gpt_prompt, process_gpt_prompt
 from datetime import datetime
 from application.features.auth.permissions import require_user_access
 from application.features.assignments.crud import get_assignments_by_id
 from application.features.students.crud import get_student_by_student_id
-from application.features.student_profile.crud import get_profile
-from application.features.versionHistory.crud import create_version
-from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse
-from application.database.nosql_connection import get_container
+from application.features.versionHistory.schemas import AssignmentVersionResponse
 from application.features.gpt.crud import process_gpt_prompt
 
 router = APIRouter()

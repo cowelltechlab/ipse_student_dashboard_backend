@@ -1,5 +1,5 @@
-from pydantic import BaseModel
-from typing import List, Dict, Optional
+from pydantic import BaseModel, Field, conlist
+from typing import Annotated, List, Dict, Optional
 
 class StudentProfileBase(BaseModel):
     strengths: List[str]
@@ -10,17 +10,60 @@ class StudentProfileBase(BaseModel):
     summaries: Optional[Dict[str, str]] = None
     vision: Optional[str] = None
 
-class StudentProfileCreate(StudentProfileBase):
-    student_id: int
+
+class ClassSelection(BaseModel):
+    class_id: int
+    class_goal: str
+
+class StudentProfileCreate(BaseModel):
+    user_id: int
+    first_name: str
+    last_name: str
+    year_id: int
+    reading_level: int
+    writing_level: int
+    strengths: List[str]
+    challenges: List[str]
+    likes_and_hobbies: Optional[str]
+    short_term_goals: str
+    long_term_goals: str
+    best_ways_to_help: List[str] = Field(..., min_items=1)
+    classes: List[ClassSelection]
 
 class StudentProfileUpdate(BaseModel):
+    """
+    All fields optional so user can patch any subset.
+    """
     strengths: Optional[List[str]] = None
     challenges: Optional[List[str]] = None
-    short_term_goals: Optional[str] = None
     long_term_goals: Optional[str] = None
+    short_term_goals: Optional[str] = None
+    hobbies_and_interests: Optional[str] = None
     best_ways_to_help: Optional[List[str]] = None
-    summaries: Optional[Dict[str, str]] = None
-    vision: Optional[str] = None
+    classes: Optional[List[ClassSelection]] = None
 
-class StudentProfileResponse(StudentProfileCreate):
-    id: str  # Cosmos document ID
+
+class StudentClass(BaseModel):
+    class_id: int
+    class_name: str
+    course_code: str
+    learning_goal: str
+
+class ProfileSummaries(BaseModel):
+    strengths_short: str
+    short_term_goals: str
+    long_term_goals: str
+    best_ways_to_help: str
+    vision: str
+
+class StudentProfileResponse(BaseModel):
+    student_id: int
+    year_name: str
+    classes: List[StudentClass]
+    strengths: List[str]
+    challenges: List[str]
+    long_term_goals: str
+    short_term_goals: str
+    best_ways_to_help: List[str]  
+    hobbies_and_interests: str
+    profile_summaries: ProfileSummaries
