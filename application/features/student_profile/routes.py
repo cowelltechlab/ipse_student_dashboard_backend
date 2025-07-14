@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Body, Depends
 from typing import List
 from application.features.student_profile.crud import (
-    create_profile, get_profile, update_profile, delete_profile
+    create_or_update_profile, get_complete_profile, get_profile, update_profile, delete_profile
 )
 from application.features.student_profile.schemas import (
     StudentProfileCreate, StudentProfileResponse, StudentProfileUpdate
@@ -10,23 +10,29 @@ from application.features.auth.permissions import require_user_access
 
 router = APIRouter()
 
-@router.post("/", response_model=StudentProfileResponse, status_code=status.HTTP_201_CREATED)
-def create_student_profile(
-    profile: StudentProfileCreate,
-    user_data: dict = Depends(require_user_access)
+@router.post("/{user_id}", status_code=status.HTTP_201_CREATED)
+def upsert_student_profile(
+    user_id: int,
+    payload: StudentProfileCreate,
+    _user=Depends(require_user_access),  
 ):
-    return create_profile(profile)
+    if user_id != payload.user_id:
+        raise HTTPException(
+            status_code=400, detail="user_id mismatch between path and body"
+        )
+    return create_or_update_profile(payload)
 
 
 @router.get("/{student_id}", response_model=StudentProfileResponse)
 def get_student_profile(
     student_id: int,
-    user_data: dict = Depends(require_user_access)
+    _user=Depends(require_user_access),
 ):
-    profile = get_profile(student_id)
+    profile = get_complete_profile(student_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return profile
+
 
 
 @router.put("/{student_id}", response_model=StudentProfileResponse)
