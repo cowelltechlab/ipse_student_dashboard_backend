@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from typing import List, Optional
 from datetime import datetime
 
@@ -23,20 +23,19 @@ class AssignmentVersionBase(BaseModel):
     finalized: Optional[bool] = False
     starred: Optional[bool] = False
 
-class AssignmentVersionCreate(AssignmentVersionBase):
-    pass
+class AssignmentVersionCreate(BaseModel):
+    modifier_id: int
+    content: str
+    udl_reasons: Optional[UDLReasons] = None
 
 class AssignmentVersionResponse(AssignmentVersionBase):
     id: str
 
 class AssignmentVersionUpdate(BaseModel):
     content: Optional[str] = None
-    udl_reasons: Optional[UDLReasons] = None
-    rating: Optional[Rating] = None
-    finalized: Optional[bool] = None
-    starred: Optional[bool] = None
-    date_modified: Optional[datetime] = None
 
 class FinalizeVersionRequest(BaseModel):
-    assignment_version_id: str
     finalized: bool
+
+class StarVersionRequest(BaseModel):
+    starred: bool
