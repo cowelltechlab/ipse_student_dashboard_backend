@@ -5,7 +5,6 @@ from application.database.mssql_connection import get_sql_db_connection
 from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
 from application.database.nosql_connection import get_cosmos_db_connection  
 from application.features.gpt.crud import summarize_best_ways_to_learn, summarize_long_term_goals, summarize_short_term_goals, summarize_strengths, generate_vision_statement
-from uuid import uuid4
 
 DATABASE_NAME = "ai-prompt-storage"
 CONTAINER_NAME = "ai-student-profile"
@@ -163,7 +162,6 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
         "cosmos_doc_id": doc_body["id"],
     }
 
-# application/features/student_profile/crud.py  (add below existing helpers)
 def get_complete_profile(student_id: int) -> Optional[dict]:
     """
     • Pull core attributes from Cosmos

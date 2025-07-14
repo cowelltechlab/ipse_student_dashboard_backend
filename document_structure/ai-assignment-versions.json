@@ -1,0 +1,40 @@
+{
+  "id": "uuid",
+  "assignment_id": 57,
+  "student_id": 123,
+  "modifier_id": 186,
+  "generated_options": [
+    {
+      "title": "Option A: More Visual Aids",
+      "description": "Convert written portions into diagrams and flowcharts.",
+      "reasons": [
+        "Helps focus with visuals",
+        "Matches strengths in organization"
+      ]
+    },
+    {
+      "title": "Option B: Step-by-Step Guide",
+      "description": "Break assignment into guided substeps with milestones.",
+      "reasons": [
+        "Supports difficulty with deadlines",
+        "Provides structure for focus"
+      ]
+    }
+  ],
+  "selected_option_index": 1,
+  "generated_assignment": {
+    "version_number": 1,
+    "html_content": "<p>...</p>",
+    "udl_reasons": {
+      "Engagement": "Includes video intro",
+      "Expression": "Allows voice or written answer"
+    },
+    "date_modified": "2025-07-14T15:00:00Z"
+  },
+  "finalized": false,
+  "rating": {
+    "difficulty": "",
+    "best_changes": [],
+    "disliked_changes": []
+  }
+}
