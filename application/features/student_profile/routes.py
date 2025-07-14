@@ -41,9 +41,10 @@ def patch_student_profile(
     payload: StudentProfileUpdate,
     _=Depends(require_user_access),
 ):
-    updated = update_student_profile(student_id, payload)
-    return updated
-
+    # 1. do the update
+    update_student_profile(student_id, payload)
+    # 2. fetch the fully‑joined profile for response
+    return get_complete_profile(student_id)
 
 
 # @router.delete("/{student_id}")
