@@ -1,7 +1,7 @@
-from fastapi import APIRouter, HTTPException, status, Body, Depends
+from fastapi import APIRouter, HTTPException, status, Depends
 from typing import List
 from application.features.student_profile.crud import (
-    create_or_update_profile, get_complete_profile, get_profile, update_profile, delete_profile, update_student_profile
+    create_or_update_profile, get_complete_profile, update_student_profile
 )
 from application.features.student_profile.schemas import (
     StudentProfileCreate, StudentProfileResponse, StudentProfileUpdate

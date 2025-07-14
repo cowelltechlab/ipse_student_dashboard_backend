@@ -244,11 +244,11 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     }
 
 
-# def get_profile(student_id: int):
-#     query = "SELECT * FROM c WHERE c.student_id = @student_id"
-#     params = [{"name": "@student_id", "value": student_id}]
-#     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-#     return items[0] if items else None
+def get_profile(student_id: int):
+    query = "SELECT * FROM c WHERE c.student_id = @student_id"
+    params = [{"name": "@student_id", "value": student_id}]
+    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+    return items[0] if items else None
 
 def update_student_profile(student_id: int, patch: StudentProfileUpdate) -> dict:
     """
