@@ -1,8 +1,17 @@
+import json
 from .gpt_connection import get_gpt_response
 
 def process_gpt_prompt(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     # You could add extra processing here if needed
     return get_gpt_response(prompt, model)
+
+def process_gpt_prompt_json(prompt: str, model: str = "gpt-4") -> dict:
+    response_text = get_gpt_response(prompt, model).strip()
+
+    try:
+        return json.loads(response_text)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON from GPT: {e}\nRaw content:\n{response_text}")
 
 def summarize_strengths(strengths: list[str]) -> str:
     prompt = f"""Create short, 1-2 sentence summary of these strengths

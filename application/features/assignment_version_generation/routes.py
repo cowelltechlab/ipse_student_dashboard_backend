@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from application.database.nosql_connection import get_cosmos_db_connection
-from application.features.assignment_generation.crud import handle_assignment_suggestion_generation
+from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation
 from application.features.auth.permissions import require_user_access
 
 
-from application.features.assignment_generation.schemas import AssignmentGenerationOptionsResponse
+from application.features.assignment_version_generation.schemas import AssignmentGenerationOptionsResponse
 
 router = APIRouter()
 DATABASE_NAME = "ai-prompt-storage"

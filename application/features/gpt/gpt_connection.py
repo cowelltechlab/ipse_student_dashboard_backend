@@ -10,7 +10,7 @@ def get_gpt_response(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     resp = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=150,
+        max_tokens=300,
         temperature=0.7,
     )
     return resp.choices[0].message.content.strip()
