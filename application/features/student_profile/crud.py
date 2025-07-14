@@ -244,24 +244,109 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     }
 
 
-def get_profile(student_id: int):
-    query = "SELECT * FROM c WHERE c.student_id = @student_id"
-    params = [{"name": "@student_id", "value": student_id}]
-    items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
-    return items[0] if items else None
+# def get_profile(student_id: int):
+#     query = "SELECT * FROM c WHERE c.student_id = @student_id"
+#     params = [{"name": "@student_id", "value": student_id}]
+#     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
+#     return items[0] if items else None
 
-def update_profile(student_id: int, update_data: StudentProfileUpdate):
-    existing = get_profile(student_id)
-    if not existing:
-        return None
-    for field, value in update_data.dict(exclude_unset=True).items():
-        existing[field] = value
-    container.replace_item(item=existing['id'], body=existing)
-    return existing
+def update_student_profile(student_id: int, patch: StudentProfileUpdate) -> dict:
+    """
+    • Update StudentClasses if 'classes' present
+    • Patch Cosmos doc with provided fields
+      Re‑run GPT summaries only for affected parts
+    """
+    # ---- SQL ----
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+    try:
+        conn.autocommit = False
 
-def delete_profile(student_id: int):
-    profile = get_profile(student_id)
-    if not profile:
-        return None
-    container.delete_item(item=profile['id'], partition_key=profile['student_id'])
-    return {"deleted": True}
+        if patch.classes is not None:
+            # Clear & re‑insert current class list
+            cursor.execute(
+                "DELETE FROM dbo.StudentClasses WHERE student_id = ?",
+                (student_id,),
+            )
+            insert_stmt = """
+                INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
+                VALUES (?, ?, ?)
+            """
+            cursor.executemany(
+                insert_stmt,
+                [
+                    (student_id, cls.class_id, cls.class_goal)
+                    for cls in patch.classes
+                ],
+            )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+     # ── Cosmos ────────────────────────────────────────────────────────────
+    query = "SELECT * FROM c WHERE c.student_id = @sid"
+    doc = next(
+        container.query_items(
+            query,
+            parameters=[{"name": "@sid", "value": student_id}],
+            enable_cross_partition_query=True,
+        ),
+        None,
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    summaries_changed = False
+
+    if patch.strengths is not None:
+        doc["strengths"] = patch.strengths
+        doc.setdefault("summaries", {})["strength_short"] = summarize_strengths(
+            patch.strengths
+        )
+        summaries_changed = True
+
+    if patch.short_term_goals is not None:
+        doc["short_term_goals"] = patch.short_term_goals
+        doc.setdefault("summaries", {})[
+            "short_term_goals"
+        ] = summarize_short_term_goals(patch.short_term_goals)
+        summaries_changed = True
+
+    if patch.long_term_goals is not None:
+        doc["long_term_goals"] = patch.long_term_goals
+        doc.setdefault("summaries", {})[
+            "long_term_goals"
+        ] = summarize_long_term_goals(patch.long_term_goals)
+        summaries_changed = True
+
+    if patch.best_ways_to_help is not None:
+        doc["best_ways_to_help"] = patch.best_ways_to_help
+        doc.setdefault("summaries", {})[
+            "best_ways_to_help"
+        ] = summarize_best_ways_to_learn(patch.best_ways_to_help)
+        summaries_changed = True
+
+    if patch.challenges is not None:
+        doc["challenges"] = patch.challenges
+
+    if patch.hobbies_and_interests is not None:
+        doc["hobbies_and_interests"] = patch.hobbies_and_interests
+
+    # Regenerate vision only if a “core” field changed
+    if summaries_changed:
+        doc["vision"] = generate_vision_statement(str(doc))
+
+    container.replace_item(item=doc["id"], body=doc)
+    return doc
+
+
+# def delete_profile(student_id: int):
+#     profile = get_profile(student_id)
+#     if not profile:
+#         return None
+#     container.delete_item(item=profile['id'], partition_key=profile['student_id'])
+#     return {"deleted": True}

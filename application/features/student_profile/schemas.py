@@ -31,13 +31,16 @@ class StudentProfileCreate(BaseModel):
     classes: List[ClassSelection]
 
 class StudentProfileUpdate(BaseModel):
+    """
+    All fields optional so user can patch any subset.
+    """
     strengths: Optional[List[str]] = None
     challenges: Optional[List[str]] = None
-    short_term_goals: Optional[str] = None
     long_term_goals: Optional[str] = None
+    short_term_goals: Optional[str] = None
+    hobbies_and_interests: Optional[str] = None
     best_ways_to_help: Optional[List[str]] = None
-    summaries: Optional[Dict[str, str]] = None
-    vision: Optional[str] = None
+    classes: Optional[List[ClassSelection]] = None
 
 
 class StudentClass(BaseModel):
