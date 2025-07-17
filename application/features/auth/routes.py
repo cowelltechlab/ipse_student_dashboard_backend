@@ -17,7 +17,7 @@ from application.features.auth.crud import (
     store_refresh_token,
     delete_refresh_token,
 )
-from typing import Dict
+from typing import Dict, List
 from application.features.auth.auth_helpers import (
     validate_user_email_login
 )
@@ -32,8 +32,6 @@ from application.features.auth.permissions import (
 )
 
 
-
-# This should include a way to log in through Google and generic username/password
 ''' 
 Prepend all student routes with /students and collect all student-relevant 
 endpoints under Students tag in SwaggerUI
