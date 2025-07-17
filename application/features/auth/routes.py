@@ -105,6 +105,14 @@ async def google_login():
     return { "google_auth_url": get_google_oauth_url(backend_callback_uri) }
 
 
+@router.get("login/gatech")
+async def gatech_login():
+    """
+    Initiates SSO redirect to Georgia Tech for GT SSO login using SAML2 protocol.
+    """
+    pass
+
+
 @router.post("/logout")
 async def logout(
     refresh_token: str, 
@@ -223,6 +231,17 @@ async def google_auth_callback(code: str) -> TokenResponse:
         )
 
 
+@router.post("/gatech/saml2/acs")
+async def gatech_assertion_consumer_service():
+    """
+    Receives and processes the SAML2 response from Georgia Tech.
+
+    TODO: Update schemas to reflect exact data expected from GT response. 
+          Reflect updates here
+    """
+    pass
+
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user(
     user_data: Dict = Depends(require_user_access)
@@ -257,4 +276,3 @@ async def get_current_user(
         school_email=email,
         profile_picture_url=profile_picture_url
     )
-
