@@ -4,4 +4,7 @@ __pycache__/
 application/.DS_Store
 google_secret.json
 gmail_refresh_token.json
-application/features/auth/saml_certs/sp_private.key
+
+# SAML2 private keys, metadata files
+application/features/auth/saml_certs/*.xml
+application/features/auth/saml_certs/*.key

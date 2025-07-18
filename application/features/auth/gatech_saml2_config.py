@@ -44,7 +44,7 @@ SP_CONFIG = {
             "endpoints": {
                 # Assertion Consumer Service (ACS) endpoint:
                 # Where the IdP sends the SAML response after successful authentication.
-                # Must be an absolute URL.
+                # Must be an absolute URL. This MUST match the actual route in routes.py
                 "assertion_consumer_service": [
                     (f"{BASE_URL}/auth/gatech/saml2/acs", BINDING_HTTP_POST), # Endpoints must exist in routes.py
                 ]
@@ -79,12 +79,12 @@ SP_CONFIG = {
     # or you might start with UNSPECIFIED if you don't know yet.
     "nameid_format": NAMEID_FORMAT_UNSPECIFIED, # Start with UNSPECIFIED, can refine later
 
-    # Optional: Organization details for your metadata
-    "organization": {
-        "name": ("cowelltechlab", "en"),
-        "display_name": ("Cowell Tech Lab", "en"),
-        "url": ("https://cowelltechlab.com", "en"), # Replace with your actual org website
-    },
+    # Optional TODO: Add organization details for your metadata
+    # "organization": {
+    #     "name": ("cowelltechlab", "en"),
+    #     "display_name": ("Cowell Tech Lab", "en"),
+    #     "url": ("https://cowelltechlab.com", "en"), # Replace with your actual org website
+    # },
 
     # Optional: Contact persons for your metadata
     # TODO: Determine if this is to be kept on the backend. We already have to input this info on the SSO request form

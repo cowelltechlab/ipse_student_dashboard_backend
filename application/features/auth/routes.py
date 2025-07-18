@@ -4,7 +4,15 @@ Sources:
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
 - Google Gemini
 """
-from fastapi import HTTPException, APIRouter, Depends
+from fastapi import (
+    HTTPException, 
+    APIRouter, 
+    Depends, 
+    Request, 
+    Response, 
+    HTMLResponse
+)
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import create_jwt_token
@@ -29,6 +37,12 @@ from application.features.auth.schemas import (
 )
 from application.features.auth.permissions import (
     require_user_access
+)
+from application.features.auth.gatech_saml2_helpers import (
+    get_saml_client, # To get the initialized client
+    prepare_saml_authn_request, # For /login/gatech
+    process_saml_response, # For /gatech/saml2/acs
+    generate_sp_metadata_xml # For /gatech/saml2/metadata
 )
 
 
@@ -104,11 +118,36 @@ async def google_login():
 
 
 @router.get("login/gatech")
-async def gatech_login():
+async def gatech_login(request: Request):
     """
     Initiates SSO redirect to Georgia Tech for GT SSO login using SAML2 protocol.
     """
-    pass
+    # Check if IdP metadata is loaded before preparing request
+    try:
+        # We need to ensure saml_client is initialized before calling get_saml_client().
+        # This will be handled by the lifespan event in main.py.
+        # So we can safely proceed assuming it's initialized here.
+        if not get_saml_client().metadata.identity_providers():
+            raise HTTPException(
+                status_code=500, 
+                detail="SAML Identity Provider metadata not configured. Cannot initiate login."
+            )
+
+        # Use helper function to prepare the SAML request
+        # The 'request.url' here will be the full URL including the /auth prefix
+        redirect_url, _ = prepare_saml_authn_request(relay_state=str(request.url)) 
+        
+        print(f"Redirecting user to IdP for SAML authentication: {redirect_url}") 
+        return RedirectResponse(url=redirect_url)
+
+    except HTTPException: # Catch and re-raise HTTPException directly
+        raise
+    except Exception as e:
+        print(f"Error during SAML login initiation: {e}") 
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to initiate SAML login: {e}"
+        )
 
 
 @router.post("/logout")
@@ -170,7 +209,7 @@ async def refresh_access_token(refresh_token: str) -> TokenResponse:
     )
 
 
-@router.get("/google/callback") # TODO: This URI must be registered in Google Cloud Console
+@router.get("/google/callback") 
 async def google_auth_callback(code: str) -> TokenResponse: 
     """
     Handles callback from Google OAuth that redirects back to current app. 
@@ -230,14 +269,111 @@ async def google_auth_callback(code: str) -> TokenResponse:
 
 
 @router.post("/gatech/saml2/acs")
-async def gatech_assertion_consumer_service():
+async def gatech_assertion_consumer_service(request: Request) -> TokenResponse:
     """
     Receives and processes the SAML2 response from Georgia Tech.
 
     TODO: Update schemas to reflect exact data expected from GT response. 
           Reflect updates here
     """
-    pass
+    try:
+        form_data = await request.form()
+        saml_response_b64 = form_data.get("SAMLResponse")
+
+        if not saml_response_b64:
+            print("No SAMLResponse found in ACS POST data.")
+            raise HTTPException(status_code=400, detail="SAMLResponse missing.")
+
+        # Use helper function to process the SAML response
+        authn_response = process_saml_response(saml_response_b64)
+
+        if authn_response is None:
+            print("Failed to parse SAML authentication response.")
+            raise HTTPException(status_code=400, detail="Invalid SAML response.")
+
+        # Check for authentication errors and assertion validity
+        if authn_response.assertion is None or not authn_response.successful():
+            # Access errors from client via helper
+            errors = get_saml_client().get_errors() 
+            error_reason = get_saml_client().get_last_error_reason() 
+            print(f"SAML authentication failed. Errors: {errors}. Reason: {error_reason}") 
+            raise HTTPException(
+                status_code=401,
+                detail=f"SAML authentication failed: {error_reason}"
+            )
+
+        user_attributes: Dict = authn_response.ava
+        print(f"SAML Authentication successful. Attributes: {user_attributes}")
+
+        email = None
+        if user_attributes.get("email"): # Common attribute name
+            email = user_attributes["email"][0]
+        elif user_attributes.get("mail"): # Another common attribute name
+            email = user_attributes["mail"][0]
+        # TODO: Coordinate with Georgia Tech IdP on expected attribute names.
+        # Add more checks if you expect other OIDs or attribute names
+        # Example: if user_attributes.get("urn:oid:0.9.2342.19200300.100.1.3"): email = user_attributes["urn:oid:0.9.2342.19200300.100.1.3"][0]
+
+        if not email:
+            print("SAML response did not contain a recognizable email attribute.")
+            raise HTTPException(
+                status_code=500, 
+                detail="SAML response missing required email attribute."
+            )
+        
+        user = get_user_by_email(email)
+        if not user:
+            print(f"User with email {email} from SAML not found in database.")
+            raise HTTPException(
+                status_code=403, 
+                detail="User does not exist in system or is not authorized via Gatech SSO."
+            )
+
+        user_id = user["id"]
+        roles: List[str] = get_user_role_names(user_id)
+        profile_picture_url: str = get_user_profile_picture_url(user_id)
+
+        access_token = create_jwt_token(
+            {
+                "user_id": user_id,
+                "email": email,
+                "roles": roles,
+                "profile_picture_url": profile_picture_url
+            }
+        )
+        refresh_token = store_refresh_token(user_id)
+
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error during SAML ACS processing: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"An internal server error occurred during SAML processing: {e}"
+        )
+
+
+@router.get("/gatech/saml2/metadata", response_class=HTMLResponse) # This will be /auth/gatech/saml2/metadata
+async def gatech_saml_metadata_endpoint():
+    """
+    Exposes the Service Provider (SP) metadata XML.
+    This is mainly for convenience; typically you'd generate and provide this file out-of-band.
+    """
+    try:
+        metadata_xml = generate_sp_metadata_xml()
+        return Response(content=metadata_xml, media_type="application/xml")
+    except Exception as e:
+        print(f"Error generating SP metadata XML: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate SP metadata: {e}"
+        )
 
 
 @router.get("/me", response_model=UserResponse)
