@@ -99,5 +99,5 @@ SP_CONFIG = {
     # ],
 
     "debug": 1, # Set to 1 for more verbose logging during development
-                # TODO: Set to 0 for production if 
+                # TODO: Set to 0 for production if not using verbose logging then
 }

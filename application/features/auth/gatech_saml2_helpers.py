@@ -8,7 +8,7 @@ from saml2 import BINDING_HTTP_POST, BINDING_HTTP_REDIRECT # Keep these if you u
 from saml2.metadata import create_metadata_string
 
 # Import your SP configuration
-from application.features.auth.gatech_saml2_config import SP_CONFIG, CERT_DIR # CERT_DIR might be useful here
+from application.features.auth.gatech_saml2_config import SP_CONFIG, CERT_DIR 
 
 # Global SAML client instance
 saml_client: Saml2Client = None

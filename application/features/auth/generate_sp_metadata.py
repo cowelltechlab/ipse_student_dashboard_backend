@@ -13,7 +13,7 @@ sys.path.insert(0, project_root)
 
 # Now you can import your helper function
 from application.features.auth.gatech_saml2_helpers import generate_sp_metadata_xml, init_saml_client
-from application.features.auth.gatech_saml2_config import SP_CONFIG, CERT_DIR
+from application.features.auth.gatech_saml2_config import CERT_DIR
 
 def main(print_progress = False):
     print("Initializing SAML2 client for metadata generation...")
@@ -26,8 +26,6 @@ def main(print_progress = False):
         if print_progress: print("SP metadata XML string generated.")
 
         # Define the output path for your metadata file
-        # cert_dir = SP_CONFIG["CERT_DIR"] # Get CERT_DIR from config
-        # output_path = os.path.join(cert_dir, "sp_metadata.xml")
         output_path = os.path.join(CERT_DIR, "sp_metadata.xml")
 
         if print_progress: print(f"Saving SP metadata to: {output_path}")
