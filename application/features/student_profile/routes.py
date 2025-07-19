@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from typing import List
+from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends
+from typing import List, Optional
+
+from requests import Session
 from application.features.student_profile.crud import (
-    create_or_update_profile, get_complete_profile, update_student_profile
+    create_or_update_profile, get_complete_profile, get_user_id_from_student, update_student_profile, update_user_profile_picture
 )
 from application.features.student_profile.schemas import (
     StudentProfileCreate, StudentProfileResponse, StudentProfileUpdate
 )
 from application.features.auth.permissions import require_user_access
+from application.utils.blob_upload import upload_profile_picture
 
 router = APIRouter()
 
@@ -22,6 +25,32 @@ def upsert_student_profile(
         )
     return create_or_update_profile(payload)
 
+
+@router.post("/profile-picture/{student_id}")
+async def upsert_profile_picture(
+    student_id: int,
+    profile_picture: Optional[UploadFile] = File(None),
+    _user=Depends(require_user_access)
+):
+    if not profile_picture:
+        raise HTTPException(status_code=400, detail="No profile picture provided")
+
+    user_id = get_user_id_from_student(student_id)
+
+    try:
+        blob_url = await upload_profile_picture(user_id, profile_picture)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    update_user_profile_picture(user_id, blob_url)
+
+    return {
+        "success": True,
+        "user_id": user_id,
+        "profile_picture_url": blob_url
+    }
+
+    
 
 @router.get("/{student_id}", response_model=StudentProfileResponse)
 def get_student_profile(

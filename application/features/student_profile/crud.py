@@ -187,18 +187,22 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     conn = get_sql_db_connection()
     cursor = conn.cursor()
     try:
-        # Year name
+        # Year name and user name
         cursor.execute(
             """
-            SELECT y.name
+            SELECT y.name, u.first_name, u.last_name, u.profile_picture_url
             FROM dbo.Students s
             INNER JOIN dbo.Years y ON s.year_id = y.id
+            INNER JOIN dbo.Users u ON s.user_id = u.id
             WHERE s.id = ?
             """,
             (student_id,),
         )
-        year_row = cursor.fetchone()
-        year_name = year_row[0] if year_row else None
+        row = cursor.fetchone()
+        year_name = row[0] if row else None
+        first_name = row[1] if row else None
+        last_name = row[2] if row else None
+        profile_picture_url = row[3] if row else None
 
         # Classes
         cursor.execute(
@@ -222,17 +226,21 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     finally:
         conn.close()
 
+
     # ---------- Map to front‑end shape ----------
     summaries = doc.get("summaries", {})
     return {
         "student_id": student_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "profile_picture_url": profile_picture_url,
         "year_name": year_name,
         "classes": classes,
         "strengths": doc.get("strengths"),
         "challenges": doc.get("challenges"),
         "long_term_goals": doc.get("long_term_goals"),
         "short_term_goals": doc.get("short_term_goals"),
-        "best_ways_to_help": doc.get("best_ways_to_help"), 
+        "best_ways_to_help": doc.get("best_ways_to_help"),
         "hobbies_and_interests": doc.get("hobbies_and_interests"),
         "profile_summaries": {
             "strengths_short": summaries.get("strength_short"),
@@ -242,6 +250,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
             "vision": doc.get("vision"),
         },
     }
+
 
 
 def get_profile(student_id: int):
@@ -350,3 +359,37 @@ def update_student_profile(student_id: int, patch: StudentProfileUpdate) -> dict
 #         return None
 #     container.delete_item(item=profile['id'], partition_key=profile['student_id'])
 #     return {"deleted": True}
+
+
+def get_user_id_from_student(student_id: int) -> int:
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "SELECT user_id FROM dbo.Students WHERE id = ?",
+            (student_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Student not found")
+        return row[0]
+    finally:
+        conn.close()
+
+
+def update_user_profile_picture(user_id: int, blob_url: str) -> None:
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE dbo.Users SET profile_picture_url = ? WHERE id = ?",
+            (blob_url, user_id)
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()

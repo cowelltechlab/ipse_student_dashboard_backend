@@ -58,12 +58,15 @@ class ProfileSummaries(BaseModel):
 
 class StudentProfileResponse(BaseModel):
     student_id: int
+    first_name: str
+    last_name: str
     year_name: str
+    profile_picture_url: Optional[str]
     classes: List[StudentClass]
     strengths: List[str]
     challenges: List[str]
     long_term_goals: str
     short_term_goals: str
-    best_ways_to_help: List[str]  
+    best_ways_to_help: List[str]
     hobbies_and_interests: str
     profile_summaries: ProfileSummaries
