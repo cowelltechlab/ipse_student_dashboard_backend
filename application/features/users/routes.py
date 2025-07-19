@@ -55,6 +55,16 @@ async def get_users(
         for user in users
     ]
 
+@router.get("/profile-picture-defaults", response_model=List[DefaultProfilePicture])
+async def get_profile_picture_defaults():
+
+   default_profile_pictures = fetch_all("ProfilePictureDefaults")
+
+   return [
+       DefaultProfilePicture(id=p["id"], url=p["profile_picture_url"])
+       for p in default_profile_pictures
+   ]
+
 
 @router.get("/{user_id}", response_model=UserResponse)
 async def get_user_by_id(user_id: int, user_data: dict = Depends(require_teacher_access)):
@@ -241,12 +251,3 @@ async def delete_user(
     return {"message": f"User with ID {user_id} deleted successfully."}
 
 
-@router.get("/profile-picture-defaults", response_model=List[DefaultProfilePicture])
-async def get_profile_picture_defaults():
-
-   default_profile_pictures = fetch_all("ProfilePictureDefaults")
-
-   return [
-       DefaultProfilePicture(id=p["id"], url=p["profile_picture_url"])
-       for p in default_profile_pictures
-   ]
