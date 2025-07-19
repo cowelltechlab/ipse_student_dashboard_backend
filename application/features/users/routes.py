@@ -1,16 +1,12 @@
-
-
-import hashlib
 import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
 from typing import List, Optional, Dict
-from application.database.mssql_connection import get_sql_db_connection
 from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
-from application.features.auth.crud import create_user, get_all_role_ids, get_user_by_email, get_user_role_names
-from application.features.auth.permissions import require_admin_access, require_teacher_access, require_user_access
-from application.features.auth.schemas import RegisterUserRequest, StudentProfile, UserResponse
+from application.features.auth.crud import get_user_by_email
+from application.features.auth.permissions import require_admin_access, require_teacher_access
+from application.features.auth.schemas import StudentProfile, UserResponse
 from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token, get_user_with_roles_by_id
 
 import re
