@@ -5,6 +5,15 @@ from typing import List, Dict, Optional
 from application.database.mssql_connection import get_sql_db_connection
 import pyodbc
 
+from application.database.nosql_connection import get_cosmos_db_connection
+
+DATABASE_NAME = "ai-prompt-storage"
+CONTAINER_NAME = "ai-student-profile"
+
+client = get_cosmos_db_connection()
+db = client.get_database_client(DATABASE_NAME)
+container = db.get_container_client(CONTAINER_NAME)
+
 
 def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
     conn = get_sql_db_connection()
@@ -68,8 +77,20 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
                 """, (uid,))
                 row = cursor.fetchone()
                 if row:
-                    user["student_id"] = row[0]
-                    user["year_name"] = row[1]
+                    student_id, year_name = row
+                    user["student_id"] = student_id
+                    user["year_name"] = year_name
+
+                    # New: Check if Cosmos profile exists
+                    cosmos_result = list(container.query_items(
+                        "SELECT c.id FROM c WHERE c.student_id = @sid",
+                        parameters=[{"name": "@sid", "value": student_id}],
+                        enable_cross_partition_query=True,
+                    ))
+
+                    if not cosmos_result:
+                        tag = "Profile Incomplete"
+
                 else:
                     tag = "Profile Incomplete"
 
