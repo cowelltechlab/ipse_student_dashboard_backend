@@ -56,10 +56,25 @@ class ProfileSummaries(BaseModel):
     best_ways_to_help: str
     vision: str
 
+class StudentProfileUpdate(BaseModel):
+    year_id: Optional[int] = None
+    strengths: Optional[List[str]] = None
+    challenges: Optional[List[str]] = None
+    likes_and_hobbies: Optional[str] = None
+    short_term_goals: Optional[str] = None
+    long_term_goals: Optional[str] = None
+    best_ways_to_help: Optional[List[str]] = None
+    classes: Optional[List[ClassSelection]] = None
+
+
 class StudentProfileResponse(BaseModel):
     student_id: int
+    user_id: int
+   
     first_name: str
     last_name: str
+    email: Optional[str]
+    gt_email: Optional[str]
     year_name: str
     profile_picture_url: Optional[str]
     classes: List[StudentClass]

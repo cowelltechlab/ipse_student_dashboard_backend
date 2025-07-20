@@ -66,16 +66,13 @@ def get_student_profile(
 
 
 
-@router.put("/{student_id}", response_model=StudentProfileResponse)
-def patch_student_profile(
-    student_id: int,
+@router.put("/{user_id}", status_code=status.HTTP_200_OK)
+def partial_update_student_profile(
+    user_id: int,
     payload: StudentProfileUpdate,
-    _=Depends(require_user_access),
+    _user=Depends(require_user_access)
 ):
-    # 1. do the update
-    update_student_profile(student_id, payload)
-    # 2. fetch the fully‑joined profile for response
-    return get_complete_profile(student_id)
+    return update_student_profile(user_id, payload)
 
 
 # @router.delete("/{student_id}")

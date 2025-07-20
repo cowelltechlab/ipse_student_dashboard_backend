@@ -190,7 +190,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         # Year name and user name
         cursor.execute(
             """
-            SELECT y.name, u.first_name, u.last_name, u.profile_picture_url
+            SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url
             FROM dbo.Students s
             INNER JOIN dbo.Years y ON s.year_id = y.id
             INNER JOIN dbo.Users u ON s.user_id = u.id
@@ -200,9 +200,12 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         )
         row = cursor.fetchone()
         year_name = row[0] if row else None
-        first_name = row[1] if row else None
-        last_name = row[2] if row else None
-        profile_picture_url = row[3] if row else None
+        user_id = row[1] if row else None
+        first_name = row[2] if row else None
+        last_name = row[3] if row else None
+        gmail = row[4] if row else None
+        gt_email = row[5] if row else None
+        profile_picture_url = row[6] if row else None
 
         # Classes
         cursor.execute(
@@ -231,8 +234,11 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     summaries = doc.get("summaries", {})
     return {
         "student_id": student_id,
+        "user_id": user_id,
         "first_name": first_name,
         "last_name": last_name,
+        "email":gmail,
+        "gt_email": gt_email,
         "profile_picture_url": profile_picture_url,
         "year_name": year_name,
         "classes": classes,
@@ -259,34 +265,38 @@ def get_profile(student_id: int):
     items = list(container.query_items(query=query, parameters=params, enable_cross_partition_query=True))
     return items[0] if items else None
 
-def update_student_profile(student_id: int, patch: StudentProfileUpdate) -> dict:
-    """
-    • Update StudentClasses if 'classes' present
-    • Patch Cosmos doc with provided fields
-      Re‑run GPT summaries only for affected parts
-    """
-    # ---- SQL ----
+
+def update_student_profile(user_id: int, update_data: StudentProfileUpdate) -> dict:
     conn = get_sql_db_connection()
     cursor = conn.cursor()
+
     try:
         conn.autocommit = False
 
-        if patch.classes is not None:
-            # Clear & re‑insert current class list
+        # Fetch student ID from user_id
+        cursor.execute("SELECT id FROM dbo.Students WHERE user_id = ?", (user_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail=f"Student for user {user_id} not found")
+        student_id = row[0]
+
+        # Update Students table
+        if update_data.year_id is not None:
             cursor.execute(
-                "DELETE FROM dbo.StudentClasses WHERE student_id = ?",
-                (student_id,),
+                "UPDATE dbo.Students SET year_id = ? WHERE id = ?",
+                (update_data.year_id, student_id)
             )
+
+        # Update classes if provided
+        if update_data.classes is not None:
+            cursor.execute("DELETE FROM dbo.StudentClasses WHERE student_id = ?", (student_id,))
             insert_stmt = """
                 INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
                 VALUES (?, ?, ?)
             """
             cursor.executemany(
                 insert_stmt,
-                [
-                    (student_id, cls.class_id, cls.class_goal)
-                    for cls in patch.classes
-                ],
+                [(student_id, cls.class_id, cls.class_goal) for cls in update_data.classes]
             )
 
         conn.commit()
@@ -296,61 +306,54 @@ def update_student_profile(student_id: int, patch: StudentProfileUpdate) -> dict
     finally:
         conn.close()
 
-     # ── Cosmos ────────────────────────────────────────────────────────────
+    # Cosmos update (partial merge)
     query = "SELECT * FROM c WHERE c.student_id = @sid"
-    doc = next(
+    docs = list(
         container.query_items(
             query,
             parameters=[{"name": "@sid", "value": student_id}],
             enable_cross_partition_query=True,
-        ),
-        None,
-    )
-    if not doc:
-        raise HTTPException(status_code=404, detail="Profile not found")
-
-    summaries_changed = False
-
-    if patch.strengths is not None:
-        doc["strengths"] = patch.strengths
-        doc.setdefault("summaries", {})["strength_short"] = summarize_strengths(
-            patch.strengths
         )
-        summaries_changed = True
+    )
 
-    if patch.short_term_goals is not None:
-        doc["short_term_goals"] = patch.short_term_goals
-        doc.setdefault("summaries", {})[
-            "short_term_goals"
-        ] = summarize_short_term_goals(patch.short_term_goals)
-        summaries_changed = True
+    if not docs:
+        raise HTTPException(status_code=404, detail="Cosmos student profile not found")
 
-    if patch.long_term_goals is not None:
-        doc["long_term_goals"] = patch.long_term_goals
-        doc.setdefault("summaries", {})[
-            "long_term_goals"
-        ] = summarize_long_term_goals(patch.long_term_goals)
-        summaries_changed = True
+    doc = docs[0]
 
-    if patch.best_ways_to_help is not None:
-        doc["best_ways_to_help"] = patch.best_ways_to_help
-        doc.setdefault("summaries", {})[
-            "best_ways_to_help"
-        ] = summarize_best_ways_to_learn(patch.best_ways_to_help)
-        summaries_changed = True
+    # Only update provided fields
+    if update_data.strengths is not None:
+        doc["strengths"] = update_data.strengths
+        doc["summaries"]["strength_short"] = summarize_strengths(update_data.strengths)
 
-    if patch.challenges is not None:
-        doc["challenges"] = patch.challenges
+    if update_data.challenges is not None:
+        doc["challenges"] = update_data.challenges
 
-    if patch.hobbies_and_interests is not None:
-        doc["hobbies_and_interests"] = patch.hobbies_and_interests
+    if update_data.likes_and_hobbies is not None:
+        doc["hobbies_and_interests"] = update_data.likes_and_hobbies
 
-    # Regenerate vision only if a “core” field changed
-    if summaries_changed:
-        doc["vision"] = generate_vision_statement(str(doc))
+    if update_data.short_term_goals is not None:
+        doc["short_term_goals"] = update_data.short_term_goals
+        doc["summaries"]["short_term_goals"] = summarize_short_term_goals(update_data.short_term_goals)
 
-    container.replace_item(item=doc["id"], body=doc)
-    return doc
+    if update_data.long_term_goals is not None:
+        doc["long_term_goals"] = update_data.long_term_goals
+        doc["summaries"]["long_term_goals"] = summarize_long_term_goals(update_data.long_term_goals)
+
+    if update_data.best_ways_to_help is not None:
+        doc["best_ways_to_help"] = update_data.best_ways_to_help
+        doc["summaries"]["best_ways_to_help"] = summarize_best_ways_to_learn(update_data.best_ways_to_help)
+
+    doc["vision"] = generate_vision_statement(str(doc))  # update vision based on updated fields
+
+    container.replace_item(item=doc, body=doc)
+
+    return {
+        "student_id": student_id,
+        "user_id": user_id,
+        "cosmos_doc_id": doc["id"],
+    }
+
 
 
 # def delete_profile(student_id: int):
