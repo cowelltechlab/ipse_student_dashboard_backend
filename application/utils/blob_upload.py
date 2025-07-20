@@ -23,4 +23,4 @@ async def upload_profile_picture(user_id: int, file) -> str:
     blob_client = container_client.get_blob_client(blob_name)
     blob_client.upload_blob(contents, overwrite=True)
 
-    return blob_client.url
+    return blob_client.url 

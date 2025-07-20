@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile, status, Depends
 from typing import List, Optional
 
 from requests import Session
@@ -30,17 +30,20 @@ def upsert_student_profile(
 async def upsert_profile_picture(
     student_id: int,
     profile_picture: Optional[UploadFile] = File(None),
-    _user=Depends(require_user_access)
+    existing_blob_url: Optional[str] = Form(None),
+    _user=Depends(require_user_access),
 ):
-    if not profile_picture:
-        raise HTTPException(status_code=400, detail="No profile picture provided")
-
     user_id = get_user_id_from_student(student_id)
 
-    try:
-        blob_url = await upload_profile_picture(user_id, profile_picture)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if profile_picture:
+        try:
+            blob_url = await upload_profile_picture(user_id, profile_picture)
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+    elif existing_blob_url:
+        blob_url = existing_blob_url
+    else:
+        raise HTTPException(status_code=400, detail="No profile picture provided")
 
     update_user_profile_picture(user_id, blob_url)
 
@@ -50,7 +53,6 @@ async def upsert_profile_picture(
         "profile_picture_url": blob_url
     }
 
-    
 
 @router.get("/{student_id}", response_model=StudentProfileResponse)
 def get_student_profile(
