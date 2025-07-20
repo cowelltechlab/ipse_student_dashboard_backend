@@ -2,7 +2,7 @@ import datetime
 from http.client import HTTPException
 from io import BytesIO
 from typing import List
-from fastapi import File, Form, HTTPException, APIRouter, UploadFile, status, Body
+from fastapi import Depends, File, Form, HTTPException, APIRouter, UploadFile, status, Body
 
 
 from application.features.assignments.schemas import (
@@ -13,13 +13,15 @@ from application.features.assignments.schemas import (
     AssignmentTypeListResponse
 )
 from application.features.assignments.crud import (
-    get_all_assignment_types, 
+    get_all_assignment_types,
+    get_all_assignments_by_student_id, 
     get_assignments_by_id, 
     get_all_assignments, 
     add_assignment,
     add_many_assignments, 
     update_assignment
 )
+from application.features.auth.permissions import require_user_access
 from application.services.html_extractors import extract_html_from_file
 from application.services.upload_to_blob import upload_to_blob
 from application.services.text_extractors import extract_text_from_file
@@ -31,7 +33,9 @@ router = APIRouter()
 
 
 @router.get("/", response_model=List[AssignmentListResponse])
-def fetch_assignments():
+def fetch_assignments(
+    _user = Depends(require_user_access)
+):
     """Retrieve all assignments"""
     return get_all_assignments()
 
@@ -39,6 +43,8 @@ def fetch_assignments():
 @router.get("/id/{assignment_id}", response_model= AssignmentDetailResponse)
 def fetch_assignment_by_id(
     assignment_id: int,
+    _user = Depends(require_user_access)
+
 ):
     assignment_record = get_assignments_by_id(assignment_id)
     if not assignment_record:
@@ -47,14 +53,27 @@ def fetch_assignment_by_id(
 
 
 @router.get(path="/types", response_model=List[AssignmentTypeListResponse])
-def fetch_assignment_types():
+def fetch_assignment_types(
+    _user = Depends(require_user_access)
+):
     """Retrieve all assignment types"""
-    print("REQUEST RECEIVED")
     return get_all_assignment_types()
+
+@router.get("/{student_id}", response_model=List[AssignmentListResponse])
+def fetch_assignments(
+    student_id: int,
+    _user = Depends(require_user_access)
+):
+    """Retrieve all assignments by student ID"""
+    return get_all_assignments_by_student_id(student_id)
 
 
 @router.post("/", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
-async def create_assignment(assignment_data: AssignmentCreate):
+async def create_assignment(
+    assignment_data: AssignmentCreate,
+    _user = Depends(require_user_access)
+
+                            ):
     """Create a new assignment."""
     created_assignment = add_assignment(assignment_data.model_dump())
     return created_assignment
@@ -65,7 +84,10 @@ async def upload_assignment_file(
     student_id: int = Form(...),
     title: str = Form(...),
     class_id: int = Form(...),
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+
+    _user = Depends(require_user_access)
+
 ):
     # 1. Read file content once
     file_bytes = await file.read()
@@ -92,7 +114,11 @@ async def upload_assignment_file(
 
 
 @router.post("/bulk", response_model=List[AssignmentDetailResponse], status_code=status.HTTP_201_CREATED)
-async def create_many_assignments(assignment_data: List[AssignmentCreate]) -> List:
+async def create_many_assignments(
+    assignment_data: List[AssignmentCreate],
+    _user = Depends(require_user_access)
+) -> List:
+    
     """Create a new assignment."""
     assignment_data_dicts = [data.model_dump() for data in assignment_data]
     created_assignment_records = await add_many_assignments(assignment_data_dicts)
@@ -105,7 +131,9 @@ async def upload_many_assignment_files(
     title: str = Form(...),
     class_id: int = Form(...),
     file: UploadFile = File(...),
-    assignment_type_id: int = Form(...)
+    assignment_type_id: int = Form(...),
+
+    _user = Depends(require_user_access)
 ):
     # 1. Read file content once. UploadFile can only be read once.
     original_file_bytes = await file.read()
@@ -147,7 +175,11 @@ async def upload_many_assignment_files(
 
 
 @router.put("/id/{assignment_id}", response_model=AssignmentDetailResponse)
-def update_class_route(assignment_id: int, data: AssignmentUpdate = Body(...)):
+def update_class_route(
+    assignment_id: int, 
+    data: AssignmentUpdate = Body(...),
+    _user = Depends(require_user_access)
+):
     """Update a class."""
     updated_assignment = update_assignment(assignment_id, data.dict(exclude_unset=True))
     if "error" in updated_assignment:

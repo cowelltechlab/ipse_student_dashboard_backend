@@ -158,6 +158,56 @@ def get_all_assignments():
     finally:
         conn.close()
 
+
+def get_all_assignments_by_student_id(student_id):
+    """
+    Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        query = """
+        SELECT 
+            a.id,
+            a.student_id,
+            a.title,
+            a.class_id,
+            a.date_created,
+            a.blob_url,
+            a.source_format,
+            u.first_name,
+            u.last_name
+        FROM Assignments a
+        INNER JOIN Students s ON a.student_id = s.id
+        INNER JOIN Users u ON s.user_id = u.id
+        WHERE a.student_id = ?
+        """
+        cursor.execute(query, (student_id,))
+        records = cursor.fetchall()
+        column_names = [column[0] for column in cursor.description]
+
+        assignment_versions = get_all_assignment_versions_map()
+
+        results = []
+        for row in records:
+            assignment = dict(zip(column_names, row))
+            version_data = assignment_versions.get(str(assignment["id"]), {
+                "finalized": False,
+                "rating_status": "Pending",
+                "date_modified": None
+            })
+            assignment.update(version_data)
+            results.append(assignment)
+
+        return results
+
+    except pyodbc.Error as e:
+        return {"error": str(e)}
+    finally:
+        conn.close()
+
+
 ''' 
 *** GET ASSIGNMENTS BY ID ENDPOINT *** 
 Fetch assignments in Assignments table based on ID
