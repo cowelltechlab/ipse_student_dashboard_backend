@@ -85,3 +85,29 @@ class StudentProfileResponse(BaseModel):
     best_ways_to_help: List[str]
     hobbies_and_interests: str
     profile_summaries: ProfileSummaries
+
+
+class ClassSelection(BaseModel):
+    class_id: int
+    class_goal: Optional[str]
+
+
+class StudentProfilePrefillResponse(BaseModel):
+    user_id: int
+    student_id: Optional[int]
+    first_name: Optional[str]
+    last_name: Optional[str]
+    email: Optional[str]
+    gt_email: Optional[str]
+    profile_picture_url: Optional[str]
+    year_id: Optional[int]
+
+    classes: Optional[List[ClassSelection]]
+    strengths: List[str]
+    challenges: List[str]
+    long_term_goals: str
+    short_term_goals: str
+    best_ways_to_help: List[str]
+    hobbies_and_interests: str
+    reading_level: List[str]
+    writing_level: List[str]

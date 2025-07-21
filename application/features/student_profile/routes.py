@@ -3,10 +3,10 @@ from typing import List, Optional
 
 from requests import Session
 from application.features.student_profile.crud import (
-    create_or_update_profile, get_complete_profile, get_user_id_from_student, update_student_profile, update_user_profile_picture
+    create_or_update_profile, get_complete_profile, get_prefill_profile, get_user_id_from_student, update_student_profile, update_user_profile_picture
 )
 from application.features.student_profile.schemas import (
-    StudentProfileCreate, StudentProfileResponse, StudentProfileUpdate
+    StudentProfileCreate, StudentProfilePrefillResponse, StudentProfileResponse, StudentProfileUpdate
 )
 from application.features.auth.permissions import require_user_access
 from application.utils.blob_upload import upload_profile_picture
@@ -52,6 +52,18 @@ async def upsert_profile_picture(
         "user_id": user_id,
         "profile_picture_url": blob_url
     }
+
+# For pre-filling student profile in register form, in case of existing partial profile
+@router.get("/by-user/{user_id}", response_model=StudentProfilePrefillResponse)
+def get_student_profile_by_user_id(
+    user_id: int,
+    _user=Depends(require_user_access),
+):
+    profile = get_prefill_profile(user_id)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User not found")
+    return profile
+
 
 
 @router.get("/{student_id}", response_model=StudentProfileResponse)

@@ -355,13 +355,93 @@ def update_student_profile(user_id: int, update_data: StudentProfileUpdate) -> d
     }
 
 
+def get_prefill_profile(user_id: int) -> Optional[dict]:
+    """
+    Return basic user info, optional student_id, and Cosmos fields if any.
+    Used for pre-filling the profile creation form.
+    """
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
 
-# def delete_profile(student_id: int):
-#     profile = get_profile(student_id)
-#     if not profile:
-#         return None
-#     container.delete_item(item=profile['id'], partition_key=profile['student_id'])
-#     return {"deleted": True}
+    # --- Check if user exists ---
+    cursor.execute(
+        """
+        SELECT first_name, last_name, email, gt_email, profile_picture_url
+        FROM Users
+        WHERE id = ?
+        """,
+        (user_id,)
+    )
+    row = cursor.fetchone()
+    if not row:
+        return None
+
+    first_name, last_name, email, gt_email, profile_picture_url = row
+
+    # --- Get optional student_id and year_id ---
+    cursor.execute(
+        "SELECT id, year_id FROM Students WHERE user_id = ?", (user_id,)
+    )
+    row = cursor.fetchone()
+    student_id = row[0] if row else None
+    year_id = row[1] if row else None
+
+    # Classes
+    cursor.execute(
+        """
+        SELECT sc.class_id, sc.learning_goal
+        FROM dbo.StudentClasses sc
+        INNER JOIN dbo.Classes c ON sc.class_id = c.id
+        WHERE sc.student_id = ?
+        """,
+        (student_id,),
+    )
+    classes = [
+        {
+            "class_id": cid,
+            "class_goal": goal,
+        }
+        for cid, goal in cursor.fetchall()
+    ]
+
+    # --- Try to pull Cosmos doc if student exists ---
+    cosmos_doc = {}
+    if student_id:
+        query = "SELECT * FROM c WHERE c.student_id = @sid"
+        cosmos_docs = list(
+            container.query_items(
+                query,
+                parameters=[{"name": "@sid", "value": student_id}],
+                enable_cross_partition_query=True,
+            )
+        )
+        if cosmos_docs:
+            cosmos_doc = cosmos_docs[0]
+
+    conn.close()
+
+    
+
+    return {
+        "user_id": user_id,
+        "student_id": student_id,
+        "first_name": first_name,
+        "last_name": last_name,
+        "email": email,
+        "gt_email": gt_email,
+        "profile_picture_url": profile_picture_url,
+        "year_id": year_id,
+        "classes": classes,
+        "strengths": cosmos_doc.get("strengths", []),
+        "challenges": cosmos_doc.get("challenges", []),
+        "long_term_goals": cosmos_doc.get("long_term_goals", ""),
+        "short_term_goals": cosmos_doc.get("short_term_goals", ""),
+        "best_ways_to_help": cosmos_doc.get("best_ways_to_help", []),
+        "hobbies_and_interests": cosmos_doc.get("hobbies_and_interests", ""),
+        "reading_level": cosmos_doc.get("reading_level", []),
+        "writing_level": cosmos_doc.get("writing_level", []),
+    }
+
 
 
 def get_user_id_from_student(student_id: int) -> int:
