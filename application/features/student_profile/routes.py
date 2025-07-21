@@ -3,10 +3,10 @@ from typing import List, Optional
 
 from requests import Session
 from application.features.student_profile.crud import (
-    create_or_update_profile, get_complete_profile, get_prefill_profile, get_user_id_from_student, handle_post_embed_url, update_student_profile, update_user_profile_picture
+    create_or_update_profile, get_complete_profile, get_prefill_profile, get_user_id_from_student, handle_post_ppt_urls, update_student_profile, update_user_profile_picture
 )
 from application.features.student_profile.schemas import (
-    EmbedUrlPayload, StudentProfileCreate, StudentProfilePrefillResponse, StudentProfileResponse, StudentProfileUpdate
+    PPtUrlsPayload, StudentProfileCreate, StudentProfilePrefillResponse, StudentProfileResponse, StudentProfileUpdate
 )
 from application.features.auth.permissions import require_user_access
 from application.utils.blob_upload import upload_profile_picture
@@ -55,13 +55,13 @@ async def upsert_profile_picture(
 
 
 
-@router.post("/achievements-embed-url/{student_id}", response_model=str)
+@router.post("/achievements-urls/{student_id}", response_model=str)
 def post_embed_url(
     student_id: int,
-    payload: EmbedUrlPayload,
+    payload: PPtUrlsPayload,
     _user=Depends(require_user_access),
 ):
-    return handle_post_embed_url(student_id, payload.embed_url)
+    return handle_post_ppt_urls(student_id, payload.embed_url, payload.edit_url)
 
 # For pre-filling student profile in register form, in case of existing partial profile
 @router.get("/by-user/{user_id}", response_model=StudentProfilePrefillResponse)
