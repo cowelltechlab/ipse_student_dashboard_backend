@@ -190,7 +190,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         # Year name and user name
         cursor.execute(
             """
-            SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url
+            SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url
             FROM dbo.Students s
             INNER JOIN dbo.Years y ON s.year_id = y.id
             INNER JOIN dbo.Users u ON s.user_id = u.id
@@ -206,6 +206,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         gmail = row[4] if row else None
         gt_email = row[5] if row else None
         profile_picture_url = row[6] if row else None
+        ppt_embed_url = row[7] if row else None
 
         # Classes
         cursor.execute(
@@ -241,6 +242,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         "gt_email": gt_email,
         "profile_picture_url": profile_picture_url,
         "year_name": year_name,
+        "ppt_embed_url": ppt_embed_url,
         "classes": classes,
         "strengths": doc.get("strengths"),
         "challenges": doc.get("challenges"),
@@ -471,6 +473,25 @@ def update_user_profile_picture(user_id: int, blob_url: str) -> None:
             (blob_url, user_id)
         )
         conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+
+def handle_post_embed_url(student_id: int, embed_url: str) -> str:
+    conn = get_sql_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            "UPDATE dbo.Students SET ppt_embed_url = ? WHERE id = ?",
+            (embed_url, student_id)
+        )
+        conn.commit()
+
+        return "Embed URL updated successfully."
     except Exception:
         conn.rollback()
         raise

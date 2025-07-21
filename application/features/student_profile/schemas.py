@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, conlist
+from pydantic import BaseModel, Field, HttpUrl, conlist, validator
 from typing import Annotated, List, Dict, Optional
 
 class StudentProfileBase(BaseModel):
@@ -77,6 +77,7 @@ class StudentProfileResponse(BaseModel):
     gt_email: Optional[str]
     year_name: str
     profile_picture_url: Optional[str]
+    ppt_embed_url: Optional[str]
     classes: List[StudentClass]
     strengths: List[str]
     challenges: List[str]
@@ -111,3 +112,13 @@ class StudentProfilePrefillResponse(BaseModel):
     hobbies_and_interests: str
     reading_level: List[str]
     writing_level: List[str]
+
+
+class EmbedUrlPayload(BaseModel):
+    embed_url: HttpUrl
+
+    @validator("embed_url")
+    def must_be_sharepoint_url(cls, v):
+        if not v.startswith("https://gtvault-my.sharepoint.com"):
+            raise ValueError("URL must be a valid SharePoint embed link")
+        return v
