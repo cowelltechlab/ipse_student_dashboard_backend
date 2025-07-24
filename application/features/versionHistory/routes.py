@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from application.database.nosql_connection import get_container
 from application.features.versionHistory import crud
-from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate, FinalizeVersionRequest
+from application.features.versionHistory.schemas import AssignmentVersionCreate, AssignmentVersionResponse, AssignmentVersionUpdate, FinalizeVersionRequest, RatingUpdateRequest
 from application.features.auth.permissions import require_user_access 
 
 router = APIRouter()
@@ -58,3 +58,14 @@ def finalize_assignment_version(
 ):
     container = get_container()
     return crud.finalize_by_id(container, request.assignment_version_id, request.finalized)
+
+@router.put("/rating/{modifier_id}/assignment/{assignment_id}/version/{version_number}", response_model=AssignmentVersionResponse)
+def update_version_ratings(
+    assignment_id: str,
+    version_number: int,
+    modifier_id: str, 
+    rating_data: RatingUpdateRequest,
+    user_data: dict = Depends(require_user_access)
+):
+    container = get_container()
+    return crud.update_rating_fields(container, assignment_id, version_number, modifier_id, rating_data)
