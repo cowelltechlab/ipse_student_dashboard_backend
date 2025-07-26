@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 
 from application.features.auth.permissions import require_user_access
-from application.features.students.crud import get_all_students, add_student, get_student_by_student_id, get_student_by_user_id, update_student as crud_update_student
+from application.features.students.crud import fetch_all_students_with_names, add_student, get_student_by_student_id, get_student_by_user_id, update_student as crud_update_student
 from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate 
 from application.features.students.crud import  get_students_by_year,  delete_student_records
 
@@ -18,7 +18,7 @@ def fetch_students(
     """Retrieve all students or filter by year_id."""
     if year_id is not None:
         return get_students_by_year(year_id)
-    return get_all_students()
+    return fetch_all_students_with_names()
 
 @router.get("/user/{user_id}", response_model=StudentResponse)
 def fetch_students_by_user_id(user_id: int, user_data: dict = Depends(require_user_access)):

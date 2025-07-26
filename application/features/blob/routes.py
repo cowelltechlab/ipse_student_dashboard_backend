@@ -1,7 +1,6 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException
 from azure.storage.blob import BlobServiceClient
 from application.features.students.crud import update_student_profile_pic 
-from application.database.mssql_connection import get_sql_db_connection 
 
 router = APIRouter()
 import os
