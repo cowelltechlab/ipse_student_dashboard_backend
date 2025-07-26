@@ -5,7 +5,8 @@ from application.database.mssql_connection import get_sql_db_connection
 from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
 from application.database.nosql_connection import get_cosmos_db_connection  
 from application.features.gpt.crud import summarize_best_ways_to_learn, summarize_long_term_goals, summarize_short_term_goals, summarize_strengths, generate_vision_statement
-from uuid import uuid4
+
+import pyodbc
 
 DATABASE_NAME = "ai-prompt-storage"
 CONTAINER_NAME = "ai-student-profile"
@@ -24,92 +25,91 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
     """
 
     # ----------  SQL section (transaction) ----------
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
+   
     try:
-        conn.autocommit = False   # start explicit tx
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            conn.autocommit = False   # start explicit tx
 
-        # 1.  Ensure user exists, then update names
-        cursor.execute(
-            "SELECT 1 FROM dbo.Users WHERE id = ?",
-            (data.user_id,),
-        )
-        if cursor.fetchone() is None:
-            raise HTTPException(
-                status_code=404, detail=f"User {data.user_id} not found"
+            # 1.  Ensure user exists, then update names
+            cursor.execute(
+                "SELECT 1 FROM dbo.Users WHERE id = ?",
+                (data.user_id,),
             )
+            if cursor.fetchone() is None:
+                raise HTTPException(
+                    status_code=404, detail=f"User {data.user_id} not found"
+                )
 
-        cursor.execute(
-            """
-            UPDATE dbo.Users
-            SET first_name = ?, last_name = ?
-            WHERE id = ?
-            """,
-            (data.first_name, data.last_name, data.user_id),
-        )
-
-        # 2.  Up‑sert into Students table
-        cursor.execute(
-            "SELECT id FROM dbo.Students WHERE user_id = ?",
-            (data.user_id,),
-        )
-        row = cursor.fetchone()
-        if row:
-            student_id = row[0]
             cursor.execute(
                 """
-                UPDATE dbo.Students
-                SET year_id = ?, reading_level = ?, writing_level = ?, active_status = 1
+                UPDATE dbo.Users
+                SET first_name = ?, last_name = ?
                 WHERE id = ?
                 """,
-                (
-                    data.year_id,
-                    data.reading_level,
-                    data.writing_level,
-                    student_id,
-                ),
+                (data.first_name, data.last_name, data.user_id),
             )
-        else:
+
+            # 2.  Up‑sert into Students table
             cursor.execute(
-                """
-                INSERT INTO dbo.Students (user_id, year_id, reading_level, writing_level, active_status)
-                OUTPUT INSERTED.id
-                VALUES (?, ?, ?, ?, 1)
-                """,
-                (
-                    data.user_id,
-                    data.year_id,
-                    data.reading_level,
-                    data.writing_level,
-                ),
+                "SELECT id FROM dbo.Students WHERE user_id = ?",
+                (data.user_id,),
             )
-            student_id = cursor.fetchone()[0]
+            row = cursor.fetchone()
+            if row:
+                student_id = row[0]
+                cursor.execute(
+                    """
+                    UPDATE dbo.Students
+                    SET year_id = ?, reading_level = ?, writing_level = ?, active_status = 1
+                    WHERE id = ?
+                    """,
+                    (
+                        data.year_id,
+                        data.reading_level,
+                        data.writing_level,
+                        student_id,
+                    ),
+                )
+            else:
+                cursor.execute(
+                    """
+                    INSERT INTO dbo.Students (user_id, year_id, reading_level, writing_level, active_status)
+                    OUTPUT INSERTED.id
+                    VALUES (?, ?, ?, ?, 1)
+                    """,
+                    (
+                        data.user_id,
+                        data.year_id,
+                        data.reading_level,
+                        data.writing_level,
+                    ),
+                )
+                student_id = cursor.fetchone()[0]
 
-        # 3.  Refresh StudentClasses (remove‑then‑add)
-        cursor.execute(
-            "DELETE FROM dbo.StudentClasses WHERE student_id = ?",
-            (student_id,),
-        )
-        insert_stmt = """
-            INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
-            VALUES (?, ?, ?)
-        """
-        cursor.executemany(
-            insert_stmt,
-            [
-                (student_id, cls.class_id, cls.class_goal)
-                for cls in data.classes
-            ],
-        )
+            # 3.  Refresh StudentClasses (remove‑then‑add)
+            cursor.execute(
+                "DELETE FROM dbo.StudentClasses WHERE student_id = ?",
+                (student_id,),
+            )
+            insert_stmt = """
+                INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
+                VALUES (?, ?, ?)
+            """
+            cursor.executemany(
+                insert_stmt,
+                [
+                    (student_id, cls.class_id, cls.class_goal)
+                    for cls in data.classes
+                ],
+            )
 
-        # Commit SQL work now; Cosmos write will throw on error & can be retried
-        conn.commit()
+            # Commit SQL work now; Cosmos write will throw on error & can be retried
+            conn.commit()
 
     except Exception:
-        conn.rollback()
         raise
-    finally:
-        conn.close()
+
 
     # ----------  Cosmos section ----------
     
@@ -184,52 +184,57 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
     doc = cosmos_doc[0]
 
     # ---------- SQL ----------
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
+  
     try:
-        # Year name and user name
-        cursor.execute(
-            """
-            SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url
-            FROM dbo.Students s
-            INNER JOIN dbo.Years y ON s.year_id = y.id
-            INNER JOIN dbo.Users u ON s.user_id = u.id
-            WHERE s.id = ?
-            """,
-            (student_id,),
-        )
-        row = cursor.fetchone()
-        year_name = row[0] if row else None
-        user_id = row[1] if row else None
-        first_name = row[2] if row else None
-        last_name = row[3] if row else None
-        gmail = row[4] if row else None
-        gt_email = row[5] if row else None
-        profile_picture_url = row[6] if row else None
-        ppt_embed_url = row[7] if row else None
-        ppt_edit_url = row[8] if row else None
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            # Year name and user name
+            cursor.execute(
+                """
+                SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url
+                FROM dbo.Students s
+                INNER JOIN dbo.Years y ON s.year_id = y.id
+                INNER JOIN dbo.Users u ON s.user_id = u.id
+                WHERE s.id = ?
+                """,
+                (student_id,),
+            )
+            row = cursor.fetchone()
+            year_name = row[0] if row else None
+            user_id = row[1] if row else None
+            first_name = row[2] if row else None
+            last_name = row[3] if row else None
+            gmail = row[4] if row else None
+            gt_email = row[5] if row else None
+            profile_picture_url = row[6] if row else None
+            ppt_embed_url = row[7] if row else None
+            ppt_edit_url = row[8] if row else None
 
-        # Classes
-        cursor.execute(
-            """
-            SELECT sc.class_id, c.name, c.course_code, sc.learning_goal
-            FROM dbo.StudentClasses sc
-            INNER JOIN dbo.Classes c ON sc.class_id = c.id
-            WHERE sc.student_id = ?
-            """,
-            (student_id,),
-        )
-        classes = [
-            {
-                "class_id": cid,
-                "class_name": cname,
-                "course_code": ccode,
-                "learning_goal": goal,
-            }
-            for cid, cname, ccode, goal in cursor.fetchall()
-        ]
-    finally:
-        conn.close()
+            # Classes
+            cursor.execute(
+                """
+                SELECT sc.class_id, c.name, c.course_code, sc.learning_goal
+                FROM dbo.StudentClasses sc
+                INNER JOIN dbo.Classes c ON sc.class_id = c.id
+                WHERE sc.student_id = ?
+                """,
+                (student_id,),
+            )
+            classes = [
+                {
+                    "class_id": cid,
+                    "class_name": cname,
+                    "course_code": ccode,
+                    "learning_goal": goal,
+                }
+                for cid, cname, ccode, goal in cursor.fetchall()
+            ]
+    except pyodbc.Error as e:
+        # Handle DB-related errors gracefully
+        return {"error": f"Database error: {str(e)}"}
+    except Exception as e:
+        # Handle unexpected errors
+        return {"error": f"Unexpected error: {str(e)}"}
 
 
     # ---------- Map to front‑end shape ----------
@@ -271,44 +276,49 @@ def get_profile(student_id: int):
 
 
 def update_student_profile(user_id: int, update_data: StudentProfileUpdate) -> dict:
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
+   
     try:
-        conn.autocommit = False
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            conn.autocommit = False
 
-        # Fetch student ID from user_id
-        cursor.execute("SELECT id FROM dbo.Students WHERE user_id = ?", (user_id,))
-        row = cursor.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail=f"Student for user {user_id} not found")
-        student_id = row[0]
+            # Fetch student ID from user_id
+            cursor.execute("SELECT id FROM dbo.Students WHERE user_id = ?", (user_id,))
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail=f"Student for user {user_id} not found")
+            student_id = row[0]
 
-        # Update Students table
-        if update_data.year_id is not None:
-            cursor.execute(
-                "UPDATE dbo.Students SET year_id = ? WHERE id = ?",
-                (update_data.year_id, student_id)
-            )
+            # Update Students table
+            if update_data.year_id is not None:
+                cursor.execute(
+                    "UPDATE dbo.Students SET year_id = ? WHERE id = ?",
+                    (update_data.year_id, student_id)
+                )
 
-        # Update classes if provided
-        if update_data.classes is not None:
-            cursor.execute("DELETE FROM dbo.StudentClasses WHERE student_id = ?", (student_id,))
-            insert_stmt = """
-                INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
-                VALUES (?, ?, ?)
-            """
-            cursor.executemany(
-                insert_stmt,
-                [(student_id, cls.class_id, cls.class_goal) for cls in update_data.classes]
-            )
+            # Update classes if provided
+            if update_data.classes is not None:
+                cursor.execute("DELETE FROM dbo.StudentClasses WHERE student_id = ?", (student_id,))
+                insert_stmt = """
+                    INSERT INTO dbo.StudentClasses (student_id, class_id, learning_goal)
+                    VALUES (?, ?, ?)
+                """
+                cursor.executemany(
+                    insert_stmt,
+                    [(student_id, cls.class_id, cls.class_goal) for cls in update_data.classes]
+                )
 
-        conn.commit()
-    except Exception:
-        conn.rollback()
+            conn.commit()
+
+    except HTTPException:
         raise
-    finally:
-        conn.close()
+
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
 
     # Cosmos update (partial merge)
     query = "SELECT * FROM c WHERE c.student_id = @sid"
@@ -364,67 +374,68 @@ def get_prefill_profile(user_id: int) -> Optional[dict]:
     Return basic user info, optional student_id, and Cosmos fields if any.
     Used for pre-filling the profile creation form.
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
 
-    # --- Check if user exists ---
-    cursor.execute(
-        """
-        SELECT first_name, last_name, email, gt_email, profile_picture_url
-        FROM Users
-        WHERE id = ?
-        """,
-        (user_id,)
-    )
-    row = cursor.fetchone()
-    if not row:
-        return None
-
-    first_name, last_name, email, gt_email, profile_picture_url = row
-
-    # --- Get optional student_id and year_id ---
-    cursor.execute(
-        "SELECT id, year_id FROM Students WHERE user_id = ?", (user_id,)
-    )
-    row = cursor.fetchone()
-    student_id = row[0] if row else None
-    year_id = row[1] if row else None
-
-    # Classes
-    cursor.execute(
-        """
-        SELECT sc.class_id, sc.learning_goal
-        FROM dbo.StudentClasses sc
-        INNER JOIN dbo.Classes c ON sc.class_id = c.id
-        WHERE sc.student_id = ?
-        """,
-        (student_id,),
-    )
-    classes = [
-        {
-            "class_id": cid,
-            "class_goal": goal,
-        }
-        for cid, goal in cursor.fetchall()
-    ]
-
-    # --- Try to pull Cosmos doc if student exists ---
-    cosmos_doc = {}
-    if student_id:
-        query = "SELECT * FROM c WHERE c.student_id = @sid"
-        cosmos_docs = list(
-            container.query_items(
-                query,
-                parameters=[{"name": "@sid", "value": student_id}],
-                enable_cross_partition_query=True,
+            # --- Check if user exists ---
+            cursor.execute(
+                """
+                SELECT first_name, last_name, email, gt_email, profile_picture_url
+                FROM Users
+                WHERE id = ?
+                """,
+                (user_id,)
             )
-        )
-        if cosmos_docs:
-            cosmos_doc = cosmos_docs[0]
+            row = cursor.fetchone()
+            if not row:
+                return None
 
-    conn.close()
+            first_name, last_name, email, gt_email, profile_picture_url = row
 
-    
+            # --- Get optional student_id and year_id ---
+            cursor.execute(
+                "SELECT id, year_id FROM Students WHERE user_id = ?", (user_id,)
+            )
+            row = cursor.fetchone()
+            student_id = row[0] if row else None
+            year_id = row[1] if row else None
+
+            # --- Classes (only if student exists) ---
+            classes = []
+            if student_id:
+                cursor.execute(
+                    """
+                    SELECT sc.class_id, sc.learning_goal
+                    FROM dbo.StudentClasses sc
+                    INNER JOIN dbo.Classes c ON sc.class_id = c.id
+                    WHERE sc.student_id = ?
+                    """,
+                    (student_id,)
+                )
+                classes = [
+                    {"class_id": cid, "class_goal": goal}
+                    for cid, goal in cursor.fetchall()
+                ]
+
+            # --- Cosmos doc (only if student exists) ---
+            cosmos_doc = {}
+            if student_id:
+                query = "SELECT * FROM c WHERE c.student_id = @sid"
+                cosmos_docs = list(
+                    container.query_items(
+                        query,
+                        parameters=[{"name": "@sid", "value": student_id}],
+                        enable_cross_partition_query=True,
+                    )
+                )
+                if cosmos_docs:
+                    cosmos_doc = cosmos_docs[0]
+
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
     return {
         "user_id": user_id,
@@ -448,57 +459,67 @@ def get_prefill_profile(user_id: int) -> Optional[dict]:
 
 
 
-def get_user_id_from_student(student_id: int) -> int:
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
+def get_user_id_from_student(student_id: int) -> int:
     try:
-        cursor.execute(
-            "SELECT user_id FROM dbo.Students WHERE id = ?",
-            (student_id,)
-        )
-        row = cursor.fetchone()
-        if not row:
-            raise HTTPException(status_code=404, detail="Student not found")
-        return row[0]
-    finally:
-        conn.close()
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT user_id FROM dbo.Students WHERE id = ?",
+                (student_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                raise HTTPException(status_code=404, detail="Student not found")
+            return row[0]
+
+    except HTTPException:
+        raise
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
 
 
 def update_user_profile_picture(user_id: int, blob_url: str) -> None:
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
+   
     try:
-        cursor.execute(
-            "UPDATE dbo.Users SET profile_picture_url = ? WHERE id = ?",
-            (blob_url, user_id)
-        )
-        conn.commit()
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE dbo.Users SET profile_picture_url = ? WHERE id = ?",
+                (blob_url, user_id)
+            )
+            conn.commit()
+
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
 
 
 def handle_post_ppt_urls(student_id: int, embed_url: str, edit_url: str) -> str:
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
     try:
-        cursor.execute(
-            """
-            UPDATE dbo.Students
-            SET ppt_embed_url = ?, ppt_edit_url = ?
-            WHERE id = ?
-            """,
-            (embed_url, edit_url, student_id)
-        )
-        conn.commit()
-        return "PPT URLs updated successfully."
-    except Exception:
-        conn.rollback()
-        raise
-    finally:
-        conn.close()
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                UPDATE dbo.Students
+                SET ppt_embed_url = ?, ppt_edit_url = ?
+                WHERE id = ?
+                """,
+                (embed_url, edit_url, student_id)
+            )
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail=f"Student with id {student_id} not found")
+
+            conn.commit()
+            return "PPT URLs updated successfully."
+
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
