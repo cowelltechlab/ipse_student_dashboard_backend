@@ -115,6 +115,33 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
+def get_users_with_roles(user_ids: list[int]) -> dict[int, dict]:
+    """Batch fetch names and roles for multiple users."""
+    if not user_ids:
+        return {}
+
+    placeholders = ",".join("?" for _ in user_ids)
+    query = f"""
+    SELECT u.id AS user_id, u.first_name, u.last_name, r.role_name
+    FROM Users u
+    LEFT JOIN UserRoles ur ON ur.user_id = u.id
+    LEFT JOIN Roles r ON r.id = ur.role_id
+    WHERE u.id IN ({placeholders})
+    """
+    with get_sql_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(query, tuple(user_ids))
+        results = cursor.fetchall()
+
+    return {
+        row.user_id: {
+            "name": f"{row.first_name} {row.last_name}",
+            "role": row.role_name
+        }
+        for row in results
+    }
+
+
 
 def get_user_with_roles_by_id(user_id: int) -> Dict:
     try:

@@ -12,6 +12,7 @@ from datetime import datetime
 from typing import List, Dict
 
 from application.features.assignments.schemas import AssignmentDetailResponse
+from application.features.users.crud import get_users_with_roles
 
 TABLE_NAME = "Assignments"
 def is_rating_meaningful(rating):
@@ -205,29 +206,41 @@ def get_all_assignments_by_student_id(student_id):
         return {"error": str(e)}
 
 
-def get_assignments_by_id(assignment_id: int):
+def get_assignment_by_id(assignment_id: int):
     """
-    Fetch a single assignment and include student first/last name and NoSQL metadata.
+    Fetch a single assignment, including student/class info and NoSQL version metadata.
+    Resolves modifier names and roles in a single query.
     """
-    
     try:
         # 1. Fetch assignment from SQL
         query = """
         SELECT 
-            a.id,
-            a.student_id,
-            a.title,
-            a.class_id,
-            a.content,
-            a.date_created,
-            a.blob_url,
-            a.source_format,
-            a.html_content,
-            u.first_name,
-            u.last_name
+            a.id AS assignment_id,
+            a.student_id AS student_id,
+            a.title AS assignment_title,
+            at.type AS assignment_type,
+            a.assignment_type_id AS assignment_type_id,
+            a.content AS assignment_content,
+            a.date_created AS assignment_date_created,
+            a.blob_url AS assignment_blob_url,
+            a.source_format AS assignment_source_format,
+            a.html_content AS assignment_html_content,
+
+            -- Class info
+            c.id AS class_id,
+            c.name AS class_name,
+            c.course_code AS class_course_code,
+
+            -- Student info
+            s.id AS student_internal_id,
+            u.first_name AS student_first_name,
+            u.last_name AS student_last_name
+
         FROM Assignments a
         INNER JOIN Students s ON a.student_id = s.id
         INNER JOIN Users u ON s.user_id = u.id
+        LEFT JOIN AssignmentTypes at ON at.id = a.assignment_type_id
+        LEFT JOIN Classes c ON c.id = a.class_id 
         WHERE a.id = ?
         """
         with get_sql_db_connection() as conn:
@@ -240,34 +253,52 @@ def get_assignments_by_id(assignment_id: int):
             column_names = [column[0] for column in cursor.description]
             assignment_data = dict(zip(column_names, record))
 
-        # 2. Fetch all versions from CosmosDB
+        # 2. Fetch versions from CosmosDB
         container = get_container()
         query = f"SELECT * FROM c WHERE c.assignment_id = '{assignment_id}'"
         versions = list(container.query_items(query=query, enable_cross_partition_query=True))
 
+        assignment_data["versions"] = []
+
         if versions:
-            # Sort by date_modified descending to get latest
             versions_sorted = sorted(
                 versions,
                 key=lambda v: v.get("date_modified", ""),
                 reverse=True
             )
 
+            # Extract all modifier_ids to batch query user info
+            modifier_ids = list({v.get("modifier_id") for v in versions_sorted if v.get("modifier_id")})
+            modifier_info_map = get_users_with_roles(modifier_ids)
+
+            # Overall metadata
+            assignment_data["finalized"] = any(v.get("finalized") for v in versions)
             assignment_data["date_modified"] = versions_sorted[0].get("date_modified")
 
-            # Finalized check
-            assignment_data["finalized"] = any(v.get("finalized") is True for v in versions)
-
-            # Rating status
             ratings = [v.get("rating") for v in versions if v.get("rating")]
             final_version = next((v for v in versions if v.get("finalized")), None)
-
             if final_version and final_version.get("rating"):
                 assignment_data["rating_status"] = "Rated"
             elif not ratings:
                 assignment_data["rating_status"] = "Pending"
             else:
                 assignment_data["rating_status"] = "Partially Rated"
+
+            # Populate version details
+            for v in versions_sorted:
+                modifier_id = v.get("modifier_id")
+                modifier_info = modifier_info_map.get(modifier_id) if modifier_id else None
+
+                assignment_data["versions"].append({
+                    "document_id": v.get("id"),
+                    "version_number": v.get("version_number"),
+                    "modified_by": modifier_info["name"] if modifier_info else None,
+                    "modifier_role": modifier_info["role"] if modifier_info else None,
+                    "date_modified": v.get("date_modified"),
+                    "document_url": f"/cosmos/download/{v.get('id')}",
+                    "finalized": v.get("finalized", False),
+                    "rating_status": "Rated" if v.get("rating") else "Pending"
+                })
         else:
             assignment_data["finalized"] = False
             assignment_data["rating_status"] = "Pending"
@@ -277,6 +308,7 @@ def get_assignments_by_id(assignment_id: int):
 
     except Exception as e:
         return {"error": str(e)}
+
 
 ''' 
 *** POST ASSIGNMENT ENDPOINT *** 
