@@ -238,13 +238,13 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
 
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-        cursor.execute(query, (user_id,))
+            cursor.execute(query, (user_id,))
 
-        record = cursor.fetchone()
-        if not record:
-            return None
+            record = cursor.fetchone()
+            if not record:
+                return None
 
-        return record[0]
+            return record[0]
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
@@ -298,13 +298,13 @@ def get_user_role_names(user_id: int) -> List[str]:
         """
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-        cursor.execute(query, (user_id,))
+            cursor.execute(query, (user_id,))
 
-        records = cursor.fetchall()
-        roles = [row[0] for row in records]
+            records = cursor.fetchall()
+            roles = [row[0] for row in records]
 
 
-        return roles
+            return roles
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality

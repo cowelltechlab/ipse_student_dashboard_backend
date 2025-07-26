@@ -45,7 +45,6 @@ def validate_user_email_login(email: str, password: str) -> int:
             detail="Unauthorized. User not found."
         )
     
-    print(user)
     if "password_hash" not in user or "id" not in user:
         raise HTTPException(
             status_code=400,
