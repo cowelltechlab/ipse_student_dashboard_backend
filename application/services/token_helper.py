@@ -1,10 +1,17 @@
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from dotenv import load_dotenv
+import os
 import json
 
+load_dotenv()
+
 def authenticate():
-    with open("gmail_refresh_token.json") as f:
-        token_data = json.load(f)
+    creds_json = os.getenv("GMAIL_CREDENTIALS")
+    if not creds_json:
+        raise ValueError("GMAIL_CREDENTIALS is not set in .env")
+
+    token_data = json.loads(creds_json)
 
     creds = Credentials(
         None,

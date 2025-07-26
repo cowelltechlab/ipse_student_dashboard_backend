@@ -115,8 +115,6 @@ def get_all_assignments():
     """
     Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -134,37 +132,36 @@ def get_all_assignments():
         INNER JOIN Students s ON a.student_id = s.id
         INNER JOIN Users u ON s.user_id = u.id
         """
-        cursor.execute(query)
-        records = cursor.fetchall()
-        column_names = [column[0] for column in cursor.description]
 
-        assignment_versions = get_all_assignment_versions_map()
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
+            records = cursor.fetchall()
+            column_names = [column[0] for column in cursor.description]
 
-        results = []
-        for row in records:
-            assignment = dict(zip(column_names, row))
-            version_data = assignment_versions.get(str(assignment["id"]), {
-                "finalized": False,
-                "rating_status": "Pending",
-                "date_modified": None
-            })
-            assignment.update(version_data)
-            results.append(assignment)
+            assignment_versions = get_all_assignment_versions_map()
 
-        return results
+            results = []
+            for row in records:
+                assignment = dict(zip(column_names, row))
+                version_data = assignment_versions.get(str(assignment["id"]), {
+                    "finalized": False,
+                    "rating_status": "Pending",
+                    "date_modified": None
+                })
+                assignment.update(version_data)
+                results.append(assignment)
+
+            return results
 
     except pyodbc.Error as e:
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 
 def get_all_assignments_by_student_id(student_id):
     """
     Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -183,41 +180,36 @@ def get_all_assignments_by_student_id(student_id):
         INNER JOIN Users u ON s.user_id = u.id
         WHERE a.student_id = ?
         """
-        cursor.execute(query, (student_id,))
-        records = cursor.fetchall()
-        column_names = [column[0] for column in cursor.description]
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (student_id,))
+            records = cursor.fetchall()
+            column_names = [column[0] for column in cursor.description]
 
-        assignment_versions = get_all_assignment_versions_map()
+            assignment_versions = get_all_assignment_versions_map()
 
-        results = []
-        for row in records:
-            assignment = dict(zip(column_names, row))
-            version_data = assignment_versions.get(str(assignment["id"]), {
-                "finalized": False,
-                "rating_status": "Pending",
-                "date_modified": None
-            })
-            assignment.update(version_data)
-            results.append(assignment)
+            results = []
+            for row in records:
+                assignment = dict(zip(column_names, row))
+                version_data = assignment_versions.get(str(assignment["id"]), {
+                    "finalized": False,
+                    "rating_status": "Pending",
+                    "date_modified": None
+                })
+                assignment.update(version_data)
+                results.append(assignment)
 
-        return results
+            return results
 
     except pyodbc.Error as e:
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 
-''' 
-*** GET ASSIGNMENTS BY ID ENDPOINT *** 
-Fetch assignments in Assignments table based on ID
-'''
 def get_assignments_by_id(assignment_id: int):
     """
     Fetch a single assignment and include student first/last name and NoSQL metadata.
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
+    
     try:
         # 1. Fetch assignment from SQL
         query = """
@@ -238,13 +230,15 @@ def get_assignments_by_id(assignment_id: int):
         INNER JOIN Users u ON s.user_id = u.id
         WHERE a.id = ?
         """
-        cursor.execute(query, (assignment_id,))
-        record = cursor.fetchone()
-        if not record:
-            return None
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (assignment_id,))
+            record = cursor.fetchone()
+            if not record:
+                return None
 
-        column_names = [column[0] for column in cursor.description]
-        assignment_data = dict(zip(column_names, record))
+            column_names = [column[0] for column in cursor.description]
+            assignment_data = dict(zip(column_names, record))
 
         # 2. Fetch all versions from CosmosDB
         container = get_container()
@@ -283,8 +277,6 @@ def get_assignments_by_id(assignment_id: int):
 
     except Exception as e:
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 ''' 
 *** POST ASSIGNMENT ENDPOINT *** 
@@ -317,11 +309,11 @@ async def add_many_assignments(data) -> List[Dict]:
     response = [AssignmentDetailResponse(**record) for record in new_records]
     return response
 
-''' 
-*** UPDATE ASSIGNMENT ENDPOINT *** 
-Update existing assignment in Assignments table
-'''
+
 def update_assignment(assignment_id, data):
+    """
+    Update existing assignment in Assignments table
+    """
     return update_record(TABLE_NAME, assignment_id, data)
 
 def get_all_assignment_types():
