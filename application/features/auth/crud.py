@@ -20,8 +20,6 @@ def get_user_by_email(user_email: str, get_password = False) -> Optional[Dict]:
     :returns: user's record in database
     :rtype: Optional[Dict]
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = f"""
@@ -30,19 +28,20 @@ def get_user_by_email(user_email: str, get_password = False) -> Optional[Dict]:
         FROM Users u
         WHERE u.email = ?
         """
-        cursor.execute(query, (user_email,))
 
-        record = cursor.fetchone()
-        if not record:
-            return None
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (user_email,))
 
-        column_names = [column[0] for column in cursor.description]
-        return dict(zip(column_names, record))
+            record = cursor.fetchone()
+            if not record:
+                return None
+
+            column_names = [column[0] for column in cursor.description]
+            return dict(zip(column_names, record))
 
     except pyodbc.Error as e:
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 
 def create_user(
@@ -56,7 +55,6 @@ def create_user(
     """
     TODO: Implement user registration
     """
-    conn = None
 
     try:
         # Create new user
@@ -74,30 +72,27 @@ def create_user(
         user_id = new_user["id"]
         insert_roles = [(user_id, role_id) for role_id in role_ids]
 
-        conn = get_sql_db_connection()
-        cursor = conn.cursor()
-
         insert_query = "INSERT INTO UserRoles (user_id, role_id) VALUES (?, ?)"
-        cursor.executemany(insert_query, insert_roles)
-        conn.commit()
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.executemany(insert_query, insert_roles)
+            conn.commit()
 
-        return {
-            "id": user_id,
-            "email": new_user["email"],
-            "first_name": new_user["first_name"],
-            "last_name": new_user["last_name"],
-            "school_email": new_user["gt_email"],
-            "role_ids": role_ids,
-            
-        }
+            return {
+                "id": user_id,
+                "email": new_user["email"],
+                "first_name": new_user["first_name"],
+                "last_name": new_user["last_name"],
+                "school_email": new_user["gt_email"],
+                "role_ids": role_ids,
+                
+            }
+        
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {e}")
         return None
-    finally:
-        if conn:
-            conn.close()
-
+  
 
 
 
@@ -118,38 +113,34 @@ def store_refresh_token(user_id: int) -> str:
     app_refresh_token = token_urlsafe(64)
     expires_at = datetime.now() + timedelta(days=30)
 
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
     try:
         query = """
         INSERT INTO RefreshTokens (user_id, refresh_token, expires_at)
         VALUES (?, ?, ?)
         """
+
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
         
-        # Execute the query with the corresponding values
-        cursor.execute(
-            query,
-            (user_id, app_refresh_token, expires_at)
-        )
-        
-        conn.commit()
+            # Execute the query with the corresponding values
+            cursor.execute(
+                query,
+                (user_id, app_refresh_token, expires_at)
+            )
+            
+            conn.commit()
 
         return app_refresh_token
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {e}")
         return ""
-    finally:
-        conn.close()
 
 
 def get_refresh_token_details(refresh_token: str) -> Optional[Dict[str, Any]]:
     """
     Retrieve user ID based on refresh token.
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -157,20 +148,20 @@ def get_refresh_token_details(refresh_token: str) -> Optional[Dict[str, Any]]:
         FROM RefreshTokens rt
         WHERE rt.refresh_token = ?
         """
-        cursor.execute(query, (refresh_token,))
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (refresh_token,))
 
-        record = cursor.fetchone()
-        if not record:
-            return None
+            record = cursor.fetchone()
+            if not record:
+                return None
 
-        return {"user_id": record[0], "expires_at": record[1]}
+            return {"user_id": record[0], "expires_at": record[1]}
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return None
-    finally:
-        conn.close()
 
 
 def get_refresh_token_from_user_id(user_id: int) -> Optional[str]:
@@ -183,8 +174,6 @@ def get_refresh_token_from_user_id(user_id: int) -> Optional[str]:
     :rtype: str
     :raises pyodbc.Error: If error occurs when calling database
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -192,20 +181,20 @@ def get_refresh_token_from_user_id(user_id: int) -> Optional[str]:
         FROM RefreshTokens rt
         WHERE rt.user_id = ?
         """
-        cursor.execute(query, (user_id,))
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (user_id,))
 
-        record = cursor.fetchone()
-        if not record:
-            return None
+            record = cursor.fetchone()
+            if not record:
+                return None
 
-        return record[0]
+            return record[0]
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
-        return None
-    finally:
-        conn.close()
+
 
 
 def delete_refresh_token(refresh_token: str) -> Dict:
@@ -219,30 +208,26 @@ def delete_refresh_token(refresh_token: str) -> Dict:
     :rtype: Dict
     :raises pyodbc.Error: When delete action in database fails. 
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
+  
 
     try:
         query = """
         DELETE FROM RefreshTokens
         WHERE refresh_token = ?
         """
-        cursor.execute(query, (refresh_token,))
-        conn.commit()
-        return {"message": f"Record deleted from RefreshTokens"}
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (refresh_token,))
+            conn.commit()
+            return {"message": f"Record deleted from RefreshTokens"}
     except pyodbc.Error as e:
-        conn.rollback()
         return {"error": str(e)}
-    finally:
-        conn.close()
 
 
 def get_user_email_by_id(user_id: int) -> Optional[str]:
     """
     Retrieves user's email address from their DB record via user ID.
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -250,6 +235,9 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
         FROM Users u
         WHERE u.id = ?
         """
+
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
         cursor.execute(query, (user_id,))
 
         record = cursor.fetchone()
@@ -262,15 +250,12 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return None
-    finally:
-        conn.close()
+
 
 def get_user_profile_picture_url(user_id: int) -> Optional[str]:
     """
     Retrieves user's profile picture URL from their DB record via user ID.
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
 
     try:
         query = """
@@ -278,20 +263,21 @@ def get_user_profile_picture_url(user_id: int) -> Optional[str]:
         FROM Users u
         WHERE u.id = ?
         """
-        cursor.execute(query, (user_id,))
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (user_id,))
 
-        record = cursor.fetchone()
-        if not record:
-            return None
+            record = cursor.fetchone()
+            if not record:
+                return None
 
-        return record[0]
+            return record[0]
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return None
-    finally:
-        conn.close()
+
 
 def get_user_role_names(user_id: int) -> List[str]:
     """
@@ -302,10 +288,7 @@ def get_user_role_names(user_id: int) -> List[str]:
     :returns: list of roles associated with the user
     :rtype: List[str]
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-    roles = []
-
+   
     try:
         query = """
         SELECT r.role_name
@@ -313,6 +296,8 @@ def get_user_role_names(user_id: int) -> List[str]:
         JOIN UserRoles ur ON r.id = ur.role_id
         WHERE ur.user_id = ?
         """
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
         cursor.execute(query, (user_id,))
 
         records = cursor.fetchall()
@@ -325,8 +310,6 @@ def get_user_role_names(user_id: int) -> List[str]:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return []
-    finally:
-        conn.close()
 
 
 def get_all_role_ids() -> List[int]:
@@ -336,19 +319,17 @@ def get_all_role_ids() -> List[int]:
     :returns: all IDs
     :rtype: List[int]
     """
-    conn = get_sql_db_connection()
-    cursor = conn.cursor()
-
+  
     try:
         query = "SELECT r.id from Roles r"
-        cursor.execute(query)
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query)
 
-        all_role_ids = [row[0] for row in cursor.fetchall()]
-        return all_role_ids
+            all_role_ids = [row[0] for row in cursor.fetchall()]
+            return all_role_ids
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return []
-    finally:
-        conn.close()
