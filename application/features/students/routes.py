@@ -5,7 +5,7 @@ from fastapi import HTTPException, APIRouter, Depends, status, Query
 from application.features.auth.permissions import require_user_access
 from application.features.students.crud import fetch_all_students_with_names, add_student, get_student_by_student_id, get_student_by_user_id, update_student as crud_update_student
 from application.features.students.schemas import StudentResponse, StudentCreate, StudentUpdate 
-from application.features.students.crud import  get_students_by_year,  delete_student_records
+from application.features.students.crud import  get_students_by_year,  delete_student as delete_student_records
 
 ''' Prepend all student routes with /students and collect all student-relevant endpoints under Students tag in SwaggerUI'''
 router = APIRouter()
