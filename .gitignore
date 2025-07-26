@@ -8,3 +8,4 @@ gmail_refresh_token.json
 # SAML2 private keys, metadata files
 application/features/auth/saml_certs/*.xml
 application/features/auth/saml_certs/*.key
+application/features/versionHistory/document_Structure.txt

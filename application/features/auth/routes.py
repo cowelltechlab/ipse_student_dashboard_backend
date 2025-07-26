@@ -116,7 +116,7 @@ async def google_login():
     return { "google_auth_url": get_google_oauth_url(backend_callback_uri) }
 
 
-@router.get("login/gatech")
+@router.get("/login/gatech")
 async def gatech_login(request: Request):
     """
     Initiates SSO redirect to Georgia Tech for GT SSO login using SAML2 protocol.

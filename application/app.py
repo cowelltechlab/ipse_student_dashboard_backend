@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from application.features.auth.gatech_saml2_helpers import init_saml_client 
 
 # from application.core.config import get_settings
 
@@ -42,3 +43,8 @@ application.include_router(tutor_students_router, tags=["TutorStudents"], prefix
 application.include_router(blob_router, tags=["Blob"], prefix="/blob")
 application.include_router(blob_router, tags=["Blob"], prefix="/blob")
 application.include_router(gpt_router, prefix="/gpt", tags=["GPT"])
+
+
+@application.on_event("startup")
+async def startup_event():
+    init_saml_client()

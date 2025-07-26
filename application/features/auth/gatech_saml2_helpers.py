@@ -52,10 +52,47 @@ def prepare_saml_authn_request(relay_state: str = None):
     """
     _saml_client = get_saml_client()
     try:
+        reqid, http_args = _saml_client.prepare_for_authenticate(relay_state=relay_state)
+        
+        print("DEBUG http_args:", http_args)
+        
+        if isinstance(http_args, dict) and "headers" in http_args:
+            headers = http_args["headers"]
+            print("DEBUG headers:", headers)
+
+            # Now extract the Location header
+            if isinstance(headers, list):
+                redirect_url = next((v for k, v in headers if k.lower() == "location"), None)
+            elif isinstance(headers, dict):
+                redirect_url = headers.get("Location")
+            else:
+                raise RuntimeError(f"Unexpected headers type: {type(headers)}")
+
+            if not redirect_url:
+                raise RuntimeError("SAML authentication redirect URL not found in headers.")
+        else:
+            raise RuntimeError("Invalid http_args format returned from prepare_for_authenticate")
+
+        return redirect_url, reqid
+    except Exception as e:
+        raise RuntimeError(f"Error preparing SAML authentication request: {e}")
+
+
+def prepare_saml_authn_request_0(relay_state: str = None):
+    """
+    Prepares a SAML authentication request to send to the IdP.
+    """
+    _saml_client = get_saml_client()
+    try:
+        '''
         reqid, binding, http_args = _saml_client.prepare_for_authenticate(relay_state=relay_state)
         redirect_url = dict(http_args["headers"])["Location"]
         # print(f"SAML2 Helper: Prepared AuthNRequest with redirect URL: {redirect_url}") # Optional: print debug
         return redirect_url, reqid
+        ''' 
+        http_args, request_id = _saml_client.prepare_for_authenticate(relay_state=relay_state)
+        redirect_url = next((value for key, value in http_args["headers"] if key.lower() == "location"), None)
+        return redirect_url, request_id
     except Exception as e:
         # print(f"SAML2 Helper: Error preparing SAML authentication request: {e}") # Optional: print error
         raise

@@ -71,7 +71,8 @@ SP_CONFIG = {
     # THIS IS WHERE YOU'LL ADD THE GATECH IDP METADATA LATER!
     # For now, it remains empty or placeholder.
     "metadata": {
-        "local": [], # Will be a list of paths to IdP metadata XML files (e.g., ["./saml_certs/gatech_idp_metadata.xml"])
+        "local": [os.path.join(CERT_DIR, "idp_metadata.xml")], # Will be a list of paths to IdP metadata XML files (e.g., ["./saml_certs/gatech_idp_metadata.xml"])
+        # This will load the Georgia Tech IdP metadata at runtime.
     },
 
     # Define acceptable NameID formats from the IdP.
