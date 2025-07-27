@@ -17,7 +17,7 @@ db = client.get_database_client(DATABASE_NAME)
 profile_container = db.get_container_client(PROFILE_CONTAINER_NAME)
 versions_container = db.get_container_client(VERSIONS_CONTAINER_NAME)
 
-def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
+def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int) -> dict:
     conn = get_sql_db_connection()
     cursor = conn.cursor()
 
@@ -111,6 +111,7 @@ def handle_assignment_suggestion_generation(assignment_id: int) -> dict:
     new_doc = {
         "id": doc_id,
         "assignment_id": assignment_id,
+        "modifier_idd": modifier_id,
         "student_id": student_id,
         "version_number": next_version,
         "generated_options": gpt_data.get("learning_pathways", []),
