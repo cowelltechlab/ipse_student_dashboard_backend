@@ -255,7 +255,7 @@ def get_assignment_by_id(assignment_id: int):
 
         # 2. Fetch versions from CosmosDB
         container = get_container()
-        query = f"SELECT * FROM c WHERE c.assignment_id = '{assignment_id}'"
+        query = f"SELECT * FROM c WHERE c.assignment_id = {assignment_id}"
         versions = list(container.query_items(query=query, enable_cross_partition_query=True))
 
         assignment_data["versions"] = []
