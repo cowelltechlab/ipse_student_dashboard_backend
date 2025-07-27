@@ -1,7 +1,7 @@
 import json
 from typing import Optional
 
-from application.features.gpt.crud import process_gpt_prompt_json
+from application.features.gpt.crud import process_gpt_prompt_json, process_gpt_prompt_html
 
 def generate_assignment_modification_suggestions(student_profile: dict, assignment: dict, class_info: dict) -> dict:
     
@@ -110,4 +110,4 @@ def generate_assignment(student_profile: dict, assignment: dict, class_info: dic
     # TODO: Generate "else" case
 
        
-    return process_gpt_prompt_json(prompt, model="gpt-4.1")
+    return process_gpt_prompt_html(prompt, model="gpt-4.1", override_max_tokens=8000)

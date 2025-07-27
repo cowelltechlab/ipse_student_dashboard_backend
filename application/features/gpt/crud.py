@@ -1,4 +1,5 @@
 import json
+from typing import Optional
 from .gpt_connection import get_gpt_response
 
 def process_gpt_prompt(prompt: str, model: str = "gpt-3.5-turbo") -> str:
@@ -12,6 +13,24 @@ def process_gpt_prompt_json(prompt: str, model: str = "gpt-4") -> dict:
         return json.loads(response_text)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON from GPT: {e}\nRaw content:\n{response_text}")
+
+def process_gpt_prompt_html(
+    prompt: str,
+    model: str = "gpt-4.1",
+    override_max_tokens: Optional[int] = None
+) -> str:
+    """
+    Sends a prompt to GPT and returns the raw HTML string.
+    Allows an optional override for max tokens.
+    """
+    response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
+
+    # Optionally, validate that the output is HTML
+    if not response_text.lower().startswith("<!doctype html") and not response_text.lower().startswith("<html"):
+        raise ValueError(f"Expected HTML but got unexpected content:\n{response_text[:200]}...")
+
+    return response_text
+
 
 def summarize_strengths(strengths: list[str]) -> str:
     prompt = f"""Create short, 1-2 sentence summary of these strengths

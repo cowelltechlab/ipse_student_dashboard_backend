@@ -15,6 +15,7 @@
 #     )
 #     return resp.choices[0].message.content.strip()
 
+from typing import Optional
 import tiktoken
 from openai import OpenAI
 
@@ -35,7 +36,12 @@ def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
     return len(enc.encode(text))
 
 
-def get_gpt_response(prompt: str, model: str = "gpt-3.5-turbo") -> str:
+
+def get_gpt_response(
+    prompt: str,
+    model: str = "gpt-3.5-turbo",
+    override_max_tokens: Optional[int] = None
+) -> str:
     if not client.api_key:
         raise RuntimeError("OpenAI API key not configured")
 
@@ -43,15 +49,16 @@ def get_gpt_response(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     prompt_tokens = count_tokens(prompt, model=model)
     print(f"Prompt token count: {prompt_tokens}")
 
-    # --- Set safe limits based on model context ---
-    context_limit = 4096 if "3.5" in model else 128000  # adjust for other models
-    max_output_tokens = 500
+    # --- Set safe limits ---
+    context_limit = 4096 if "3.5" in model else 128000  # adjust for gpt-4.1
+    default_max_output_tokens = 500  # keep the original default
+    max_output_tokens = override_max_tokens or default_max_output_tokens
 
-    # Check if input fits the model's context window
+    # --- Validate against context window ---
     if prompt_tokens + max_output_tokens > context_limit:
         raise ValueError(
             f"Prompt ({prompt_tokens} tokens) is too large for {model}'s {context_limit}-token limit. "
-            "Consider using gpt-4.1 or splitting the input."
+            "Consider splitting the input or lowering override_max_tokens."
         )
 
     # --- Make the API call ---
