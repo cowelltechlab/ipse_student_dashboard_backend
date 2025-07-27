@@ -13,3 +13,8 @@ class AssignmentGenerationOptionsResponse(BaseModel):
     skills_for_success: str
     learning_pathways: List[LearningPathwayOption]
     version_document_id: str
+
+
+class AssignmentVersionGenerationResponse(BaseModel):
+    version_document_id: str
+    html_content: str

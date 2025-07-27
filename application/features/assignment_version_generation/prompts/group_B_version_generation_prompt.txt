@@ -11,7 +11,11 @@ Input:
 -	Assignment Type: {assignment_type}
 
 3.	Selected Options
-- {selected_options}________________________________________
+- {selected_options}
+
+4. (Optional) Additional Ideas For Changes
+- {additional_ideas_for_changes}
+
 
 ________________________________________
  Your Goal:

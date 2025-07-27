@@ -20,8 +20,12 @@ Input:
 -	Content: {assignment_content}
 -	Assignment Type: {assignment_type}
 
-4.	4. Selected Options
-- {selected_options}________________________________________
+4.	Selected Options
+- {selected_options}
+
+5. (Optional) 
+- {additional_ideas_for_changes}
+________________________________________
  Your Goal:
 Generate a full, simplified, student-ready assignment prompt that:
 •	Retains the original assignment purpose and core academic demands.

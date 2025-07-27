@@ -1,10 +1,11 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation
 from application.features.auth.permissions import require_user_access
 
 
-from application.features.assignment_version_generation.schemas import AssignmentGenerationOptionsResponse
+from application.features.assignment_version_generation.schemas import AssignmentGenerationOptionsResponse, AssignmentVersionGenerationResponse
 
 router = APIRouter()
 DATABASE_NAME = "ai-prompt-storage"
@@ -19,8 +20,25 @@ def generate_assignment_options(assignment_id: int, _user=Depends(require_user_a
     return handle_assignment_suggestion_generation(assignment_id, _user["user_id"])
 
 
-# @router.post("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
-# def generate_new_assignment_version(
-#     assignment_version_id: str,
+@router.post("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
+def generate_new_assignment_version(
+    assignment_version_id: str,
+    selected_options: List[str],
+    additional_edit_suggestions: str,
 
-# )
+    _user=Depends(require_user_access)
+):
+    return handle_assignment_version_generation(assignment_version_id, selected_options, additional_edit_suggestions)
+    
+
+@router.put("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
+def update_assignment_verion(
+    assignment_version_id: str,
+    updated_html_content: str,
+
+    _user=Depends(require_user_access)
+):
+        """
+    Updates the assignment and saves the original version under original_version in cosmos
+    """
+    return handle_assignment_version_update(assignment_version_id, updated_html_content)
