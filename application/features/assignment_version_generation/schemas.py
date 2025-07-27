@@ -2,9 +2,12 @@ from pydantic import BaseModel
 from typing import List
 
 class LearningPathwayOption(BaseModel):
-    title: str
+    name: str
     description: str
-    reasons: List[str]
+    why_good_existing: str
+    why_good_growth: str
+    internal_id: str
+
 
 class AssignmentGenerationOptionsResponse(BaseModel):
     skills_for_success: str

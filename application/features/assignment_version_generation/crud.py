@@ -44,7 +44,7 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
 
                 # 2. Fetch student info from SQL
                 cursor.execute("""
-                    SELECT year_id, reading_level, writing_level
+                    SELECT year_id, reading_level, writing_level, group_type
                     FROM dbo.Students WHERE id = ?
                 """, (student_id,))
                 srow = cursor.fetchone()
@@ -53,7 +53,8 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
                 student_info = {
                     "year_id": srow[0],
                     "reading_level": srow[1],
-                    "writing_level": srow[2]
+                    "writing_level": srow[2],
+                    "group_type": srow[3]
                 }
 
                 # 3. Fetch class goal

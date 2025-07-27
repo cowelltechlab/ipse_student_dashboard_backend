@@ -17,3 +17,10 @@ cosmos_container = cosmos_client.get_database_client(DATABASE_NAME).get_containe
 def generate_assignment_options(assignment_id: int, _user=Depends(require_user_access)):
     
     return handle_assignment_suggestion_generation(assignment_id, _user["user_id"])
+
+
+# @router.post("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
+# def generate_new_assignment_version(
+#     assignment_version_id: str,
+
+# )
