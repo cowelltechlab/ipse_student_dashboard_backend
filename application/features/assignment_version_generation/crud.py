@@ -258,3 +258,36 @@ def handle_assignment_version_generation(
         "version_document_id": version_doc["id"],
         "html_content": final_html,
     }
+
+
+#  For put endpoint. Preserves original HTML content. 
+def handle_assignment_version_update(assignment_version_id: str, updated_html_content: str) -> dict:
+    # 1. Fetch the existing version document
+    try:
+        version_doc = versions_container.read_item(item=assignment_version_id, partition_key=assignment_version_id)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Assignment version not found")
+
+    # 2. Preserve the original HTML if not already saved
+    if "original_generated_html_content" not in version_doc:
+        current_html = version_doc.get("final_generated_content", {}).get("html_content")
+        if current_html:
+            version_doc["original_generated_html_content"] = current_html
+
+    # 3. Update the HTML content to the new value
+    version_doc["final_generated_content"] = {
+        "html_content": updated_html_content
+    }
+    version_doc["date_modified"] = datetime.datetime.utcnow().isoformat()
+
+    # 4. Replace the updated document back to CosmosDB
+    try:
+        versions_container.replace_item(item=version_doc["id"], body=version_doc)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update version document: {str(e)}")
+
+    # 5. Return the updated response
+    return {
+        "version_document_id": version_doc["id"],
+        "html_content": updated_html_content
+    }
