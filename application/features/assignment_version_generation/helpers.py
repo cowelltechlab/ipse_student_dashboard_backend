@@ -29,7 +29,7 @@ def generate_assignment_modification_suggestions(student_profile: dict, assignme
         )
 
     elif student_group == "B":
-        with open("application/features/assignment_version_generation/prompts/group_B_rec_prompt.txt", "r") as f:
+        with open("application/features/assignment_version_generation/prompts/group_B_rec_prompt.txt", "r", encoding="utf-8") as f:
           template = f.read()
           prompt = template.format(
             class_name=class_info.get("class_name", "N/A"),
