@@ -34,10 +34,9 @@ def generate_new_assignment_version(
     
 
 @router.put("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
-def update_assignment_verion(
+def update_assignment_version(
     assignment_version_id: str,
-    updated_html_content: str,
-
+    updated_html_content: str = Body(...),
     _user=Depends(require_user_access)
 ):
     """
