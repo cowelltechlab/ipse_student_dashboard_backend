@@ -144,6 +144,9 @@ o	name: Short title for the strategy (e.g., "Video Presentation").
 o	description: Brief description of what the student does.
 o	why_good_existing: 1-2 short, direct sentences about 5-7 words long explaining how this option helps the student complete the task using a relevant tool, support, or skill
 o	why_good_growth: 1-2 short, direct sentences about 5-7 words long explaining how this option supports growth toward building independence, communication, or academic habits
+
+Return ONLY a valid JSON object in the following format (do not include any explanations, markdown, or extra text):
+
 {{
   "skills_for_success": "string",
   "learning_pathways": [

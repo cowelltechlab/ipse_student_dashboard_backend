@@ -6,8 +6,9 @@ def process_gpt_prompt(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     # You could add extra processing here if needed
     return get_gpt_response(prompt, model)
 
-def process_gpt_prompt_json(prompt: str, model: str = "gpt-4") -> dict:
-    response_text = get_gpt_response(prompt, model).strip()
+def process_gpt_prompt_json(prompt: str, model: str = "gpt-4", override_max_tokens: Optional[int] = None
+) -> dict:
+    response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
 
     try:
         return json.loads(response_text)

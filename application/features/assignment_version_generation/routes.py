@@ -5,7 +5,7 @@ from application.features.assignment_version_generation.crud import handle_assig
 from application.features.auth.permissions import require_user_access
 
 
-from application.features.assignment_version_generation.schemas import AssignmentGenerationOptionsResponse, AssignmentVersionGenerationResponse
+from application.features.assignment_version_generation.schemas import AssignmentGenerationOptionsResponse, AssignmentUpdateBody, AssignmentVersionGenerationResponse
 
 router = APIRouter()
 DATABASE_NAME = "ai-prompt-storage"
@@ -33,13 +33,12 @@ def generate_new_assignment_version(
     )
     
 
+
+
 @router.put("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
 def update_assignment_version(
     assignment_version_id: str,
-    updated_html_content: str = Body(...),
+    body: AssignmentUpdateBody,
     _user=Depends(require_user_access)
 ):
-    """
-    Updates the assignment and saves the original version under original_version in cosmos
-    """
-    return handle_assignment_version_update(assignment_version_id, updated_html_content)
+    return handle_assignment_version_update(assignment_version_id, body.updated_html_content)

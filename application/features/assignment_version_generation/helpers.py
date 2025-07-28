@@ -40,7 +40,7 @@ def generate_assignment_modification_suggestions(student_profile: dict, assignme
 
 #   TODO: Generate "else" case
 
-    return process_gpt_prompt_json(prompt, model="gpt-4.1")
+    return process_gpt_prompt_json(prompt, model="gpt-4.1", override_max_tokens=8000)
 
 
 

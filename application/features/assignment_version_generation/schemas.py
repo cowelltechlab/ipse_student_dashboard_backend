@@ -18,3 +18,6 @@ class AssignmentGenerationOptionsResponse(BaseModel):
 class AssignmentVersionGenerationResponse(BaseModel):
     version_document_id: str
     html_content: str
+
+class AssignmentUpdateBody(BaseModel):
+    updated_html_content: str
