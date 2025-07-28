@@ -163,7 +163,6 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
         "cosmos_doc_id": doc_body["id"],
     }
 
-# application/features/student_profile/crud.py  (add below existing helpers)
 def get_complete_profile(student_id: int) -> Optional[dict]:
     """
     • Pull core attributes from Cosmos
