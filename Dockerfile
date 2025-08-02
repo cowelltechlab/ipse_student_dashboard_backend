@@ -2,6 +2,7 @@
 FROM python:3.12-slim
 
 # Set the working directory
+ 
 WORKDIR /app
 
 # Install required Linux packages including LibreOffice and ODBC Driver 18

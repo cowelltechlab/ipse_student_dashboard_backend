@@ -328,7 +328,7 @@ def get_all_role_ids() -> List[int]:
 
             all_role_ids = [row[0] for row in cursor.fetchall()]
             return all_role_ids
-
+    
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
