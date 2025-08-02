@@ -9,8 +9,6 @@ from application.features.auth.permissions import require_admin_access, require_
 from application.features.auth.schemas import StudentProfile, UserResponse
 from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token, get_user_with_roles_by_id
 
-import re
-
 from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
 

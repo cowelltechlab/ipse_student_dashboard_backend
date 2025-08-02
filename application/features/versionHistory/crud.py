@@ -1,86 +1,29 @@
-from azure.cosmos import ContainerProxy
 from fastapi import HTTPException
 from uuid import uuid4
 from application.features.versionHistory.schemas import AssignmentVersionCreate, RatingUpdateRequest
 from datetime import datetime
-from azure.cosmos import PartitionKey
 from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
-from fastapi.responses import JSONResponse
 from azure.cosmos import exceptions
 
-def create_version(data: AssignmentVersionCreate, container):
-    doc = data.model_dump()
-    doc["modifier_id"] = str(doc["modifier_id"]) 
-    doc["id"] = str(uuid4())
 
-    if isinstance(doc.get("date_modified"), datetime):
-        doc["date_modified"] = doc["date_modified"].isoformat()
 
-    # If this version is being finalized, unset all others for this assignment
-    if doc.get("finalized"):
-        # Fetch all previous versions of the assignment
-        query = "SELECT * FROM c WHERE c.assignment_id = @assignment_id"
-        parameters = [{"name": "@assignment_id", "value": doc["assignment_id"]}]
-        existing_versions = list(container.query_items(
-            query=query,
-            parameters=parameters,
-            enable_cross_partition_query=True
-        ))
-
-        for version in existing_versions:
-            if version.get("finalized"):
-                version["finalized"] = False
-                try:
-                    container.replace_item(item=version["id"], body=version)
-                except Exception as e:
-                    raise HTTPException(
-                        status_code=500, 
-                        detail=f"Failed to unset finalized on previous version {version['version_number']}: {str(e)}"
-                    )
-
-    # Create the new version
-    try:
-        container.create_item(body=doc)
-        # Cast modifier_id back to int for response
-        doc["modifier_id"] = int(doc["modifier_id"])
-        return AssignmentVersionResponse(**doc)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create version: {str(e)}")
-
-def get_versions_by_assignment(container, assignment_id: str) -> list[AssignmentVersionResponse]:
-    # Since modifier_id is partition key, but we want to query by assignment_id (not PK),
-    # need to cross-partition query.
-    query = "SELECT * FROM c WHERE c.assignment_id = @assignment_id"
-    parameters = [{"name": "@assignment_id", "value": assignment_id}]
+def get_assignment_version_by_doc_id(container, document_version_id: str) -> AssignmentVersionResponse:
+    query = "SELECT * FROM c WHERE c.id = @id"
+    parameters = [{"name": "@id", "value": document_version_id}]
 
     try:
         items = list(container.query_items(
             query=query,
             parameters=parameters,
-            enable_cross_partition_query=True
-        ))
-        return [AssignmentVersionResponse(**item) for item in items]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to fetch versions: {str(e)}")
-
-def get_version(container, assignment_id: str, version_number: int) -> AssignmentVersionResponse:
-    query = ("SELECT * FROM c WHERE c.assignment_id = @assignment_id AND c.version_number = @version_number")
-    parameters = [
-        {"name": "@assignment_id", "value": assignment_id},
-        {"name": "@version_number", "value": version_number}
-    ]
-
-    try:
-        items = list(container.query_items(
-            query=query,
-            parameters=parameters,
-            enable_cross_partition_query=True
+            enable_cross_partition_query=True  # keep this if needed
         ))
         if not items:
             raise HTTPException(status_code=404, detail="Version not found")
         return AssignmentVersionResponse(**items[0])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch version: {str(e)}")
+
+
 
 def delete_version_by_assignment_version(container, assignment_id: str, version_number: int):
     try:

@@ -16,6 +16,7 @@ from urllib.parse import urlencode
 
 load_dotenv()
 google_auth_str = os.getenv("GOOGLE_OAUTH")
+google_callback_uri = os.getenv("GOOGLE_CALLBACK_URI")
 CONFIG: Dict[str, Any] = {}
 
 if google_auth_str:
@@ -29,7 +30,7 @@ else:
 
 
 def get_google_oauth_url(
-    backend_callback_uri: str = "http://localhost:5173/auth/callback"
+    backend_callback_uri: str = google_callback_uri
 ) -> str:
     allowed_redirect_uris: List[str] = CONFIG["redirect_uris"]
 
@@ -52,7 +53,7 @@ def get_google_oauth_url(
 
 async def exchange_code_for_token(
     code: str,
-    backend_redirect_uri: str = "http://localhost:5173/auth/callback"
+    backend_redirect_uri: str = google_callback_uri
     ) -> Dict[str, Any]:
     """
     Exchange authorization codes for access tokens from Google's OAuth 2.0 

@@ -15,7 +15,7 @@ from application.features.assignments.schemas import (
 from application.features.assignments.crud import (
     get_all_assignment_types,
     get_all_assignments_by_student_id, 
-    get_assignments_by_id, 
+    get_assignment_by_id, 
     get_all_assignments, 
     add_assignment,
     add_many_assignments, 
@@ -40,16 +40,50 @@ def fetch_assignments(
     return get_all_assignments()
 
 
-@router.get("/id/{assignment_id}", response_model= AssignmentDetailResponse)
+@router.get("/id/{assignment_id}", response_model=AssignmentDetailResponse)
 def fetch_assignment_by_id(
     assignment_id: int,
     _user = Depends(require_user_access)
-
 ):
-    assignment_record = get_assignments_by_id(assignment_id)
-    if not assignment_record:
+    raw_data = get_assignment_by_id(assignment_id)
+    if not raw_data:
         raise HTTPException(status_code=404, detail="Assignment not found")
-    return assignment_record
+    
+    assignment_response = {
+        "assignment_id": raw_data["assignment_id"],
+        "title": raw_data["assignment_title"],
+        "content": raw_data["assignment_content"],
+        "date_created": raw_data["assignment_date_created"],
+        "blob_url": raw_data.get("assignment_blob_url"),
+        "source_format": raw_data.get("assignment_source_format"),
+        "html_content": raw_data.get("assignment_html_content"),
+        "assignment_type": raw_data.get("assignment_type"),
+        "assignment_type_id": raw_data.get("assignment_type_id"),
+
+        # Nested Student
+        "student": {
+            "id": raw_data["student_internal_id"],
+            "first_name": raw_data["student_first_name"],
+            "last_name": raw_data["student_last_name"]
+        },
+
+        # Nested Class Info
+        "class_info": {
+            "id": raw_data.get("class_id"),
+            "name": raw_data.get("class_name"),
+            "course_code": raw_data.get("class_course_code")
+        } if raw_data.get("class_id") else None,
+
+        # NoSQL metadata
+        "finalized": raw_data.get("finalized"),
+        "rating_status": raw_data.get("rating_status"),
+        "date_modified": raw_data.get("date_modified"),  
+        "versions": raw_data.get("versions", []),
+    }
+
+    return assignment_response
+
+
 
 
 @router.get(path="/types", response_model=List[AssignmentTypeListResponse])

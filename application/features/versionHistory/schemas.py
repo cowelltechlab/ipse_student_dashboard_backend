@@ -48,8 +48,6 @@ class AssignmentVersionBase(BaseModel):
     starred: Optional[bool] = False
     generated_options: Optional[List[GeneratedOption]] = None
 
-class AssignmentVersionCreate(AssignmentVersionBase):
-    pass
 
 class AssignmentVersionResponse(AssignmentVersionBase):
     id: str
@@ -61,6 +59,28 @@ class AssignmentVersionUpdate(BaseModel):
     starred: Optional[bool] = None
     date_modified: Optional[datetime] = None
 
-class FinalizeVersionRequest(BaseModel):
-    assignment_version_id: str
+class GeneratedOption(BaseModel):
+    name: str
+    description: str
+    why_good_existing: str
+    why_good_growth: str
+    internal_id: Optional[str]
+
+
+class FinalGeneratedContent(BaseModel):
+    html_content: str
+
+
+class AssignmentVersionResponse(BaseModel):
+    id: str
+    assignment_id: int
+    modifier_id: int
+    student_id: int
+    version_number: int
+    generated_options: List[GeneratedOption]
+    skills_for_success: Optional[str]
     finalized: bool
+    date_modified: str
+    selected_options: Optional[List[str]]
+    extra_ideas_for_changes: Optional[str]
+    final_generated_content: Optional[FinalGeneratedContent]
