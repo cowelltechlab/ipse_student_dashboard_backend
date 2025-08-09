@@ -5,6 +5,9 @@ from application.features.ratings.schemas import RatingUpdateRequest
 from application.features.versionHistory.schemas import AssignmentVersionResponse
 
 
+def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> AssignmentRatingData:
+    
+
 def update_rating_fields(
     container,
     assignment_id: str,

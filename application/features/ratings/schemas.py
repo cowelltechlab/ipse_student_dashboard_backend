@@ -2,6 +2,9 @@ from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+from application.features.assignment_version_generation.schemas import LearningPathwayOption
+from application.features.student_profile.schemas import StudentProfileResponse
+
 
 class RatingGoals(BaseModel):
     goals_supported: List[str]
@@ -26,3 +29,17 @@ class RatingUpdateRequest(BaseModel):
     rating_options: Optional[RatingOptions] = None
     rating_future_planning: Optional[RatingFuturePlanning] = None
     date_modified: Optional[datetime] = Field(default_factory=datetime.utcnow)
+
+
+
+
+
+class AssignmentRatingData(BaseModel):
+    assignment_version_id: str
+    assignment_id: str
+    assignment_name: str
+    generated_options: List[LearningPathwayOption]
+    original_assignment_html: str
+    version_html: str
+    student_profile: StudentProfileResponse
+     rating_goals
