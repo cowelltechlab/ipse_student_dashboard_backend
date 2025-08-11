@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import Any, Dict, List
 
 class LearningPathwayOption(BaseModel):
     name: str
@@ -17,7 +17,7 @@ class AssignmentGenerationOptionsResponse(BaseModel):
 
 class AssignmentVersionGenerationResponse(BaseModel):
     version_document_id: str
-    html_content: str
+    json_content: Dict[str, Any]
 
 class AssignmentUpdateBody(BaseModel):
-    updated_html_content: str
+    updated_json_content: dict

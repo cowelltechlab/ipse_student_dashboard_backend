@@ -1,12 +1,14 @@
 import json
-from typing import Optional
+from typing import Dict, List, Optional
 from .gpt_connection import get_gpt_response
+from openai import OpenAI
 
 def process_gpt_prompt(prompt: str, model: str = "gpt-3.5-turbo") -> str:
     # You could add extra processing here if needed
     return get_gpt_response(prompt, model)
 
-def process_gpt_prompt_json(prompt: str, model: str = "gpt-4", override_max_tokens: Optional[int] = None
+
+def process_gpt_prompt_version_suggestion_json(prompt: str, model: str = "gpt-4", override_max_tokens: Optional[int] = None
 ) -> dict:
     response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
 
@@ -14,6 +16,75 @@ def process_gpt_prompt_json(prompt: str, model: str = "gpt-4", override_max_toke
         return json.loads(response_text)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON from GPT: {e}\nRaw content:\n{response_text}")
+
+
+# gpt_client.py
+client = OpenAI()
+
+ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "assignmentInstructionsHtml": {"type": "string"},
+        "stepByStepPlanHtml": {"type": "string"},
+        "myPlanChecklistHtml": {"type": "string"},
+        "motivationalMessageHtml": {"type": "string"},
+        "template": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "title": {"type": "string"},
+                "bodyHtml": {"type": "string"}
+            },
+            "required": ["title", "bodyHtml"]
+        },
+        "promptsHtml": {"type": "string"},
+        "supportTools": {
+            "type": "object",
+            "additionalProperties": False,
+            "properties": {
+                "toolsHtml": {"type": "string"},
+                "aiPromptingHtml": {"type": "string"},  # optional
+                "aiPolicyHtml": {"type": "string"}
+            },
+            "required": ["toolsHtml", "aiPolicyHtml"]
+        }
+    },
+    "required": [
+        "assignmentInstructionsHtml",
+        "stepByStepPlanHtml",
+        "myPlanChecklistHtml",
+        "motivationalMessageHtml"
+    ]
+}
+
+
+
+
+def process_gpt_prompt_json(
+    messages: List[Dict],
+    model: str = "gpt-4o-2024-08-06",
+    override_max_tokens: int | None = None
+) -> dict:
+    resp = client.responses.create(
+        model="gpt-4o-2024-08-06",
+        input=messages,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "AssignmentPackage",
+                "strict": False,
+                "schema": ASSIGNMENT_PACKAGE_JSON_SCHEMA,  # <-- raw JSON Schema dict
+            }
+        },
+        temperature=0.2,
+        max_output_tokens=8000,
+    )
+    obj = json.loads(resp.output_text)
+
+
+    return obj
+
 
 def process_gpt_prompt_html(
     prompt: str,

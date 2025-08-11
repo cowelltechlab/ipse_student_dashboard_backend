@@ -42,4 +42,3 @@ class AssignmentRatingData(BaseModel):
     original_assignment_html: str
     version_html: str
     student_profile: StudentProfileResponse
-     rating_goals
