@@ -105,41 +105,71 @@ def process_gpt_prompt_html(
 
 
 def summarize_strengths(strengths: list[str]) -> str:
-    prompt = f"""Create short, 1-2 sentence summary of these strengths
-    using plain, simple language. Word challenges as what they student is working on,
-    using goal-discrepancy gaps to be overcome, in line with Wehmeyer’s causal
-    agency theory, NOT weaknesses. {', '.join(strengths)}"""
+    prompt = f"""Write a short,  1 sentence summary (5-10 words AT MOST)  of these strengths in **first person**.
+    Use plain, simple language (no greater than 4th grade level).
+    Make it **motivating** and **future-focused**, framing challenges as what I am working on
+    and strengths as tools for growth.
+    Use Wehmeyer’s Causal Agency Theory to highlight purposeful action, self-direction, and confidence.
+    Avoid listing weaknesses; instead, describe opportunities for growth.
+    NO quotation marks on any phrases. Response should be output as plain text.
+    Strengths: {', '.join(strengths)}
+    """
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def summarize_short_term_goals(short_term: str) -> str:
-    prompt = f"""Create short, 1-2 sentence summary of these short term goals using plain,
-    simple language. Word challenges as what they student is working on, using
-    goal-discrepancy gaps to be overcome, in line with Wehmeyer’s causal agency theory,
-    NOT weaknesses: {short_term}"""
+    prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST) of these short-term goals in **first person**.
+    Use plain, simple language (no greater than 4th grade level).
+    Make it **motivating** and **goal-oriented**, framing challenges as what I am working on
+    with a clear path forward.
+    Follow Wehmeyer’s Causal Agency Theory by emphasizing purposeful action and self-monitoring.
+    Avoid weaknesses; instead, highlight progress steps and confidence.
+    Avoid adding quotation marks on any phrases. Response should be output as plain text.
+
+    Short-term goals: {short_term}
+    """
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def summarize_long_term_goals(long_term: str) -> str:
-    prompt = f"""Create short, 1-2 sentence summary of these long term goals using plain,
-    simple language. Word challenges as what they student is working on, 
-    using goal-discrepancy gaps to be overcome, in line with Wehmeyer’s causal agency theory, 
-    NOT weaknesses. {long_term}"""
+    prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST)  of these long-term goals in **first person**.
+    Use plain, simple language (no greater than 4th grade level).
+    Make it **motivating**, connecting what I’m learning now to my future dreams.
+    Frame challenges as steps I am working through, showing determination and agency.
+    Use Wehmeyer’s Causal Agency Theory to focus on self-determined action toward my vision.
+    Avoid any weakness framing.
+    Avoid adding quotation marks on any phrases. Response should be output as plain text.
+
+    Long-term goals: {long_term}
+    """
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def summarize_best_ways_to_learn(best_ways: str) -> str:
-    prompt = f"""Create short, 1-2 sentence summary of these best ways for the student to learn
-    using plain, simple language. Word challenges as what they student is working on,
-    using goal-discrepancy gaps to be overcome, in line with Wehmeyer’s causal agency
-    theory, NOT weaknesses. {best_ways}"""
+    prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST) of the best ways for me to learn, in **first person**.
+    Use plain, simple language (no greater than 4th grade level).
+    Make it **encouraging** and show that I understand how I learn best.
+    Frame these as strategies I choose and use to reach my goals.
+    Align with Wehmeyer’s Causal Agency Theory by highlighting purposeful use of resources and self-monitoring.
+    Avoid weakness framing.
+    Avoid adding quotation marks on any phrases. Response should be output as plain text.
+
+
+    These should not be a numbered list, but instead a comma-separated list of phrases.
+    Best ways to learn: {best_ways}
+    """
     return process_gpt_prompt(prompt, model="gpt-4")
 
 def generate_vision_statement(student_info: str) -> str:
-    prompt = f"""Create a vision statement using plain, simple language for this student
-    {student_info}, focusing on what they are working toward and how they will get there.
-    Word it as a goal-discrepancy challenges, in line with Wehmeyer’s causal agency theory, 
-    NOT weakness. Instead, focus on tools, self-monitoring, and growth toward goals. 
-    Limit to no more than 40 words."""
-    return process_gpt_prompt(prompt, model="gpt-4")
+    prompt = f"""Write a **first-person** vision statement, 1-2 sentences long (each sentence 5-7 words), using plain, simple language (no greater than 4th grade level).
+    Make it **motivating**, connecting my present learning to my future dreams.
+    Frame it as a positive challenge I am working on, with steps I will take.
+    Follow Wehmeyer’s Causal Agency Theory by focusing on tools, self-direction, self-monitoring, and growth toward my goals.
+    Avoid weaknesses, instead highlight confidence and purposeful action.
+    NO quotation marks on any phrases. Response should be output as plain text.
 
+    Add one related emoji at the end of the vision statement to make it more engaging.
+
+    Student info: {student_info}
+    """
+    return process_gpt_prompt(prompt, model="gpt-4")
 def generate_gpt_prompt(assignment, student, profile):
     return f"""
     You are an AI system following UDL guidelines from https://udlguidelines.cast.org/.

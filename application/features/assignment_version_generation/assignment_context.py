@@ -90,11 +90,29 @@ def load_assignment_context(assignment_version_id: str):
     return version_doc, assignment, class_info, full_profile
 
 
-def filter_selected_options(cosmos_doc, selected_ids):
-    # reuse your existing implementation; stubbed for completeness
-    all_opts = cosmos_doc.get("options", [])
-    by_id = {str(o.get("id")): o for o in all_opts}
-    return [by_id[sid] for sid in selected_ids if sid in by_id]
+def filter_selected_options(cosmos_doc: dict, selected_ids: list[str]):
+    # Prefer generated_options; fall back to options for older docs
+    opts = cosmos_doc.get("generated_options") or cosmos_doc.get("options") or []
+    if not opts or not selected_ids:
+        return [], list(map(str, selected_ids or []))
+
+    # Detect the identifier field once
+    id_field = None
+    for candidate in ("internal_id", "id", "internalId", "option_id"):
+        if opts and candidate in opts[0]:
+            id_field = candidate
+            break
+    if id_field is None:
+        return [], list(map(str, selected_ids))
+
+    # Build map and normalize to str for reliable matching
+    by_id = {str(o.get(id_field)): o for o in opts if id_field in o}
+
+    # Preserve the order in selected_ids; skip unknowns
+    picked = [by_id[sid] for sid in map(str, selected_ids) if sid in by_id]
+    # missing = [sid for sid in map(str, selected_ids) if sid not in by_id]
+    return picked
+
 
 def build_prompt_for_version(
     assignment_version_id: str,
