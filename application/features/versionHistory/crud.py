@@ -1,5 +1,4 @@
 from fastapi import HTTPException
-from uuid import uuid4
 from datetime import datetime
 from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
 from azure.cosmos import exceptions
