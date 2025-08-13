@@ -1,10 +1,9 @@
 import datetime
-from typing import List, Optional
 from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.assignment_version_generation.assignment_context import build_prompt_for_version, versions_container
-from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation, handle_assignment_version_generation
+from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation, handle_assignment_version_generation, handle_assignment_version_update
 from application.features.auth.permissions import require_user_access
 
 
@@ -24,18 +23,6 @@ def generate_assignment_options(assignment_id: int, _user=Depends(require_user_a
     
     return handle_assignment_suggestion_generation(assignment_id, _user["user_id"])
 
-
-# @router.post("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
-# def generate_new_assignment_version(
-#     assignment_version_id: str,
-#     selected_options: List[str] = Body(...),
-#     additional_edit_suggestions: Optional[str] = Body("")
-# ):
-#     return handle_assignment_version_generation(
-#         assignment_version_id,
-#         selected_options,
-#         additional_edit_suggestions or ""
-#     )
 
 @router.post(
     "/assignment-generation/{assignment_version_id}",
@@ -115,6 +102,16 @@ def stream_assignment_version(
 
 
 
-# @router.put("/assignment-generation/{assignment_version_id}", response_model=AssignmentVersionGenerationResponse)
-# def update_assignment_version(assignment_version_id: str, body: AssignmentUpdateBody, _user=Depends(require_user_access)):
-#     return handle_assignment_version_update(assignment_version_id, body.updated_json_content)
+@router.put(
+    "/assignment-generation/{assignment_version_id}",
+    response_model=AssignmentVersionGenerationResponse
+)
+def update_assignment_version(
+    assignment_version_id: str,
+    body: AssignmentUpdateBody,
+    _user = Depends(require_user_access)
+):
+    return handle_assignment_version_update(
+        assignment_version_id,
+        body.updated_json_content
+    )

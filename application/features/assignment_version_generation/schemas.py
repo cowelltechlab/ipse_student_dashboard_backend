@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
 from typing import Any, Dict, List, Optional
 
 class LearningPathwayOption(BaseModel):
@@ -22,10 +22,6 @@ class AssignmentGenerationRequest(BaseModel):
         # Accept numbers or strings; store as strings
         return [str(x) for x in (v or [])]
 
-class AssignmentVersionGenerationResponse(BaseModel):
-    version_document_id: str
-    json_content: dict  # your validated, ordered JSON object
-
 
 class AssignmentGenerationOptionsResponse(BaseModel):
     skills_for_success: str
@@ -37,6 +33,48 @@ class AssignmentVersionGenerationResponse(BaseModel):
     version_document_id: str
     json_content: Dict[str, Any]
 
+
+class SupportToolsModel(BaseModel):
+    toolsHtml: str
+    aiPromptingHtml: str
+    aiPolicyHtml: str
+
+    class Config:
+        extra = "forbid"
+
+class AssignmentJsonContent(BaseModel):
+    assignmentInstructionsHtml: str
+    stepByStepPlanHtml: str
+    promptsHtml: str
+    supportTools: SupportToolsModel
+    motivationalMessageHtml: str
+
+    class Config:
+        extra = "forbid"
+
+    @staticmethod
+    def _is_fragment(s: str) -> bool:
+        if not isinstance(s, str):
+            return False
+        sl = s.lower()
+        return all(tag not in sl for tag in ("<html", "<body", "<head", "<!doctype"))
+
+    # Lightweight HTML-fragment checks (the full template-rule check still happens server-side)
+    @validator("assignmentInstructionsHtml", "stepByStepPlanHtml", "promptsHtml", "motivationalMessageHtml")
+    def _html_fragments(cls, v):
+        if not cls._is_fragment(v):
+            raise ValueError("Must be an HTML fragment without outer wrappers")
+        return v
+
+    @root_validator
+    def _support_tools_fragments(cls, values):
+        st = values.get("supportTools")
+        if st:
+            for k in ("toolsHtml", "aiPromptingHtml", "aiPolicyHtml"):
+                if not cls._is_fragment(getattr(st, k)):
+                    raise ValueError(f"supportTools.{k} must be an HTML fragment without outer wrappers")
+        return values
+
 class AssignmentUpdateBody(BaseModel):
-    updated_json_content: dict
-    output_reasoning: str
+    updated_json_content: AssignmentJsonContent = Field(..., description="Full assignment JSON matching the generation schema.")
+    output_reasoning: Optional[str] = Field(default=None, description="Optional human note on why the update was made.")
