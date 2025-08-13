@@ -106,7 +106,6 @@ def update_version(container, assignment_id: str, version_number: int, update_da
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update version: {str(e)}")
     
-
 def finalize_by_id(container, assignment_version_id: str, finalized: bool) -> AssignmentVersionResponse:
     # Step 1: Get the current document by ID
     try:

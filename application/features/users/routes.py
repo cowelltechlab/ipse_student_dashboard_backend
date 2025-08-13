@@ -101,7 +101,7 @@ async def invite_user(
     if get_user_by_email(email):
         raise HTTPException(409, "A user with this email already exists.")
 
-    result = create_invited_user(email, request_data.school_email, request_data.role_ids)
+    result = create_invited_user(email, request_data.school_email, request_data.role_ids, request_data.student_type)
 
     if not result or "token" not in result:
         raise HTTPException(500, "Failed to create invited user")

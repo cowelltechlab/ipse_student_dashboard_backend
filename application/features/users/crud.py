@@ -215,17 +215,26 @@ def get_user_with_roles_by_id(user_id: int) -> Dict:
 
 
 
-def create_invited_user(email: str, school_email: str, role_ids: List[int]) -> Dict:
+def create_invited_user(email: str, school_email: str, role_ids: List[int], student_type: Optional[str] = None) -> Dict:
     try:
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
 
-            # Insert user
-            cursor.execute("""
-                INSERT INTO Users (email, gt_email, is_active, created_at)
-                OUTPUT INSERTED.id
-                VALUES (?, ?, 0, GETUTCDATE())
-            """, (email, school_email))
+            if student_type:
+                # Insert with pending_student_group_type
+                cursor.execute("""
+                    INSERT INTO Users (email, gt_email, is_active, created_at, pending_student_group_type)
+                    OUTPUT INSERTED.id
+                    VALUES (?, ?, 0, GETUTCDATE(), ?)
+                """, (email, school_email, student_type))
+            else:
+                # Insert without pending_student_group_type
+                cursor.execute("""
+                    INSERT INTO Users (email, gt_email, is_active, created_at)
+                    OUTPUT INSERTED.id
+                    VALUES (?, ?, 0, GETUTCDATE())
+                """, (email, school_email))
+
             user_id = cursor.fetchone()[0]
 
             # Assign roles
