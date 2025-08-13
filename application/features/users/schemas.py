@@ -6,6 +6,7 @@ class InviteUserRequest(BaseModel):
     school_email: EmailStr
     google_email: Optional[EmailStr]
     role_ids: List[int]
+    student_type: Optional[str] = None
 
 class CompleteInviteRequest(BaseModel):
     token: str

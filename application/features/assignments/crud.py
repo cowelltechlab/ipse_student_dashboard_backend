@@ -38,8 +38,13 @@ def analyze_assignment_versions(assignment_id: str):
         }
 
     finalized = any(item.get("finalized") for item in items)
+
     date_modified = max(
-        [datetime.fromisoformat(v["date_modified"]) for v in items if "date_modified" in v],
+        [
+            datetime.fromisoformat(v["date_modified"]).replace(tzinfo=None)
+            for v in items
+            if "date_modified" in v
+        ],
         default=None
     )
 
@@ -85,9 +90,13 @@ def get_all_assignment_versions_map():
     for assignment_id, versions in grouped.items():
         finalized = any(v.get("finalized") for v in versions)
         date_modified = max(
-            [datetime.fromisoformat(v["date_modified"]) for v in versions if "date_modified" in v],
-            default=None
-        )
+        [
+            datetime.fromisoformat(v["date_modified"]).replace(tzinfo=None)
+            for v in versions
+            if "date_modified" in v
+        ],
+        default=None
+)
 
         finalized_versions = [v for v in versions if v.get("finalized")]
         finalized_version = finalized_versions[0] if finalized_versions else None

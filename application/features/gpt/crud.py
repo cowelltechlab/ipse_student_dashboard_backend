@@ -165,7 +165,7 @@ def generate_vision_statement(student_info: str) -> str:
     Avoid weaknesses, instead highlight confidence and purposeful action.
     NO quotation marks on any phrases. Response should be output as plain text.
 
-    Add one related emoji at the end of the vision statement to make it more engaging.
+    NEVER add emojis.
 
     Student info: {student_info}
     """

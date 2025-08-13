@@ -1,4 +1,5 @@
 import datetime
+import json
 from typing import List, Optional
 from fastapi import HTTPException
 import pyodbc
@@ -9,6 +10,7 @@ from application.features.assignment_version_generation.helpers import generate_
 from application.database.nosql_connection import get_cosmos_db_connection
 
 
+from application.features.assignment_version_generation.template_verification_helpers import _needs_template, _validate_and_order_result
 from application.features.gpt.crud import process_gpt_prompt_json
 
 
@@ -133,6 +135,7 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
             "version_number": next_version,
             "generated_options": gpt_data.get("learning_pathways", []),
             "skills_for_success": gpt_data.get("skills_for_success"),
+            "output_reasoning": gpt_data.get("output_reasoning"),
             "finalized": False,
             "date_modified": datetime.datetime.utcnow().isoformat()
         }
@@ -149,38 +152,91 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
 
 
 
+# def handle_assignment_version_generation(
+#     assignment_version_id: str,
+#     selected_options: list[str],
+#     additional_edit_suggestions: str | None
+# ):
+#     # Build messages + context (same as streaming)
+#     messages, ctx = build_prompt_for_version(
+#         assignment_version_id=assignment_version_id,
+#         selected_options=selected_options,
+#         additional_edit_suggestions=additional_edit_suggestions or ""
+#     )
+
+#     # If you want, remove the system tool header for non-streaming:
+#     # messages = [m for m in messages if m["role"] != "system"] + [{"role":"system","content":"Return one JSON object per the schema."}]
+
+#     # Call non-streaming structured output
+#     try:
+#         result = process_gpt_prompt_json(
+#         messages=messages,
+#         model="gpt-4o-2024-08-06",
+#         override_max_tokens=8000,
+#     )
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
+
+#     # Persist JSON
+#     version_doc = ctx["version_doc"]
+#     version_doc["selected_options"] = selected_options
+#     version_doc["extra_ideas_for_changes"] = additional_edit_suggestions or ""
+#     version_doc["finalized"] = False
+#     version_doc["final_generated_content"] = {"json_content": result}
+#     version_doc["date_modified"] = datetime.datetime.utcnow().isoformat()
+
+#     try:
+#         versions_container.replace_item(item=version_doc["id"], body=version_doc)
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Failed to update version document: {str(e)}")
+
+#     return {
+#         "version_document_id": version_doc["id"],
+#         "json_content": result,
+#     }
+
 def handle_assignment_version_generation(
     assignment_version_id: str,
     selected_options: list[str],
     additional_edit_suggestions: str | None
 ):
-    # Build messages + context (same as streaming)
+    # Build messages + context using the JSON header (non-streaming)
     messages, ctx = build_prompt_for_version(
         assignment_version_id=assignment_version_id,
         selected_options=selected_options,
-        additional_edit_suggestions=additional_edit_suggestions or ""
+        additional_edit_suggestions=additional_edit_suggestions or "",
+        for_stream=False,  # IMPORTANT: ensures json_header is used
     )
 
-    # If you want, remove the system tool header for non-streaming:
-    # messages = [m for m in messages if m["role"] != "system"] + [{"role":"system","content":"Return one JSON object per the schema."}]
-
-    # Call non-streaming structured output
+    # Call non-streaming structured output model
     try:
-        result = process_gpt_prompt_json(
-        messages=messages,
-        model="gpt-4o-2024-08-06",
-        override_max_tokens=8000,
-    )
+        result_text = process_gpt_prompt_json(
+            messages=messages,
+            model="gpt-4o-2024-08-06",
+            override_max_tokens=8000,
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 
-    # Persist JSON
+    # Determine if a template is required (pre-validate)
     version_doc = ctx["version_doc"]
+    assignment_type = version_doc.get("assignment_type") or ""  # or map id->name upstream
+    selected_options_str = json.dumps(ctx.get("selected_options", []), indent=2)
+    template_required = _needs_template(selected_options_str, assignment_type)
+
+    # Validate schema, order, and template rules
+    data_obj = _validate_and_order_result(result_text, template_required)
+
+    # Persist JSON (keep raw and parsed for debugging if you want)
     version_doc["selected_options"] = selected_options
-    version_doc["extra_ideas_for_changes"] = additional_edit_suggestions or ""
+    # Choose a single, consistent field name:
+    version_doc["additional_edit_suggestions"] = additional_edit_suggestions or ""
     version_doc["finalized"] = False
-    version_doc["final_generated_content"] = {"json_content": result}
-    version_doc["date_modified"] = datetime.datetime.utcnow().isoformat()
+    version_doc["final_generated_content"] = {
+        "json_content": data_obj,
+        "raw_text": result_text,  # optional
+    }
+    version_doc["date_modified"] = datetime.datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
 
     try:
         versions_container.replace_item(item=version_doc["id"], body=version_doc)
@@ -189,5 +245,5 @@ def handle_assignment_version_generation(
 
     return {
         "version_document_id": version_doc["id"],
-        "json_content": result,
+        "json_content": data_obj,
     }
