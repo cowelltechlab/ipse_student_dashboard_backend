@@ -10,7 +10,7 @@ from application.features.assignment_version_generation.helpers import generate_
 from application.database.nosql_connection import get_cosmos_db_connection
 
 
-from application.features.assignment_version_generation.template_verification_helpers import _needs_template, _validate_and_order_result
+from application.features.assignment_version_generation.template_verification_helpers import needs_template, validate_and_order_result
 from application.features.gpt.crud import process_gpt_prompt_json
 
 
@@ -177,10 +177,10 @@ def handle_assignment_version_generation(
     version_doc = ctx["version_doc"]
     assignment_type = version_doc.get("assignment_type") or ""  # or map id->name upstream
     selected_options_str = json.dumps(ctx.get("selected_options", []), indent=2)
-    template_required = _needs_template(selected_options_str, assignment_type)
+    template_required = needs_template(selected_options_str, assignment_type)
 
     # Validate schema, order, and template rules
-    data_obj = _validate_and_order_result(result_text, template_required)
+    data_obj = validate_and_order_result(result_text, template_required)
 
     # Persist JSON (keep raw and parsed for debugging if you want)
     version_doc["selected_options"] = selected_options
@@ -228,10 +228,10 @@ def handle_assignment_version_update(assignment_version_id: str, updated_json_co
         selected_options_str = str(selected_options)
 
     # If you defined _needs_template elsewhere, import and reuse it.
-    template_required = _needs_template(selected_options_str, assignment_type)
+    template_required = needs_template(selected_options_str, assignment_type)
 
     # 3) Validate and normalize order
-    validated = _validate_and_order_result(updated_json_content, template_required)
+    validated = validate_and_order_result(updated_json_content, template_required)
 
     # 4) Preserve original JSON once (if not already saved)
     if "original_generated_json_content" not in version_doc:
