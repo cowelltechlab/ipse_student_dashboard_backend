@@ -1,39 +1,44 @@
-# Use official Python base image
-FROM python:3.12-slim
+# Pin to Debian 12 (bookworm) so Microsoft ODBC repo is available & signed
+FROM python:3.12-bookworm
 
-# Set the working directory
- 
+# Noninteractive apt installs
+ARG DEBIAN_FRONTEND=noninteractive
+
 WORKDIR /app
 
-# Install required Linux packages including LibreOffice and ODBC Driver 18
-RUN apt-get update && apt-get install -y \
+# OS deps (use --no-install-recommends to keep image smaller)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    gnupg \
     unixodbc \
     unixodbc-dev \
     libpq-dev \
-    curl \
-    gnupg2 \
     libreoffice \
-    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
-    && curl https://packages.microsoft.com/config/debian/10/prod.list > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y msodbcsql18 \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/*
 
-# Set up ODBC drivers (Optional)
-ENV ODBCINI=/etc/odbc.ini
-ENV ODBCSYSINI=/etc
-ENV LD_LIBRARY_PATH=/usr/lib:/usr/lib/x86_64-linux-gnu:/opt/microsoft/msodbcsql18/lib
+# Add Microsoft repo (bookworm) using keyring (no apt-key)
+RUN set -eux; \
+    curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
+      | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg; \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" \
+      > /etc/apt/sources.list.d/mssql-release.list; \
+    apt-get update; \
+    ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18; \
+    apt-get clean; \
+    rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file and install dependencies
+# ODBC env (optional)
+ENV ODBCINI=/etc/odbc.ini \
+    ODBCSYSINI=/etc \
+    LD_LIBRARY_PATH=/usr/lib:/usr/lib/x86_64-linux-gnu:/opt/microsoft/msodbcsql18/lib
+
+# Python deps
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
+# App code
 COPY . .
 
-# Expose the FastAPI port
 EXPOSE 8000
-
-# Run the FastAPI application
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
