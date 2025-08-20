@@ -4,7 +4,7 @@ Sources:
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
 - Google Gemini
 """
-from fastapi import HTTPException, APIRouter, Depends
+from fastapi import HTTPException, APIRouter, Depends, Response
 from fastapi.security import OAuth2PasswordBearer
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import create_jwt_token
@@ -258,3 +258,14 @@ async def get_current_user(
         profile_picture_url=profile_picture_url
     )
 
+
+
+@router.get("/gatech/saml2/metadata")
+async def metadata_xtml():
+    """
+    Returns SSO metadata file
+    """
+    with open("saml_metadata.xml", "r", encoding="utf-8") as f:
+        metadata = f.read()
+
+    return Response(content=metadata, media_type="application/xml")

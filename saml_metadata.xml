@@ -1,0 +1,68 @@
+<?xml version="1.0"?>
+<md:EntityDescriptor
+    xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
+    validUntil="2025-08-22T20:43:03Z"
+    cacheDuration="PT604800S"
+    entityID="https://ipse-dashboard-backend-adcpeuexeuf8fvf4.centralus-01.azurewebsites.net/auth/gatech/saml2/metadata">
+
+  <md:SPSSODescriptor
+      AuthnRequestsSigned="true"
+      WantAssertionsSigned="true"
+      protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>
+            MIIDuzCCAqOgAwIBAgIUUlwJW1tdnYo+roFrHwpYH8DP/c8wDQYJKoZIhvcNAQEL
+            BQAwbTELMAkGA1UEBhMCVVMxEDAOBgNVBAgMB0dlb3JnaWExEDAOBgNVBAcMB0F0
+            bGFudGExIzAhBgNVBAoMGkNvbGxhYm9yYXRpdmUgd2VsbG5lc3MgTGFiMRUwEwYD
+            VQQLDAxHZW9yZ2lhIFRlY2gwHhcNMjUwODIwMjA1ODA5WhcNMjgwODE5MjA1ODA5
+            WjBtMQswCQYDVQQGEwJVUzEQMA4GA1UECAwHR2VvcmdpYTEQMA4GA1UEBwwHQXRs
+            YW50YTEjMCEGA1UECgwaQ29sbGFib3JhdGl2ZSB3ZWxsbmVzcyBMYWIxFTATBgNV
+            BAsMDEdlb3JnaWEgVGVjaDCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEB
+            AI130RiEMN5JJ05W3TYqbVXP8aaHgfK3dQ7C4yt2LZqcCKvLnGburjH6uepfmwBL
+            fA/qZD80CuYShHqh/js5DCxI6hx8cSzRNV4vTMAJe/liiWgQgQkm9qAxPO+UajK0
+            nP78E8f8Vs3qwc9vtWlx1fiixz2s9RLlKTQNWgntNsDSdVJlGPRxv5f3N2fdwoZX
+            bfGAuZNSqL/fXXNp7/Zl9rPbdwhKZHCk/+FedPxsTo9CbFmCTGySefcc1ZiKBuN4
+            8FAf3NJVcnuIjk1buZ/aEj+aZcpzsFWfTbVM1TBKhIq1zTuN2rAwMN/XXfEBKbau
+            zhZkS9FXfQ6qZO4IjxNVjVECAwEAAaNTMFEwHQYDVR0OBBYEFG5KRVhsvhPytZu+
+            2gfuqilzdId/MB8GA1UdIwQYMBaAFG5KRVhsvhPytZu+2gfuqilzdId/MA8GA1Ud
+            EwEB/wQFMAMBAf8wDQYJKoZIhvcNAQELBQADggEBAEycLZfkIYWZOneGNlKpHBw4
+            cv9sAEtrx+TtmHFs+T4tf5jsCIPqvf7FhjWRAJHXBuI1Ftq67TWAE0hp7nIGPeBd
+            h7CmZpqdxLHn8mQG/7oiTAM/mxkthp+b9LpPxaklyLM/9HwSzFPW0AZxa+O8G/xQ
+            YUzFRrtDECOVjsZRzrnG6aUyGw3joQdcpoiL16EP+7GiDoFsUUD3QRGsailwQrZB
+            qG1aXcqtuY4GA+BgL7+2Sh7rk3FWqbNjx53hr+2alvxtNqoV2/mTbH9G0ubobVLL
+            Svjrz4uZCorvWrhFr10lItkp4HneBFAO/YH/n3+4jS2oFdSwrKy3wYACOis7EN0=
+          </ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+
+    <md:NameIDFormat>
+      urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified
+    </md:NameIDFormat>
+
+    <md:AssertionConsumerService
+        Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
+        Location="https://ipse-dashboard-backend-adcpeuexeuf8fvf4.centralus-01.azurewebsites.net/auth/gatech/saml2/acs"
+        index="1" isDefault="true"/>
+  </md:SPSSODescriptor>
+
+  <md:Organization>
+    <md:OrganizationName xml:lang="en-US">MyChoice</md:OrganizationName>
+    <md:OrganizationDisplayName xml:lang="en-US">MyChoice</md:OrganizationDisplayName>
+    <md:OrganizationURL xml:lang="en-US">https://ipse-portal.netlify.app</md:OrganizationURL>
+  </md:Organization>
+
+  <md:ContactPerson contactType="technical">
+    <md:GivenName>Alejandra Bernabel</md:GivenName>
+    <md:EmailAddress>acamacho9@gatech.edu</md:EmailAddress>
+  </md:ContactPerson>
+
+  <md:ContactPerson contactType="support">
+    <md:GivenName>Rachel Lowy</md:GivenName>
+    <md:EmailAddress>rlowy3@gatech.edu</md:EmailAddress>
+  </md:ContactPerson>
+
+</md:EntityDescriptor>
