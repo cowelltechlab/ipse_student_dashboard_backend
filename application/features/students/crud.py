@@ -261,8 +261,8 @@ def get_student_by_user_id(user_id: int):
     try:
         query = """
         SELECT s.id, s.user_id, s.year_id, y.name AS year_name,
-               s.reading_level, s.writing_level, s.profile_picture_url, s.active_status,
-               u.email, u.first_name, u.last_name, u.gt_email
+               s.reading_level, s.writing_level, s.active_status,
+               u.email, u.first_name, u.last_name, u.gt_email, u.profile_picture_url
         FROM Students s
         JOIN Users u ON s.user_id = u.id
         JOIN Years y ON s.year_id = y.id
