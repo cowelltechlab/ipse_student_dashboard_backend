@@ -35,13 +35,13 @@ def _check_user_roles(user_data: dict, required_roles: Optional[List[str]] = Non
                            user does not have required roles.
     """
     # Check that JWT includes roles and is appropriately formatted
-    if "roles" not in user_data or not isinstance(user_data["roles"], list):
+    if "role_names" not in user_data or not isinstance(user_data["role_names"], list):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Role information missing from token."
         )
 
-    user_roles = set(user_data["roles"])
+    user_roles = set(user_data["role_names"])
     expanded_user_roles = _expand_roles(user_roles)
 
     if not required_roles:

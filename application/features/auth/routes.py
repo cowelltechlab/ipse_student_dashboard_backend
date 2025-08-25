@@ -30,6 +30,8 @@ from application.features.auth.schemas import (
 from application.features.auth.permissions import (
     require_user_access
 )
+from application.features.students.crud import get_student_by_user_id
+from application.features.users.crud import get_user_with_roles_by_id
 
 
 
@@ -62,28 +64,33 @@ async def email_login(user_credentials: UserLogin) -> TokenResponse:
             status_code=500, 
             detail="An internal server error occurred."
         )
-    
-    # Get user roles to generate new access roles
-    roles: List[str] = get_user_role_names(user_id)
 
-    # Generate access token
-    email = get_user_email_by_id(user_id)
-    if not email:
-        raise HTTPException(
-            status_code=500, 
-            detail="User email could not be retrieved after authentication."
-        )
-    
-    profile_picture_url = get_user_profile_picture_url(user_id)
-    
+    user = get_user_with_roles_by_id(user_id)
+
+    first_name = user.get("first_name")
+    last_name = user.get("last_name")
+    email = user.get("email")
+    school_email = user.get("school_email")
+
+    role_ids = user.get("role_ids", [])
+    role_names = user.get("roles", [])
+
+    profile_picture_url = user.get("profile_picture_url")
+    student_id = user.get("student_id")
+
     access_token = create_jwt_token(
         {
             "user_id": user_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "student_id": student_id,
             "email": email,
-            "roles": roles,
+            "school_email": school_email,
+            "role_ids": role_ids,
+            "role_names": role_names,
             "profile_picture_url": profile_picture_url
         },
-        expires_delta=15
+        expires_delta=1500
     )
 
     # Generate refresh token
@@ -137,22 +144,32 @@ async def refresh_access_token(refresh_token: str) -> TokenResponse:
             detail="Invalid or expired refresh token. Please log in again."
             )
     
-    email = get_user_email_by_id(user_id)
-    if not email:
-        raise HTTPException(status_code=401, detail="User not found")
-    
-    roles = get_user_role_names(user_id)
+    user = get_user_with_roles_by_id(user_id)
 
-    profile_picture_url = get_user_profile_picture_url(user_id)
+    first_name = user.get("first_name")
+    last_name = user.get("last_name")
+    email = user.get("email")
+    school_email = user.get("school_email")
+
+    role_ids = user.get("role_ids", [])
+    role_names = user.get("roles", [])
+
+    profile_picture_url = user.get("profile_picture_url")
+    student_id = user.get("student_id")
 
     new_access_token = create_jwt_token(
         {
             "user_id": user_id,
+            "first_name": first_name,
+            "last_name": last_name,
+            "student_id": student_id,
             "email": email,
-            "roles": roles,
+            "school_email": school_email,
+            "role_ids": role_ids,
+            "role_names": role_names,
             "profile_picture_url": profile_picture_url
-        }
-    )
+        },
+    )   
 
     new_refresh_token = store_refresh_token(user_id)
     delete_refresh_token(refresh_token)
@@ -195,19 +212,34 @@ async def google_auth_callback(code: str) -> TokenResponse:
 
         
         user_id = user["id"]
-        roles = get_user_role_names(user_id)
+        user = get_user_with_roles_by_id(user_id)
 
-        profile_picture_url = get_user_profile_picture_url(user_id)
+        first_name = user.get("first_name")
+        last_name = user.get("last_name")
+        email = user.get("email")
+        school_email = user.get("school_email")
+
+        role_ids = user.get("role_ids", [])
+        role_names = user.get("roles", [])
+
+        profile_picture_url = user.get("profile_picture_url")
+        student_id = user.get("student_id")
 
         access_token = create_jwt_token(
             {
                 "user_id": user_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "student_id": student_id,
                 "email": email,
-                "roles": roles,
+                "school_email": school_email,
+                "role_ids": role_ids,
+                "role_names": role_names,
                 "profile_picture_url": profile_picture_url
-            }
+            },
+            expires_delta=1500
         )
-        
+            
         refresh_token = store_refresh_token(user_id)
 
         return TokenResponse( 

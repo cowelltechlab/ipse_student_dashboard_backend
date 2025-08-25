@@ -51,9 +51,8 @@ def validate_user_email_login(email: str, password: str) -> int:
             detail="Bad Request. Database request did not return a password."
         )
 
-    hashed_password = hash_password(password)
-    if not verify_password(password, hashed_password) and \
-        user["password_hash"] != hashed_password:
+    hashed_password = user["password_hash"]
+    if not verify_password(password, hashed_password):
         raise HTTPException(
             status_code=401,
             detail="Unauthorized. Incorrect email or password."
