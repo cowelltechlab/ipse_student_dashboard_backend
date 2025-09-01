@@ -1,0 +1,8 @@
+import base64, zlib, urllib.parse
+b64 = "tVNNj9owEL3vr4hyT5yE7gIWIFHoBxIFBLSHXqqJPVmsJnbqcXZpf32dwBZWark1l0jjmTfvvZkZEVRlzaeNO%2Bgt%2FmiQ3F0QHKtSE%2B%2BexmFjNTdAiriGCok7wXfTT0uexQmvrXFGmDJ8VXS7BojQOmV0W7SYj8P16t1y%2FWGx%2BjYoRCHSIpepTPoPg34CkGPWwzztQZL1Zd4byqI3LNrCL2jJY4xDD9kBETW40ORAOx9MsvsoGUZJuk8H%2FD7h2cPXNmvu9SkNrqs8OFcTZ4zIxI%2FgUBxilA1TsmZeV6FKZC3pjG1RKovCsd1u3aJszqrfKi2VfrwtNz8lEf%2B432%2BizXq3byGmLybMjKamQrtD%2B6QEft4uL8RUTRhJoENuwMooB%2FEdtYxAihobPGJTDIqn4k0sUDsLZUNebwy%2FGovPmJNySLFGx8APl50EsnY8GQNB4cSzCIJRG%2BCdeXby3%2FtW6ECCgxG7bnshUvOV928x35hSiZ9dvP3eG1uB%2B7fNaZx2ESWjokvljaYahSoUyvAPzLQszfPMomc0Dp1tMAzYq%2BbnA0DZnYOfjMOjC2amqsEqalcGjyDc2bqLfdfps9Lv9xaLyc0TEFy0eT688b9nY2W7U37FUO4tePLGurNJfwU%2FsWY3aE%2FuXp6vb3vyGw%3D%3D"
+raw = base64.b64decode(urllib.parse.unquote(b64))
+try:
+    xml = zlib.decompress(raw, -15)  # Redirect binding uses raw DEFLATE
+except zlib.error:
+    xml = raw
+print(xml.decode("utf-8", errors="replace"))

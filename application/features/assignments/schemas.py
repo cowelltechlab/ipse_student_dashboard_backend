@@ -43,7 +43,7 @@ class AssignmentListResponse(AssignmentBase):
     date_modified: Optional[datetime] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class StudentInfo(BaseModel):
@@ -89,7 +89,7 @@ class AssignmentDetailResponse(BaseModel):
     versions: List[VersionInfo] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class AssignmentTypeListResponse(BaseModel):

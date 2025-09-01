@@ -59,7 +59,6 @@ def get_saml_settings() -> dict:
                 "url": "https://sso.gatech.edu/idp/profile/SAML2/Redirect/SLO",
                 "binding": "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect",
             },
-            # Option 1: leave empty and rely on IdP metadata download/validation path you manage
             "x509cert": os.getenv("GT_IDP_CERT", "").strip(),
         },
         "security": {

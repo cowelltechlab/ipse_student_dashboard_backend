@@ -252,59 +252,59 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
         return None
 
 
-def get_user_profile_picture_url(user_id: int) -> Optional[str]:
-    """
-    Retrieves user's profile picture URL from their DB record via user ID.
-    """
+# def get_user_profile_picture_url(user_id: int) -> Optional[str]:
+#     """
+#     Retrieves user's profile picture URL from their DB record via user ID.
+#     """
 
-    try:
-        query = """
-        SELECT u.profile_picture_url
-        FROM Users u
-        WHERE u.id = ?
-        """
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (user_id,))
+#     try:
+#         query = """
+#         SELECT u.profile_picture_url
+#         FROM Users u
+#         WHERE u.id = ?
+#         """
+#         with get_sql_db_connection() as conn:
+#             cursor = conn.cursor()
+#             cursor.execute(query, (user_id,))
 
-            record = cursor.fetchone()
-            if not record:
-                return None
+#             record = cursor.fetchone()
+#             if not record:
+#                 return None
 
-            return record[0]
+#             return record[0]
 
-    except pyodbc.Error as e:
-        # TODO: integrate into future logging functionality
-        print(f"Error: {str(e)}")
-        return None
+#     except pyodbc.Error as e:
+#         # TODO: integrate into future logging functionality
+#         print(f"Error: {str(e)}")
+#         return None
 
 
-def get_user_role_names(user_id: int) -> List[str]:
-    """
-    Retrieves list of roles associated with a user from DB using user ID.
+# def get_user_role_names(user_id: int) -> List[str]:
+#     """
+#     Retrieves list of roles associated with a user from DB using user ID.
 
-    :param user_id: ID of user in the Users database table
-    :type user_id: int
-    :returns: list of roles associated with the user
-    :rtype: List[str]
-    """
+#     :param user_id: ID of user in the Users database table
+#     :type user_id: int
+#     :returns: list of roles associated with the user
+#     :rtype: List[str]
+#     """
    
-    try:
-        query = """
-        SELECT r.role_name
-        FROM Roles r
-        JOIN UserRoles ur ON r.id = ur.role_id
-        WHERE ur.user_id = ?
-        """
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (user_id,))
+#     try:
+#         query = """
+#         SELECT r.role_name
+#         FROM Roles r
+#         JOIN UserRoles ur ON r.id = ur.role_id
+#         WHERE ur.user_id = ?
+#         """
+#         with get_sql_db_connection() as conn:
+#             cursor = conn.cursor()
+#             cursor.execute(query, (user_id,))
 
-            records = cursor.fetchall()
-            roles = [row[0] for row in records]
+#             records = cursor.fetchall()
+#             roles = [row[0] for row in records]
 
 
-            return roles
+#             return roles
 
     except pyodbc.Error as e:
         # TODO: integrate into future logging functionality

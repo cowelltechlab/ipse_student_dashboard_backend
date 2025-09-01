@@ -47,7 +47,7 @@ class StudentResponse(StudentBase):
     profile_picture_url: Optional[str] = None  
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 class StudentProfilePictureResponse(BaseModel):
     student_id: int

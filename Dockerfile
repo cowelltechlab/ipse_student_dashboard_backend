@@ -1,23 +1,19 @@
-# Pin to Debian 12 (bookworm) so Microsoft ODBC repo is available & signed
+# Pin to Debian 12 (bookworm)
 FROM python:3.12-bookworm
-
-# Noninteractive apt installs
 ARG DEBIAN_FRONTEND=noninteractive
-
 WORKDIR /app
 
-# OS deps (use --no-install-recommends to keep image smaller)
+# OS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    gnupg \
-    unixodbc \
-    unixodbc-dev \
-    libpq-dev \
-    libreoffice \
+    ca-certificates curl gnupg \
+    unixodbc unixodbc-dev libpq-dev \
+    # add build + xmlsec toolchain:
+    build-essential pkg-config \
+    libxml2 libxml2-dev libxslt1-dev \
+    libxmlsec1 libxmlsec1-dev libxmlsec1-openssl \
  && rm -rf /var/lib/apt/lists/*
 
-# Add Microsoft repo (bookworm) using keyring (no apt-key)
+# Microsoft ODBC repo (unchanged)
 RUN set -eux; \
     curl -fsSL https://packages.microsoft.com/keys/microsoft.asc \
       | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg; \
@@ -28,17 +24,17 @@ RUN set -eux; \
     apt-get clean; \
     rm -rf /var/lib/apt/lists/*
 
-# ODBC env (optional)
 ENV ODBCINI=/etc/odbc.ini \
     ODBCSYSINI=/etc \
     LD_LIBRARY_PATH=/usr/lib:/usr/lib/x86_64-linux-gnu:/opt/microsoft/msodbcsql18/lib
 
 # Python deps
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+
+# Force source builds for lxml & xmlsec so they use the system libxml2/xmlsec
+RUN pip install --no-cache-dir --no-binary=lxml,xmlsec -r requirements.txt
 
 # App code
 COPY . .
-
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
