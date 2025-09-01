@@ -9,11 +9,11 @@ from datetime import datetime, timedelta
 
 def get_user_by_email(user_email: str, get_password = False) -> Optional[Dict]:
     """
-    DB helper function to fetch a single user record via their email. 
+    DB helper function to fetch a single user record via their email or GT email. 
 
     TODO: choose which columns are required to be passed back.
     
-    :param user_email: email address of the user
+    :param user_email: email address of the user (regular email or GT email)
     :type user_email: str
     :param get_password: True if including password in response, False if not
     :type get_password: bool
@@ -26,12 +26,12 @@ def get_user_by_email(user_email: str, get_password = False) -> Optional[Dict]:
         SELECT u.id, u.email, u.gt_email, u.first_name, u.last_name, 
                u.created_at{", u.password_hash" if get_password else ""}
         FROM Users u
-        WHERE u.email = ?
+        WHERE u.email = ? OR u.gt_email = ?
         """
 
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (user_email,))
+            cursor.execute(query, (user_email, user_email))
 
             record = cursor.fetchone()
             if not record:

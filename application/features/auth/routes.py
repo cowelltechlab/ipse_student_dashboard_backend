@@ -4,10 +4,18 @@ Sources:
 - https://medium.com/@vivekpemawat/enabling-googleauth-for-fast-api-1c39415075ea
 - Google Gemini
 """
-from fastapi import HTTPException, APIRouter, Depends, Response
+from fastapi import HTTPException, APIRouter, Depends, Response, Request, Form
+from fastapi.responses import RedirectResponse
 from fastapi.security import OAuth2PasswordBearer
+from application.features import auth
 from application.features.auth.google_oauth import *
 from application.features.auth.jwt_handler import create_jwt_token
+from application.features.auth.gatech_saml import (
+    init_saml_auth,
+    extract_user_attributes, 
+    validate_saml_response,
+    get_sso_url
+)
 from application.features.auth.crud import (
     get_user_email_by_id, 
     get_refresh_token_details,
@@ -252,6 +260,97 @@ async def google_auth_callback(code: str) -> TokenResponse:
         raise HTTPException(
             status_code=401, 
             detail="Invalid Google ID token. Please try logging in again."
+        )
+
+
+@router.get("/login/gatech")
+async def gatech_sso_login(request: Request):
+    auth = init_saml_auth(request)
+    # optional return_to: where your app should go after successful ACS handling
+    url = auth.login()  # signs AuthnRequest because of settings + keys
+    return RedirectResponse(url, status_code=302)
+
+
+
+@router.post("/gatech/saml2/acs")
+async def gatech_saml_callback(
+    request: Request,
+    SAMLResponse: str = Form(...)
+) -> TokenResponse:
+    """
+    Handle Georgia Tech SAML assertion consumer service callback.
+    Processes the SAML response and creates user session.
+    """
+    try:
+        # Initialize SAML auth with the POST data
+        auth = init_saml_auth(request, post_data={"SAMLResponse": SAMLResponse})
+        auth.process_response()
+        
+        # Process the SAML response
+        auth.process_response()
+        
+        # Validate the SAML response
+        validate_saml_response(auth)
+        
+        # Extract user attributes from SAML assertion
+        user_attributes = extract_user_attributes(auth)
+        
+        # Check if user exists in our system
+        email = user_attributes["email"]
+        user = get_user_by_email(email)
+        
+        if not user:
+            raise HTTPException(
+                status_code=403,
+                detail="User does not exist in system. Please contact administrator."
+            )
+        
+        user_id = user["id"]
+        user = get_user_with_roles_by_id(user_id)
+        
+        # Use existing user data, but update with GT attributes if needed
+        first_name = user_attributes.get("first_name") or user.get("first_name")
+        last_name = user_attributes.get("last_name") or user.get("last_name")
+        email = user.get("email")
+        school_email = user_attributes.get("school_email") or user.get("gt_email")
+        
+        role_ids = user.get("role_ids", [])
+        role_names = user.get("roles", [])
+        profile_picture_url = user.get("profile_picture_url")
+        student_id = user.get("student_id")
+        
+        # Create JWT token
+        access_token = create_jwt_token(
+            {
+                "user_id": user_id,
+                "first_name": first_name,
+                "last_name": last_name,
+                "student_id": student_id,
+                "email": email,
+                "school_email": school_email,
+                "role_ids": role_ids,
+                "role_names": role_names,
+                "profile_picture_url": profile_picture_url
+            },
+            expires_delta=1500
+        )
+        
+        # Generate refresh token
+        refresh_token = store_refresh_token(user_id)
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer"
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Georgia Tech SAML callback failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Georgia Tech SSO authentication failed."
         )
 
 
