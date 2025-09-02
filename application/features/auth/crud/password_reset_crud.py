@@ -44,17 +44,18 @@ def validate_password_reset_token(token: str) -> Optional[int]:
     """
     try:
         token_hash = hashlib.sha256(token.encode()).hexdigest()
-        
+        current_date = datetime.now()
+
         query = """
         SELECT user_id
         FROM PasswordResetTokens
         WHERE token_hash = ? 
-          AND expires_at > GETUTCDATE()
+          AND expires_at > ?
           AND used_at IS NULL
         """
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query, (token_hash,))
+            cursor.execute(query, (token_hash, current_date))
             
             record = cursor.fetchone()
             if not record:
