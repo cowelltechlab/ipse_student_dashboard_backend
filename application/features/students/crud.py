@@ -26,6 +26,7 @@ def fetch_all_students_with_names():
             FROM students
             JOIN users ON students.user_id = users.id
             JOIN years ON students.year_id = years.id
+            WHERE users.is_active = 1
             """
             cursor.execute(query)
             rows = cursor.fetchall()
