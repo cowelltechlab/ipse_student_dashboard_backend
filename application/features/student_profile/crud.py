@@ -75,7 +75,6 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
                 cursor.execute(
                     """
                     INSERT INTO dbo.Students (user_id, year_id, reading_level, writing_level, active_status)
-                    OUTPUT INSERTED.id
                     VALUES (?, ?, ?, ?, 1)
                     """,
                     (
@@ -85,7 +84,13 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
                         data.writing_level,
                     ),
                 )
-                student_id = cursor.fetchone()[0]
+                cursor.commit()
+
+                cursor.execute("SELECT SCOPE_IDENTITY()")
+                result = cursor.fetchone()
+                if result is None or result[0] is None:
+                    raise HTTPException(status_code=500, detail="Failed to create student record")
+                student_id = int(result[0])
 
             # 3.  Refresh StudentClasses (remove‑then‑add)
             cursor.execute(
