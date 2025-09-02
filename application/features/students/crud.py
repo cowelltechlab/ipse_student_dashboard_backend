@@ -10,6 +10,8 @@ TABLE_NAME = "Students"
 def fetch_all_students_with_names():
     """Fetch all students with their first and last names joined from Users table."""
     try:
+        # TODO: Improve student activation query
+        # Added first name is not null to account for account activation not being done before assignment is given
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
             query = """
@@ -27,6 +29,7 @@ def fetch_all_students_with_names():
             JOIN users ON students.user_id = users.id
             JOIN years ON students.year_id = years.id
             WHERE users.is_active = 1
+            AND users.first_name IS NOT NULL
             """
             cursor.execute(query)
             rows = cursor.fetchall()
