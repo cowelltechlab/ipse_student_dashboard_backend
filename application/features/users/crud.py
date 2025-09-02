@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import os
 from http.client import HTTPException
 from secrets import token_urlsafe
 from typing import List, Dict, Optional
@@ -106,6 +107,12 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
                         tag = "Profile Incomplete"
 
                 user["profile_tag"] = tag
+                
+                # Add invite URL for inactive users
+                if not user.get("is_active", True):
+                    user["invite_url"] = get_or_regenerate_invite_url(uid)
+                else:
+                    user["invite_url"] = None
 
             return user_dicts
 
@@ -367,3 +374,55 @@ def delete_user_db(user_id: int) -> dict:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def get_or_regenerate_invite_url(user_id: int) -> Optional[str]:
+    """
+    Gets existing valid invite token or regenerates if expired/missing.
+    Returns the complete invite URL (not just the token).
+    """
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Check for existing valid token
+            cursor.execute("""
+                SELECT 1
+                FROM AccountInvites
+                WHERE user_id = ? 
+                  AND used_at IS NULL
+                  AND expires_at > GETUTCDATE()
+            """, (user_id,))
+            
+            if cursor.fetchone():
+                # Valid token exists but we can't retrieve it (it's hashed)
+                # So we'll regenerate it by deleting old and creating new
+                cursor.execute("""
+                    DELETE FROM AccountInvites
+                    WHERE user_id = ?
+                """, (user_id,))
+            
+            # Generate new token
+            raw_token = token_urlsafe(32)
+            token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
+            expires = datetime.datetime.utcnow() + datetime.timedelta(days=3)
+            
+            cursor.execute("""
+                INSERT INTO AccountInvites (user_id, token_hash, expires_at)
+                VALUES (?, ?, ?)
+            """, (user_id, token_hash, expires))
+            
+            conn.commit()
+            
+            # Build the complete invite URL
+            frontend_base_url = os.getenv('FRONTEND_BASE_URL')
+            if not frontend_base_url:
+                print("Warning: FRONTEND_BASE_URL not set")
+                return None
+            
+            invite_url = f"{frontend_base_url}/complete-invite?token={raw_token}"
+            return invite_url
+            
+    except Exception as e:
+        print(f"Error managing invite URL: {e}")
+        return None

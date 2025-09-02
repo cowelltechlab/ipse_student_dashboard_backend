@@ -40,6 +40,7 @@ async def get_users(
             profile_picture_url=user.get("profile_picture_url"),
             is_active=user.get("is_active", True),
             profile_tag=user.get("profile_tag"),
+            invite_url=user.get("invite_url"),
             
             student_profile = StudentProfile(
                 student_id = user["student_id"],

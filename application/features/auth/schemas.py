@@ -33,6 +33,9 @@ class UserResponse(BaseModel):
     
     # Used only for students, for home page display / navigation
     student_profile: Optional[StudentProfile] = None
+    
+    # Invite URL for unactivated users
+    invite_url: Optional[str] = None
 
 
 class RegisterUserRequest(BaseModel):
