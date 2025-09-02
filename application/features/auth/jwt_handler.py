@@ -26,7 +26,6 @@ def create_jwt_token(data: dict, expires_delta: int = 120) -> str:
     data_to_encode = data.copy()
     data_to_encode.update({"exp": expire})
 
-    # TODO: look into generating a secret key
     return jwt.encode(data_to_encode, JWT_SECRET_KEY, algorithm="HS256")
 
 

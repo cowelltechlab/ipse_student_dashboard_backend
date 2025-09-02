@@ -1,35 +1,54 @@
-import base64
 import os
-from email.mime.image import MIMEImage
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from googleapiclient.discovery import build
 from dotenv import load_dotenv
-from application.services.token_helper import authenticate
+import sendgrid
+from sendgrid.helpers.mail import Mail, Email, To, Content
 
 # Load environment variables
 load_dotenv()
-SENDER_EMAIL = os.getenv("EMAIL_SENDER")
+SENDER_EMAIL = os.getenv("SENDER_EMAIL")
+SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
+
+
+def send_email_sendgrid(to_email: str, subject: str, html_body: str, plain_body: str = None):
+    """Send email using SendGrid API."""
+    
+    if not SENDGRID_API_KEY:
+        raise ValueError("SENDGRID_API_KEY is not set in .env")
+    
+    if not SENDER_EMAIL:
+        raise ValueError("EMAIL_SENDER is not set in .env")
+    
+    sg = sendgrid.SendGridAPIClient(api_key=SENDGRID_API_KEY)
+    
+    from_email = Email(SENDER_EMAIL)
+    to_email_obj = To(to_email)
+    
+    # Create mail object
+    mail = Mail(from_email, to_email_obj, subject)
+    
+    # Add content (plain text first, then HTML)
+    if plain_body:
+        mail.add_content(Content("text/plain", plain_body))
+    mail.add_content(Content("text/html", html_body))
+    
+    try:
+        response = sg.send(mail)
+        print(f"Email sent successfully to {to_email}. Status: {response.status_code}")
+        return response
+    except Exception as e:
+        print(f"Error sending email via SendGrid: {e}")
+        raise
 
 
 def send_invite_email(to_email: str, invite_url: str):
-    """Send an HTML + Plain Text invite email via Gmail API."""
-
-    # Authenticate Gmail API
-    creds = authenticate()
-    service = build("gmail", "v1", credentials=creds)
-
-    # Create message container
-    msg = MIMEMultipart("related")
-    msg_alt = MIMEMultipart("alternative")
-    msg["From"] = SENDER_EMAIL
-    msg["To"] = to_email
-    msg["Subject"] = "You're Invited! Complete Your Setup"
-
+    """Send an HTML + Plain Text invite email via SendGrid."""
+    
+    subject = "You're Invited! Complete Your Setup"
+    
     # Plain text fallback (improves spam filter score)
     plain_body = f"""Welcome!
 
-You have been invited to join our platform.
+You have been invited to join MyChoice.
 
 Complete your account setup here: {invite_url}
 
@@ -43,7 +62,7 @@ If you did not request this invitation, you can ignore this email.
         <img src="https://ipseportalstorage.blob.core.windows.net/app-assets/Create Profile.svg"
              alt="Logo" style="width:150px; margin-bottom:10px;"/>
         <h2>Welcome!</h2>
-        <p>You have been invited to join our platform.</p>
+        <p>You have been invited to join MyChoice.</p>
         <p>
             <a href="{invite_url}"
                style="padding: 10px 20px; color: white; background-color: #007bff;
@@ -56,30 +75,45 @@ If you did not request this invitation, you can ignore this email.
     </html>
     """
 
-    # Attach both plain and HTML versions
-    msg_alt.attach(MIMEText(plain_body, "plain"))
-    msg_alt.attach(MIMEText(html_body, "html"))
-    msg.attach(msg_alt)
+    send_email_sendgrid(to_email, subject, html_body, plain_body)
 
-    # Optional: attach inline logo (if you prefer CID embedding instead of URL)
-    logo_path = os.path.join(os.path.dirname(__file__), "logo.png")
-    if os.path.exists(logo_path):
-        try:
-            with open(logo_path, "rb") as img_file:
-                img = MIMEImage(img_file.read())
-                img.add_header("Content-ID", "<logoimage>")
-                img.add_header("Content-Disposition", "inline", filename="logo.png")
-                msg.attach(img)
-        except Exception as e:
-            print(f"Warning: Could not attach logo image. {e}")
 
-    # Encode message
-    raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode("utf-8")
-    message = {"raw": raw_message}
+def send_password_reset_email(to_email: str, reset_url: str):
+    """Send a password reset email via SendGrid."""
+    
+    subject = "Reset Your Password"
+    
+    # Plain text fallback
+    plain_body = f"""Password Reset Request
 
-    # Send email via Gmail API
-    try:
-        service.users().messages().send(userId="me", body=message).execute()
-        print(f"Invite email sent successfully to {to_email}")
-    except Exception as e:
-        print(f"Error sending invite email: {e}")
+Someone (hopefully you) has requested a password reset for your account.
+
+Reset your password here: {reset_url}
+
+This link will expire in 1 hour.
+
+If you did not request this password reset, you can safely ignore this email.
+"""
+
+    # HTML version
+    html_body = f"""
+    <html>
+    <body style="font-family: Arial, sans-serif; color: #333;">
+        <img src="https://ipseportalstorage.blob.core.windows.net/app-assets/Create Profile.svg"
+             alt="Logo" style="width:150px; margin-bottom:10px;"/>
+        <h2>Password Reset Request</h2>
+        <p>Someone (hopefully you) has requested a password reset for your account.</p>
+        <p>
+            <a href="{reset_url}"
+               style="padding: 10px 20px; color: white; background-color: #007bff;
+                      text-decoration: none; border-radius: 4px;">
+               Reset Your Password
+            </a>
+        </p>
+        <p><strong>This link will expire in 1 hour.</strong></p>
+        <p>If you did not request this password reset, you can safely ignore this email.</p>
+    </body>
+    </html>
+    """
+
+    send_email_sendgrid(to_email, subject, html_body, plain_body)

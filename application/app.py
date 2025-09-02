@@ -8,7 +8,7 @@ from application.features.classes.routes import router as classes_router
 from application.features.student_profile.routes import router as  profile_router
 from application.features.assignment_version_generation.routes import router as assignment_version_generation
 from application.features.versionHistory.routes import router as versions_router
-from application.features.auth.routes import router as auth_router
+from application.features.auth.router import router as auth_router
 from application.features.roles.routes import router as roles_router
 from application.features.studentClasses.routes import router as student_classes_router
 from application.features.users.routes import router as users_router

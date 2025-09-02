@@ -42,3 +42,13 @@ class RegisterUserRequest(BaseModel):
     role_ids: List[int]
     school_email: str
     google_email: Optional[str] = None
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    email: str
+    new_password: str

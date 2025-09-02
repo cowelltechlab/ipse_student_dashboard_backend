@@ -6,10 +6,8 @@ It processes SAML assertions and extracts user attributes for authentication.
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from onelogin.saml2.auth import OneLogin_Saml2_Auth
-from onelogin.saml2.settings import OneLogin_Saml2_Settings
-from onelogin.saml2.utils import OneLogin_Saml2_Utils
 from fastapi import Request, HTTPException
 from dotenv import load_dotenv
 
