@@ -1,20 +1,34 @@
 
-from fastapi import Depends, APIRouter, HTTPException
+from fastapi import Depends, APIRouter, HTTPException, status
 
-from application.features.auth.permissions import require_admin_access
+from application.features.auth.permissions import _expand_roles, require_admin_access, require_user_access
 
-from application.database.mssql_crud_helpers import fetch_all, create_record, update_record, delete_record, fetch_by_id
+from application.database.mssql_crud_helpers import create_record, update_record, delete_record, fetch_by_id
+from application.features.roles.crud import fetch_roles_by_names
 from application.features.roles.schemas import RoleCreate, RoleResponse, RoleUpdate
 
 
 router = APIRouter()
 
 @router.get("/", response_model=list[RoleResponse])
-async def get_roles(user_data: dict = Depends(require_admin_access)):
+async def get_roles(user_data: dict = Depends(require_user_access)):
     """
-    Retrieves and returns a list of all types of roles.
+    Returns only the roles at and below the caller's role(s), based on ROLE_HIERARCHY.
+
+    Admin   -> Admin, Advisor, Peer Tutor, Student
+    Advisor -> Advisor, Peer Tutor, Student
+    Tutor   -> Peer Tutor, Student
+    Student -> Student
     """
-    return fetch_all("Roles")
+    role_names = user_data.get("role_names")
+    if not isinstance(role_names, list) or not role_names:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Role information missing from token."
+        )
+
+    allowed_roles = _expand_roles(set(role_names))
+    return fetch_roles_by_names(allowed_roles)
 
 
 @router.get("/{role_id}", response_model=RoleResponse)

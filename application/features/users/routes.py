@@ -1,13 +1,14 @@
 import os
 from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Set
 from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
 from application.features.auth.crud import get_user_by_email
-from application.features.auth.permissions import require_admin_access, require_teacher_access
+from application.features.auth.permissions import _expand_roles, require_admin_access, require_peer_tutor_access, require_teacher_access
 from application.features.auth.schemas import StudentProfile, UserResponse
-from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_user_id_from_invite_token, get_user_with_roles_by_id
+from application.features.roles.crud import get_multiple_role_names_from_ids
+from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_all_users_with_roles_allowed, get_user_id_from_invite_token, get_user_with_roles_by_id
 
 from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
@@ -19,12 +20,37 @@ router = APIRouter()
 @router.get("/", response_model=List[UserResponse])
 async def get_users(
     role_id: Optional[int] = Query(None), 
-    user_data: Dict = Depends(require_teacher_access)
+    user_data: Dict = Depends(require_peer_tutor_access)
 ):
     """
-    Retrieves all users with their roles. Optional role_id filter.
+    Retrieves users with their roles, but filters to only those whose roles are
+    at/below the caller’s role hierarchy. Optional role_id filter is allowed
+    only if it maps to a role within the caller’s allowed set.
     """
-    users = get_all_users_with_roles(role_id)
+
+    caller_roles = user_data.get("role_names")
+    if not isinstance(caller_roles, list) or not caller_roles:
+        raise HTTPException(status_code=403, detail="Role information missing from token.")
+
+    # Expand roles per hierarchy (e.g., 'Peer Tutor' -> {'Peer Tutor','Student'})
+    allowed_role_names: Set[str] = _expand_roles(set(caller_roles))
+
+   
+    # If role_id provided, ensure it resolves to an allowed role
+    if role_id is not None:
+        names = get_multiple_role_names_from_ids([role_id]) or []
+        if not names:
+            raise HTTPException(status_code=400, detail=f"Invalid role_id: {role_id}")
+        if names[0] not in allowed_role_names:
+            raise HTTPException(
+                status_code=403,
+                detail=f"You cannot filter by role '{names[0]}'.",
+            )
+
+    users = get_all_users_with_roles_allowed(
+        allowed_role_names=allowed_role_names,
+        role_id=role_id
+    )
 
     
 
@@ -92,7 +118,7 @@ async def get_user_by_id(user_id: int, user_data: dict = Depends(require_teacher
 @router.post("/invite", status_code=status.HTTP_201_CREATED)
 async def invite_user(
     request_data: InviteUserRequest,
-    admin_data: dict = Depends(require_admin_access)
+    admin_data: dict = Depends(require_peer_tutor_access)
 ):
     """
     Admin invites a new user to complete their account setup.

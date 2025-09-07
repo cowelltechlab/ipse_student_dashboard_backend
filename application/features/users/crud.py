@@ -110,7 +110,7 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
                 
                 # Add invite URL for inactive users
                 if not user.get("is_active", True):
-                    user["invite_url"] = get_or_regenerate_invite_url(uid)
+                    user["invite_url"] = regenerate_invite_url(uid)
                 else:
                     user["invite_url"] = None
 
@@ -120,6 +120,28 @@ def get_all_users_with_roles(role_id: Optional[int] = None) -> List[Dict]:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def get_all_users_with_roles_allowed(
+    allowed_role_names: set[str],
+    role_id: Optional[int] = None
+) -> List[Dict]:
+    """
+    Reuses get_all_users_with_roles and filters the results to allowed roles.
+    """
+    all_users = get_all_users_with_roles(role_id=role_id)
+    if not all_users:
+        return []
+
+    # Keep users whose single role is in the allowed set.
+    filtered = []
+    for u in all_users:
+        role_names = u.get("roles", [])
+        if not role_names:
+            continue
+        if role_names[0] in allowed_role_names:
+            filtered.append(u)
+    return filtered
 
 
 def get_users_with_roles(user_ids: list[int]) -> dict[int, dict]:
@@ -332,8 +354,8 @@ def complete_user_invite(token: str, first_name: str, last_name: str, password_h
                 WHERE id = ?
             """, (first_name, last_name, password_hash, profile_picture_url, user_id))
 
-            # Mark invite as used
-            cursor.execute("UPDATE AccountInvites SET used_at = GETUTCDATE() WHERE id = ?", (invite_id,))
+            # Mark invite as used -- invalidate all other user tokens for this user
+            cursor.execute("UPDATE AccountInvites SET used_at = GETUTCDATE() WHERE user_id = ?", (user_id,))
 
             conn.commit()
 
@@ -376,7 +398,7 @@ def delete_user_db(user_id: int) -> dict:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 
-def get_or_regenerate_invite_url(user_id: int) -> Optional[str]:
+def regenerate_invite_url(user_id: int) -> Optional[str]:
     """
     Gets existing valid invite token or regenerates if expired/missing.
     Returns the complete invite URL (not just the token).
@@ -384,23 +406,6 @@ def get_or_regenerate_invite_url(user_id: int) -> Optional[str]:
     try:
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-            
-            # Check for existing valid token
-            cursor.execute("""
-                SELECT 1
-                FROM AccountInvites
-                WHERE user_id = ? 
-                  AND used_at IS NULL
-                  AND expires_at > GETUTCDATE()
-            """, (user_id,))
-            
-            if cursor.fetchone():
-                # Valid token exists but we can't retrieve it (it's hashed)
-                # So we'll regenerate it by deleting old and creating new
-                cursor.execute("""
-                    DELETE FROM AccountInvites
-                    WHERE user_id = ?
-                """, (user_id,))
             
             # Generate new token
             raw_token = token_urlsafe(32)
