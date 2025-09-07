@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <md:EntityDescriptor
     xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"
-    validUntil="2025-08-22T20:43:03Z"
     cacheDuration="PT604800S"
     entityID="https://ipse-dashboard-backend-adcpeuexeuf8fvf4.centralus-01.azurewebsites.net/auth/gatech/saml2/metadata">
 
