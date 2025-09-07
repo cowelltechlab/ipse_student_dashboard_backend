@@ -1,7 +1,6 @@
 
 
-from http.client import HTTPException
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
 from application.features.auth.permissions import require_user_access

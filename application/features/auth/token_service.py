@@ -2,7 +2,7 @@ from typing import Dict
 from application.features.auth.jwt_handler import create_jwt_token
 from application.features.auth.crud import store_refresh_token
 from application.features.auth.schemas import TokenResponse
-from application.features.users.crud import get_user_with_roles_by_id
+from application.features.users.crud.user_queries import get_user_with_roles_by_id
 
 
 def create_token_response(user_id: int, expires_delta: int = 1500) -> TokenResponse:

@@ -1,5 +1,4 @@
 import datetime
-from http.client import HTTPException
 from io import BytesIO
 from typing import List
 from fastapi import Depends, File, Form, HTTPException, APIRouter, UploadFile, status, Body
@@ -34,10 +33,21 @@ router = APIRouter()
 
 @router.get("/", response_model=List[AssignmentListResponse])
 def fetch_assignments(
-    _user = Depends(require_user_access)
+    user_data = Depends(require_user_access)
 ):
+
+    # If user is a Peer Tutor, filter assignments to only those of their assigned students
+    caller_roles = user_data.get("role_names")
+
+    tutor_user_id = None
+    if "Peer Tutor" in caller_roles:
+        tutor_user_id = user_data.get("user_id")
+
+    
     """Retrieve all assignments"""
-    return get_all_assignments()
+    assignments = get_all_assignments(tutor_user_id=tutor_user_id)
+
+    return assignments
 
 
 @router.get("/id/{assignment_id}", response_model=AssignmentDetailResponse)

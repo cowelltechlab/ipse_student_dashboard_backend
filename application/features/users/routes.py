@@ -8,7 +8,9 @@ from application.features.auth.crud import get_user_by_email
 from application.features.auth.permissions import _expand_roles, require_admin_access, require_peer_tutor_access, require_teacher_access
 from application.features.auth.schemas import StudentProfile, UserResponse
 from application.features.roles.crud import get_multiple_role_names_from_ids
-from application.features.users.crud import complete_user_invite, create_invited_user, delete_user_db, get_all_users_with_roles, get_all_users_with_roles_allowed, get_user_id_from_invite_token, get_user_with_roles_by_id
+from application.features.users.crud.user_queries import get_all_users_with_roles_allowed, get_user_with_roles_by_id
+from application.features.users.crud.user_invitations import complete_user_invite, create_invited_user, get_user_id_from_invite_token
+from application.features.users.crud.user_management import delete_user_db
 
 from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
@@ -47,9 +49,15 @@ async def get_users(
                 detail=f"You cannot filter by role '{names[0]}'.",
             )
 
+    # Check if the caller is a Peer Tutor. If so, only show their assigned students
+    tutor_user_id = None
+    if "Peer Tutor" in caller_roles:
+        tutor_user_id = user_data.get("user_id")
+    
     users = get_all_users_with_roles_allowed(
         allowed_role_names=allowed_role_names,
-        role_id=role_id
+        role_id=role_id,
+        tutor_user_id=tutor_user_id
     )
 
     

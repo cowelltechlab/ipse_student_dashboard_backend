@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from application.database.mssql_crud_helpers import (
     fetch_by_id, 
 )

@@ -9,10 +9,10 @@ from application.database.mssql_crud_helpers import (
     update_record,
 )
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Optional
 
 from application.features.assignments.schemas import AssignmentDetailResponse
-from application.features.users.crud import get_users_with_roles
+from application.features.users.crud.user_queries import get_users_with_roles
 
 TABLE_NAME = "Assignments"
 def is_rating_meaningful(rating):
@@ -121,16 +121,37 @@ def get_all_assignment_versions_map():
 *** GET ASSIGNMENTS ENDPOINT *** 
 Fetch all assignments in Assignments table
 '''
-def get_all_assignments():
+def get_all_assignments(tutor_user_id: Optional[int] = None):
     """
     Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
     """
 
     try:
-        query = """
-        SELECT 
-            a.id,
-            a.student_id,
+        if tutor_user_id is not None:
+            query = """
+            SELECT 
+                a.id,
+                a.student_id,
+                a.title,
+                a.class_id,
+                a.date_created,
+                a.blob_url,
+                a.source_format,
+                u.first_name,
+                u.last_name
+            FROM Assignments a
+            INNER JOIN Students s ON a.student_id = s.id
+            INNER JOIN Users u ON s.user_id = u.id
+            INNER JOIN TutorStudents ts ON ts.student_id = s.id
+            WHERE ts.user_id = ?
+            """
+            params = (tutor_user_id,)
+
+        else:
+            query = """
+            SELECT 
+                a.id,
+                a.student_id,
             a.title,
             a.class_id,
             a.date_created,
@@ -145,7 +166,7 @@ def get_all_assignments():
 
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute(query)
+            cursor.execute(query, params if tutor_user_id is not None else ())
             records = cursor.fetchall()
             column_names = [column[0] for column in cursor.description]
 

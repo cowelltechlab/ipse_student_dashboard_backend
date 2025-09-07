@@ -1,7 +1,6 @@
 #  SQL pulling generic classes information from Classes table
 #  To be used, for example, in an admin's login page to view a list of all classes
 
-from http.client import HTTPException
 from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query, Body
 

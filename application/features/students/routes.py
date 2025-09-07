@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import APIRouter, HTTPException
 from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query
 

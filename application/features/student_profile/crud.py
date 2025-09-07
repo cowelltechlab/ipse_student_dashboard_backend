@@ -1,4 +1,4 @@
-from http.client import HTTPException
+from fastapi import HTTPException
 from typing import Optional
 import uuid
 from application.database.mssql_connection import get_sql_db_connection
@@ -72,25 +72,26 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
                     ),
                 )
             else:
-                cursor.execute(
+                row = cursor.execute(
                     """
-                    INSERT INTO dbo.Students (user_id, year_id, reading_level, writing_level, active_status)
-                    VALUES (?, ?, ?, ?, 1)
-                    """,
-                    (
-                        data.user_id,
-                        data.year_id,
-                        data.reading_level,
-                        data.writing_level,
-                    ),
-                )
-                cursor.commit()
+                    SET NOCOUNT ON;
 
-                cursor.execute("SELECT SCOPE_IDENTITY()")
-                result = cursor.fetchone()
-                if result is None or result[0] is None:
+                    DECLARE @NewIds TABLE (id int);
+
+                    INSERT INTO dbo.Students (user_id, year_id, reading_level, writing_level, active_status)
+                    OUTPUT INSERTED.id INTO @NewIds(id)
+                    VALUES (?, ?, ?, ?, 1);
+
+                    SELECT id FROM @NewIds;
+                    """,
+                    (data.user_id, data.year_id, data.reading_level, data.writing_level),
+                ).fetchone()
+
+                if row[0] is None:
                     raise HTTPException(status_code=500, detail="Failed to create student record")
-                student_id = int(result[0])
+                
+                student_id = int(row[0])
+                conn.commit()
 
             # 3.  Refresh StudentClasses (remove‑then‑add)
             cursor.execute(
@@ -109,7 +110,6 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
                 ],
             )
 
-            # Commit SQL work now; Cosmos write will throw on error & can be retried
             conn.commit()
 
     except Exception:
