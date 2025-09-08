@@ -91,3 +91,9 @@ class AssignmentVersionResponse(BaseModel):
 
     final_generated_content: Optional[FinalGeneratedContent] = None
     original_generated_json_content: Optional[Dict[str, Any]] = None
+
+
+class AssignmentVersionDownloadResponse(BaseModel):
+    file_name: str
+    file_type: str
+    file_content: bytes

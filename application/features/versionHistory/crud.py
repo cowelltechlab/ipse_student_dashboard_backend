@@ -2,6 +2,106 @@ from fastapi import HTTPException
 from datetime import datetime
 from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionUpdate
 from azure.cosmos import exceptions
+from docx import Document
+from docx.shared import Inches
+from bs4 import BeautifulSoup
+import io
+import re
+
+
+def convert_html_to_word_bytes(html_content: str) -> bytes:
+    """
+    Convert HTML content to Word document bytes
+    """
+    doc = Document()
+    
+    if not html_content:
+        doc.add_paragraph("No content available")
+        buffer = io.BytesIO()
+        doc.save(buffer)
+        buffer.seek(0)
+        return buffer.getvalue()
+    
+    soup = BeautifulSoup(html_content, 'html.parser')
+    
+    # Track numbered lists to ensure each section starts fresh
+    numbered_list_count = 0
+    
+    for element in soup.find_all(['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'pre', 'div', 'hr']):
+        if element.name in ['h1', 'h2', 'h3']:
+            # Add headings - reset numbered list counter when we hit a new section
+            level = int(element.name[1])
+            doc.add_heading(element.get_text(strip=True), level=level)
+            numbered_list_count = 0  # Reset counter for new sections
+        
+        elif element.name == 'hr':
+            # Add a page break or section break for HR tags
+            doc.add_page_break()
+            numbered_list_count = 0  # Reset counter at section breaks
+        
+        elif element.name == 'p':
+            # Add paragraphs
+            text = element.get_text(strip=True)
+            if text:
+                paragraph = doc.add_paragraph(text)
+        
+        elif element.name in ['ul', 'ol']:
+            # Handle lists - ensure numbered lists restart properly
+            is_numbered = element.name == 'ol'
+            
+            if is_numbered:
+                numbered_list_count += 1
+                # For numbered lists, create a new numbering instance to ensure fresh start
+                for i, li in enumerate(element.find_all('li')):
+                    text = li.get_text(strip=True)
+                    if text:
+                        paragraph = doc.add_paragraph(text, style='List Number')
+                        # Restart numbering for each new <ol> section
+                        if i == 0:  # First item in this list
+                            try:
+                                paragraph._element.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = numbered_list_count
+                            except:
+                                # Fallback if numbering manipulation fails
+                                pass
+            else:
+                # Unordered lists
+                for li in element.find_all('li'):
+                    text = li.get_text(strip=True)
+                    if text:
+                        doc.add_paragraph(text, style='List Bullet')
+        
+        elif element.name == 'pre':
+            # Handle code blocks
+            text = element.get_text()
+            if text:
+                paragraph = doc.add_paragraph(text)
+                paragraph.style = 'Normal'
+                # Make code blocks appear in monospace-like formatting
+                for run in paragraph.runs:
+                    run.font.name = 'Courier New'
+        
+        elif element.name == 'div':
+            # Handle different div types
+            if 'ql-code-block' in element.get('class', []):
+                # Handle Quill code blocks
+                text = element.get_text()
+                if text.strip():
+                    paragraph = doc.add_paragraph(text)
+                    for run in paragraph.runs:
+                        run.font.name = 'Courier New'
+            elif 'counter-reset' in element.get('style', ''):
+                # This div marks a section boundary - reset numbering
+                numbered_list_count = 0
+                # Process child elements
+                for child in element.find_all(['h1', 'h2', 'h3', 'p', 'ul', 'ol', 'pre']):
+                    # Re-process child elements within this div
+                    pass
+    
+    # Convert to bytes
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 
@@ -20,6 +120,79 @@ def get_assignment_version_by_doc_id(container, document_version_id: str) -> Ass
         return AssignmentVersionResponse(**items[0])
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch version: {str(e)}")
+    
+
+def download_assignment_version(container, document_version_id: str) -> dict:
+    query = "SELECT * FROM c WHERE c.id = @id"
+    parameters = [{"name": "@id", "value": document_version_id}]
+
+    try:
+        items = list(container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+        if not items:
+            raise HTTPException(status_code=404, detail="Version not found")
+        
+        item = items[0]
+        
+        # Extract content from final_generated_content.json_content
+        final_content = item.get("final_generated_content", {}).get("json_content", {})
+        
+        if not final_content:
+            raise HTTPException(status_code=400, detail="No final content available for download")
+        
+        # Combine all HTML sections with counter reset divs to fix numbered list continuity
+        html_sections = []
+        
+        # Wrap each section to ensure numbered lists restart
+        def wrap_section_with_counter_reset(html):
+            return f'<div style="counter-reset: list-item;">{html}</div>'
+        
+        # Assignment instructions
+        if final_content.get("assignmentInstructionsHtml"):
+            html_sections.append(wrap_section_with_counter_reset(final_content["assignmentInstructionsHtml"]))
+        
+        # Step by step plan
+        if final_content.get("stepByStepPlanHtml"):
+            html_sections.append(wrap_section_with_counter_reset(final_content["stepByStepPlanHtml"]))
+        
+        # Brainstorm prompts
+        if final_content.get("promptsHtml"):
+            html_sections.append(wrap_section_with_counter_reset(final_content["promptsHtml"]))
+        
+        # Support tools
+        support_tools = final_content.get("supportTools", {})
+        if support_tools.get("toolsHtml"):
+            html_sections.append(wrap_section_with_counter_reset(support_tools["toolsHtml"]))
+        if support_tools.get("aiPromptingHtml"):
+            html_sections.append(wrap_section_with_counter_reset(support_tools["aiPromptingHtml"]))
+        if support_tools.get("aiPolicyHtml"):
+            html_sections.append(wrap_section_with_counter_reset(support_tools["aiPolicyHtml"]))
+        
+        # Motivational message
+        if final_content.get("motivationalMessageHtml"):
+            html_sections.append(wrap_section_with_counter_reset(final_content["motivationalMessageHtml"]))
+        
+        # Combine all sections with section breaks
+        combined_html = "\n<hr>\n".join(html_sections)
+        
+        # Convert to Word document
+        word_bytes = convert_html_to_word_bytes(combined_html)
+        
+        # Generate a descriptive filename
+        assignment_id = item.get("assignment_id", "unknown")
+        version_number = item.get("version_number", "1")
+        filename = f"assignment_{assignment_id}_v{version_number}.docx"
+
+        return {
+            "file_name": filename,
+            "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            "file_content": word_bytes
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to download version: {str(e)}")
 
 
 
