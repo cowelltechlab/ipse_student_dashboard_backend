@@ -5,7 +5,8 @@ from fastapi import Depends, File, Form, HTTPException, APIRouter, UploadFile, s
 
 
 from application.features.assignments.schemas import (
-    AssignmentCreate, 
+    AssignmentCreate,
+    AssignmentCreateResponse, 
     AssignmentListResponse, 
     AssignmentDetailResponse, 
     AssignmentUpdate,
@@ -169,7 +170,7 @@ async def create_many_assignments(
     return created_assignment_records
 
 
-@router.post("/upload/bulk", response_model=List[AssignmentDetailResponse])
+@router.post("/upload/bulk", response_model=List[AssignmentCreateResponse])
 async def upload_many_assignment_files(
     student_ids: List[int] = Form(...),
     title: str = Form(...),
@@ -215,7 +216,8 @@ async def upload_many_assignment_files(
         )
     
     # 5. Store in SQL DB
-    return await create_many_assignments(assignment_data)
+    response = await create_many_assignments(assignment_data)
+    return response
 
 
 @router.put("/id/{assignment_id}", response_model=AssignmentDetailResponse)

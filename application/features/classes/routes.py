@@ -5,7 +5,7 @@ from typing import List, Optional
 from fastapi import HTTPException, APIRouter, Depends, status, Query, Body
 
 from application.features.auth.permissions import require_user_access
-from application.features.classes.crud import get_all_classes, add_class, delete_class, update_class as crud_update_class
+from application.features.classes.crud import get_all_classes, add_class, delete_class, get_classes_by_student_id, update_class as crud_update_class
 from application.features.classes.schemas import ClassesResponse , ClassesCreate, ClassesUpdate 
 from application.features.classes.crud import get_class_by_id
 
@@ -21,6 +21,14 @@ def fetch_classes(
 ):
     """Retrieve all classes or filter by class_id."""
     return get_all_classes()
+
+@router.get("/student/{student_id}", response_model=List[ClassesResponse])
+def fetch_classes_by_student(
+    student_id: int,
+    user_data: dict = Depends(require_user_access)
+):
+    """Retrieve all classes for a specific student."""
+    return get_classes_by_student_id(student_id)
 
 @router.get("/{class_id}", response_model=ClassesResponse)
 def fetch_class_by_id(

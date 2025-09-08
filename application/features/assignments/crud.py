@@ -11,7 +11,7 @@ from application.database.mssql_crud_helpers import (
 from datetime import datetime
 from typing import List, Dict, Optional
 
-from application.features.assignments.schemas import AssignmentDetailResponse
+from application.features.assignments.schemas import AssignmentCreateResponse, AssignmentDetailResponse
 from application.features.users.crud.user_queries import get_users_with_roles
 
 TABLE_NAME = "Assignments"
@@ -367,8 +367,8 @@ async def add_many_assignments(data) -> List[Dict]:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
             detail=new_records[0]["error"]
         )
-    
-    response = [AssignmentDetailResponse(**record) for record in new_records]
+
+    response = [AssignmentCreateResponse(**record) for record in new_records]
     return response
 
 

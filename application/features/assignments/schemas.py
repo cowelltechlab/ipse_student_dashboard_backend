@@ -91,6 +91,18 @@ class AssignmentDetailResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class AssignmentCreateResponse(BaseModel):
+    id: int
+    student_id: int
+    title: str
+    class_id: int
+    content: str
+    date_created: datetime
+    blob_url: Optional[str] = None
+    source_format: Optional[str] = None
+    hyperlink: Optional[str] = None
+    assignment_type_id: Optional[int] = None
+
 
 class AssignmentTypeListResponse(BaseModel):
     id: int
