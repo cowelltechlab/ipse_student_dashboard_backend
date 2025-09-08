@@ -4,6 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
 from application.features.auth.permissions import require_user_access
+from application.features.ratings.crud import get_rating_data_by_assignment_version_id, upsert_rating_fields
+from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest, RatingUpdateResponse
 
 
 router = APIRouter()
@@ -26,7 +28,7 @@ def get_assignment_rating_data(
 
 
 
-@router.post("/{assignment_version_id}", response_model=AssignmentVersionPostResponse)
+@router.post("/{assignment_version_id}", response_model=RatingUpdateResponse)
 def post_version_rating(
     assignment_version_id: str,
     rating_data: RatingUpdateRequest,
@@ -35,10 +37,14 @@ def post_version_rating(
     """
     Posts rating data for assignment version
     """
-
     response = upsert_rating_fields(assignment_version_id, rating_data)
 
-    if not response:
-        raise HTTPException(status_code=404, detail="Assignment version not found or rating update failed")
+    if not response or not response.get("success"):
+        raise HTTPException(status_code=500, detail="Failed to save rating data")
 
-    return response
+    return RatingUpdateResponse(
+        success=response["success"],
+        assignment_version_id=response["assignment_version_id"],
+        message=response["message"],
+        last_rating_update=response["rating_data"]["last_rating_update"]
+    )

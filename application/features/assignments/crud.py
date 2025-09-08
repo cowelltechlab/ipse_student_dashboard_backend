@@ -111,7 +111,8 @@ def get_all_assignment_versions_map():
         result_map[str(assignment_id)] = {
             "finalized": finalized,
             "rating_status": rating_status,
-            "date_modified": date_modified
+            "date_modified": date_modified,
+            "final_version_id": finalized_version.get("id") if finalized_version else None
         }
 
     return result_map
@@ -178,7 +179,8 @@ def get_all_assignments(tutor_user_id: Optional[int] = None):
                 version_data = assignment_versions.get(str(assignment["id"]), {
                     "finalized": False,
                     "rating_status": "Pending",
-                    "date_modified": None
+                    "date_modified": None,
+                    "final_version_id": None
                 })
                 assignment.update(version_data)
                 results.append(assignment)
@@ -225,7 +227,8 @@ def get_all_assignments_by_student_id(student_id):
                 version_data = assignment_versions.get(str(assignment["id"]), {
                     "finalized": False,
                     "rating_status": "Pending",
-                    "date_modified": None
+                    "date_modified": None,
+                    "final_version_id": None
                 })
                 assignment.update(version_data)
                 results.append(assignment)
@@ -307,6 +310,7 @@ def get_assignment_by_id(assignment_id: int):
 
             ratings = [v.get("rating") for v in versions if v.get("rating")]
             final_version = next((v for v in versions if v.get("finalized")), None)
+            assignment_data["final_version_id"] = final_version.get("id") if final_version else None
             if final_version and final_version.get("rating"):
                 assignment_data["rating_status"] = "Rated"
             elif not ratings:

@@ -30,7 +30,7 @@ class AssignmentUpdate(BaseModel):
     content: Optional[str] = None
     date_created: Optional[datetime] = None
 
-# Updated Assignment List Response with issue#50 requirements
+
 class AssignmentListResponse(AssignmentBase):
     blob_url: Optional[str] = None
     source_format: Optional[str] = None
@@ -40,6 +40,7 @@ class AssignmentListResponse(AssignmentBase):
     # Return NoSQL Fields
     finalized: Optional[bool] = None
     rating_status: Optional[str] = None
+    final_version_id: Optional[str] = None
     date_modified: Optional[datetime] = None
 
     class Config:
@@ -85,6 +86,7 @@ class AssignmentDetailResponse(BaseModel):
 
     # Version Information
     finalized: Optional[bool] = None       # Overall: any version is finalized
+    final_version_id: Optional[str] = None  # ID of the finalized version
     rating_status: Optional[str] = None    # Overall rating status
     versions: List[VersionInfo] = []
 

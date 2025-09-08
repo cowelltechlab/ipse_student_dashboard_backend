@@ -6,32 +6,41 @@ from application.features.assignment_version_generation.schemas import LearningP
 from application.features.student_profile.schemas import StudentProfileResponse
 
 
-class RatingGoals(BaseModel):
-    goals_supported: List[str]
-    agreement_level: Optional[str] = Field(None, description="Likert scale: strongly disagree to strongly agree")
-    explanation_goals: Optional[str] = None
+# Goals Section
+class GoalsRating(BaseModel):
+    helped_work_towards_goals: Optional[str] = Field(None, description="Likert scale: strongly disagree, disagree, neutral, agree, strongly agree")
+    which_goals: List[str] = Field(default=[], description="Selected goals: long_term, short_term, course, different, none")
+    goals_explanation: Optional[str] = Field(None, description="How did the assignment help you work toward your goals?")
 
-class RatingOptions(BaseModel):
-    student_selected_options: List[str]
-    assignment_sections: List[str]
-    explanation_options: Optional[str] = None
+# Rate My Options Section  
+class OptionsRating(BaseModel):
+    most_helpful_parts: List[str] = Field(default=[], description="Up to 3 most helpful parts (chosen options + assignment sections)")
+    most_helpful_explanation: Optional[str] = Field(None, description="Why were these helpful? Future use?")
+    least_helpful_parts: List[str] = Field(default=[], description="Up to 3 least helpful parts (chosen options + assignment sections)")
+    least_helpful_explanation: Optional[str] = Field(None, description="Why weren't these helpful? How to improve?")
 
-class RatingFuturePlanning(BaseModel):
-    learned_skills_to_apply: Optional[str] = Field(None, description="Likert scale")
-    explanation_learned_skills: Optional[str] = None
-    identified_changes: Optional[str] = Field(None, description="Likert scale")
-    explanation_new_changes: Optional[str] = None
-    confidence_level: Optional[str] = Field(None, description="Likert scale")
-    explanation_confidence_level: Optional[str] = None
+# My Skills Subsection
+class MySkillsRating(BaseModel):
+    found_way_to_keep_using: Optional[str] = Field(None, description="Likert scale: strongly disagree to strongly agree")
+    way_to_keep_explanation: Optional[str] = Field(None, description="What way of working/learning? How helpful? Update profile?")
+    can_describe_improvements: Optional[str] = Field(None, description="Likert scale: strongly disagree to strongly agree")
+    improvements_explanation: Optional[str] = Field(None, description="What could you do better? Update profile?")
+
+# Guiding My Learning Subsection
+class GuidingLearningRating(BaseModel):
+    confidence_making_changes: Optional[str] = Field(None, description="Likert scale: strongly disagree to strongly agree")
+    confidence_explanation: Optional[str] = Field(None, description="What makes you confident/not confident? What would help?")
+
+# Planning for Future Section
+class PlanningForFutureRating(BaseModel):
+    my_skills: Optional[MySkillsRating] = None
+    guiding_my_learning: Optional[GuidingLearningRating] = None
 
 class RatingUpdateRequest(BaseModel):
-    rating_goals: Optional[RatingGoals] = None
-    rating_options: Optional[RatingOptions] = None
-    rating_future_planning: Optional[RatingFuturePlanning] = None
+    goals_section: Optional[GoalsRating] = None
+    options_section: Optional[OptionsRating] = None
+    planning_section: Optional[PlanningForFutureRating] = None
     date_modified: Optional[datetime] = Field(default_factory=datetime.utcnow)
-
-
-
 
 
 class AssignmentRatingData(BaseModel):
@@ -42,3 +51,10 @@ class AssignmentRatingData(BaseModel):
     original_assignment_html: str
     version_html: str
     student_profile: StudentProfileResponse
+
+
+class RatingUpdateResponse(BaseModel):
+    success: bool
+    assignment_version_id: str
+    message: str
+    last_rating_update: Optional[str] = None

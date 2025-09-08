@@ -16,6 +16,7 @@ from application.features.assignments.routes import router as assignments_router
 from application.features.tutor_students.routes import router as tutor_students_router
 from application.features.blob.routes import router as blob_router
 from application.features.gpt.routes import router as gpt_router
+from application.features.ratings.routes import router as ratings_router
 
 application = FastAPI()
 
@@ -35,6 +36,7 @@ application.include_router(student_router, tags=["Students"], prefix="/students"
 application.include_router(classes_router, tags=["Classes"], prefix="/classes")
 application.include_router(profile_router, tags=["Profile"], prefix="/profile")
 application.include_router(assignment_version_generation, tags=["Assignment Version Generation"])
+application.include_router(ratings_router, tags=["Ratings"], prefix="/rating-and-feedback")
 application.include_router(versions_router,  tags=["Assignment Versions"], prefix="/versions")
 application.include_router(roles_router, tags=["Roles"], prefix="/roles")
 application.include_router(student_classes_router, tags=["StudentClasses"], prefix="") 

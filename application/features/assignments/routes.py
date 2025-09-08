@@ -87,6 +87,7 @@ def fetch_assignment_by_id(
 
         # NoSQL metadata
         "finalized": raw_data.get("finalized"),
+        "final_version_id": raw_data.get("final_version_id"),
         "rating_status": raw_data.get("rating_status"),
         "date_modified": raw_data.get("date_modified"),  
         "versions": raw_data.get("versions", []),
