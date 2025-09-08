@@ -7,13 +7,35 @@ from application.database.mssql_connection import get_sql_db_connection
 
 TABLE_NAME = "Students"
 
-def fetch_all_students_with_names():
+def fetch_all_students_with_names(tutor_user_id: int = None):
     """Fetch all students with their first and last names joined from Users table."""
     try:
         # TODO: Improve student activation query
         # Added first name is not null to account for account activation not being done before assignment is given
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
+
+        if tutor_user_id:
+            query = """
+            SELECT
+                students.id,
+                students.year_id,
+                students.reading_level,
+                students.writing_level,
+                students.active_status,
+                users.first_name,
+                users.last_name,
+                users.email,
+                years.name AS year_name
+            FROM students
+            JOIN users ON students.user_id = users.id
+            JOIN years ON students.year_id = years.id
+            JOIN TutorStudents ts ON ts.student_id = students.id
+            WHERE ts.user_id = ?
+            AND users.is_active = 1
+            AND users.first_name IS NOT NULL
+            """
+            params = (tutor_user_id,)
+
+        else:
             query = """
             SELECT
                 students.id,
@@ -31,7 +53,11 @@ def fetch_all_students_with_names():
             WHERE users.is_active = 1
             AND users.first_name IS NOT NULL
             """
-            cursor.execute(query)
+            params = ()
+
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, params)
             rows = cursor.fetchall()
             columns = [column[0] for column in cursor.description]
             return [dict(zip(columns, row)) for row in rows]

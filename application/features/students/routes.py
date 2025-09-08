@@ -18,7 +18,18 @@ def fetch_students(
     """Retrieve all students or filter by year_id."""
     if year_id is not None:
         return get_students_by_year(year_id)
-    return fetch_all_students_with_names()
+    
+
+    # If the user is a Peer Tutor, filter students to only those assigned to them
+    caller_roles = user_data.get("role_names", [])
+    tutor_user_id = None
+
+    if "Peer Tutor" in caller_roles:
+        tutor_user_id = user_data.get("user_id")
+
+    students = fetch_all_students_with_names(tutor_user_id=tutor_user_id)
+
+    return students
 
 @router.get("/user/{user_id}", response_model=StudentResponse)
 def fetch_students_by_user_id(user_id: int, user_data: dict = Depends(require_user_access)):
