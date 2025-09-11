@@ -1,5 +1,8 @@
 from typing import List
 from pydantic import BaseModel
+from typing import Literal
+
+YearCode = Literal["FR", "SO", "JR", "SR"]
 
 class TutorStudentCreate(BaseModel):
     user_id: int       # Tutor user ID
@@ -22,3 +25,8 @@ class TutorStudentResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class TutoredStudent(BaseModel):
+  student_id: int
+  code: YearCode
+  name: str
