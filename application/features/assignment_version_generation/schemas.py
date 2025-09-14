@@ -9,6 +9,7 @@ class LearningPathwayOption(BaseModel):
     why_good_growth: str
     selection_logic: str
     internal_id: str
+    selected: bool = False
 
 class AssignmentGenerationRequest(BaseModel):
     selected_options: List[str] = Field(..., description="Array of option identifiers (strings).", min_items=0)

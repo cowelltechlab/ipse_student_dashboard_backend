@@ -15,14 +15,6 @@ from application.features.assignments.schemas import AssignmentCreateResponse, A
 from application.features.users.crud.user_queries import get_users_with_roles
 
 TABLE_NAME = "Assignments"
-def is_rating_meaningful(rating):
-    if not rating:
-        return False
-
-    difficulty = rating.get("difficulty", "")
-    best_changes = rating.get("best_changes", [])
-    disliked_changes = rating.get("disliked_changes", [])
-    return bool(difficulty.strip()) or bool(best_changes) or bool(disliked_changes)
 
 def analyze_assignment_versions(assignment_id: str):
     container = get_container()
@@ -53,11 +45,11 @@ def analyze_assignment_versions(assignment_id: str):
     finalized_version = finalized_versions[0] if finalized_versions else None
 
     # Check rating for finalized version
-    if finalized_version and is_rating_meaningful(finalized_version.get("rating")):
+    if finalized_version and finalized_version.get("rating_data"):
         rating_status = "Rated"
     else:
         # Check any versions with meaningful rating
-        if any(is_rating_meaningful(v.get("rating")) for v in items):
+        if any(v.get("rating_data") for v in items):
             rating_status = "Partially Rated"
         else:
             rating_status = "Pending"
@@ -101,9 +93,9 @@ def get_all_assignment_versions_map():
         finalized_versions = [v for v in versions if v.get("finalized")]
         finalized_version = finalized_versions[0] if finalized_versions else None
 
-        if finalized_version and is_rating_meaningful(finalized_version.get("rating")):
+        if finalized_version and finalized_version.get("rating_data"):
             rating_status = "Rated"
-        elif any(is_rating_meaningful(v.get("rating")) for v in versions):
+        elif any(v.get("rating_data") for v in versions):
             rating_status = "Partially Rated"
         else:
             rating_status = "Pending"

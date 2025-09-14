@@ -120,13 +120,13 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
                 year_row = cursor.fetchone()
                 year_name = year_row[0] if year_row else "Unknown"
                 
-                # Get class information and student classes
+                # Get class information and student classes (filtered by assignment's class)
                 cursor.execute("""
                     SELECT sc.class_id, sc.learning_goal, c.name, c.course_code, c.term, c.type
                     FROM dbo.StudentClasses sc
                     JOIN dbo.Classes c ON sc.class_id = c.id
-                    WHERE sc.student_id = ?
-                """, (student_id,))
+                    WHERE sc.student_id = ? AND sc.class_id = ?
+                """, (student_id, assignment_info["class_id"]))
                 classes_rows = cursor.fetchall()
                 
                 classes = []
@@ -160,7 +160,9 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
         
         # Convert generated options to LearningPathwayOption objects
         generated_options = []
+        selected_options = version_doc.get("selected_options", [])
         for option in version_doc.get("generated_options", []):
+            internal_id = option.get("internal_id", "")
             generated_options.append(LearningPathwayOption(
                 name=option.get("name", ""),
                 description=option.get("description", ""),
@@ -168,7 +170,8 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
                 why_challenge=option.get("why_challenge", ""),
                 why_good_growth=option.get("why_good_growth", ""),
                 selection_logic=option.get("selection_logic", ""),
-                internal_id=option.get("internal_id", "")
+                internal_id=internal_id,
+                selected=internal_id in selected_options
             ))
         
         # Build student profile response
