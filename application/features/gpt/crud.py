@@ -27,33 +27,24 @@ ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
     "properties": {
         "assignmentInstructionsHtml": {"type": "string"},
         "stepByStepPlanHtml": {"type": "string"},
-        "myPlanChecklistHtml": {"type": "string"},
-        "motivationalMessageHtml": {"type": "string"},
-        "template": {
-            "type": "object",
-            "additionalProperties": False,
-            "properties": {
-                "title": {"type": "string"},
-                "bodyHtml": {"type": "string"}
-            },
-            "required": ["title", "bodyHtml"]
-        },
         "promptsHtml": {"type": "string"},
+        "motivationalMessageHtml": {"type": "string"},
         "supportTools": {
             "type": "object",
             "additionalProperties": False,
             "properties": {
                 "toolsHtml": {"type": "string"},
-                "aiPromptingHtml": {"type": "string"},  # optional
+                "aiPromptingHtml": {"type": "string"},
                 "aiPolicyHtml": {"type": "string"}
             },
-            "required": ["toolsHtml", "aiPolicyHtml"]
+            "required": ["toolsHtml", "aiPromptingHtml", "aiPolicyHtml"]
         }
     },
     "required": [
         "assignmentInstructionsHtml",
         "stepByStepPlanHtml",
-        "myPlanChecklistHtml",
+        "promptsHtml",
+        "supportTools",
         "motivationalMessageHtml"
     ]
 }
