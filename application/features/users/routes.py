@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, logger, status, HTTPException
 from typing import List, Optional, Dict, Set
 from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
@@ -19,7 +19,7 @@ from application.services.email_sender import send_invite_email
 from collections import defaultdict
 from application.features.tutor_students.crud import get_all_tutor_students
 # Map year name -> code for compact items we return to the frontend
-CODE_FROM_NAME = {"Freshman": "FR", "Sophomore": "SO", "Junior": "JR", "Senior": "SR"}
+# CODE_FROM_NAME = {"Freshman": "FR", "Sophomore": "SO", "Junior": "JR", "Senior": "SR"}
 # ----------------------------------------------------------
 
 load_dotenv()
@@ -74,18 +74,14 @@ async def get_users(
         for r in flat:
             # r has: tutor_id, student_id, student_year, etc.
             year_name = r.get("student_year")
-            code = CODE_FROM_NAME.get(year_name)
-            if not code:
-                continue
             tutored_map[r["tutor_id"]].append(
                 {
                     "student_id": r["student_id"],
-                    "code": code,
                     "name": year_name,
                 }
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.error(f"Error building tutored_map: {e}")
     
 
     return [

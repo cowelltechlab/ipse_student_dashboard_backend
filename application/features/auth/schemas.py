@@ -6,7 +6,6 @@ from application.features.tutor_students.schemas import TutoredStudent
 
 class TutoredStudent(BaseModel):
     student_id: int
-    code: str
     name: str
 
 class UserLogin(BaseModel):
