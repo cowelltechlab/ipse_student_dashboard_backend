@@ -18,6 +18,6 @@ class CompleteInviteRequest(BaseModel):
 class DefaultProfilePicture(BaseModel):
     id: int
     url: str
-    
+
     class Config:
         from_attributes = True

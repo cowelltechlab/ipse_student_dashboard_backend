@@ -15,12 +15,8 @@ from application.features.users.crud.user_management import delete_user_db
 from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
 
-# ---------------------- ADDED IMPORTS ----------------------
 from collections import defaultdict
 from application.features.tutor_students.crud import get_all_tutor_students
-# Map year name -> code for compact items we return to the frontend
-# CODE_FROM_NAME = {"Freshman": "FR", "Sophomore": "SO", "Junior": "JR", "Senior": "SR"}
-# ----------------------------------------------------------
 
 load_dotenv()
 

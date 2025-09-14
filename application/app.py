@@ -17,6 +17,7 @@ from application.features.tutor_students.routes import router as tutor_students_
 from application.features.blob.routes import router as blob_router
 from application.features.gpt.routes import router as gpt_router
 from application.features.ratings.routes import router as ratings_router
+from application.features.student_groups.routes import router as student_groups_router
 
 application = FastAPI()
 
@@ -33,6 +34,7 @@ application.add_middleware(
 
 application.include_router(auth_router, tags=["Auth"], prefix="/auth")
 application.include_router(student_router, tags=["Students"], prefix="/students")
+application.include_router(student_groups_router, tags=["Student Groups"], prefix="/student-groups")
 application.include_router(classes_router, tags=["Classes"], prefix="/classes")
 application.include_router(profile_router, tags=["Profile"], prefix="/profile")
 application.include_router(assignment_version_generation, tags=["Assignment Version Generation"])
