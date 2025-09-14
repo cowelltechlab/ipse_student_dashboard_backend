@@ -58,3 +58,11 @@ class RatingUpdateResponse(BaseModel):
     assignment_version_id: str
     message: str
     last_rating_update: Optional[str] = None
+
+
+class ExistingRatingDataResponse(BaseModel):
+    assignment_version_id: str
+    goals_section: Optional[GoalsRating] = None
+    options_section: Optional[OptionsRating] = None
+    planning_section: Optional[PlanningForFutureRating] = None
+    last_rating_update: Optional[str] = None

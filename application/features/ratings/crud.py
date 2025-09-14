@@ -5,7 +5,7 @@ from typing import List
 from fastapi import HTTPException
 from application.database.mssql_connection import get_sql_db_connection
 from application.database.nosql_connection import get_cosmos_db_connection
-from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest
+from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest, ExistingRatingDataResponse
 from application.features.versionHistory.schemas import AssignmentVersionResponse
 from application.features.assignment_version_generation.schemas import LearningPathwayOption
 from application.features.student_profile.schemas import StudentProfileResponse, StudentClass, ProfileSummaries
@@ -296,6 +296,44 @@ def upsert_rating_fields(assignment_version_id: str, rating_data: RatingUpdateRe
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save rating data: {str(e)}")
+
+
+def get_existing_rating_data(assignment_version_id: str) -> ExistingRatingDataResponse:
+    """
+    Retrieve existing rating data for a specific assignment version.
+    Returns the rating responses if they exist, otherwise raises 404.
+    """
+    try:
+        # Find the assignment version document
+        version_docs = list(versions_container.query_items(
+            query="SELECT * FROM c WHERE c.id = @id",
+            parameters=[{"name": "@id", "value": assignment_version_id}],
+            enable_cross_partition_query=True
+        ))
+
+        if not version_docs:
+            raise HTTPException(status_code=404, detail="Assignment version not found")
+
+        existing_doc = version_docs[0]
+
+        # Check if rating data exists
+        rating_data = existing_doc.get("rating_data")
+        if not rating_data:
+            raise HTTPException(status_code=404, detail="No rating data found for this assignment version")
+
+        # Extract rating sections
+        return ExistingRatingDataResponse(
+            assignment_version_id=assignment_version_id,
+            goals_section=rating_data.get("goals_section"),
+            options_section=rating_data.get("options_section"),
+            planning_section=rating_data.get("planning_section"),
+            last_rating_update=rating_data.get("last_rating_update")
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve rating data: {str(e)}")
 
 
 def update_rating_fields(

@@ -4,8 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
 from application.features.auth.permissions import require_user_access
-from application.features.ratings.crud import get_rating_data_by_assignment_version_id, upsert_rating_fields
-from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest, RatingUpdateResponse
+from application.features.ratings.crud import get_rating_data_by_assignment_version_id, upsert_rating_fields, get_existing_rating_data
+from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest, RatingUpdateResponse, ExistingRatingDataResponse
 
 
 router = APIRouter()
@@ -48,3 +48,16 @@ def post_version_rating(
         message=response["message"],
         last_rating_update=response["rating_data"]["last_rating_update"]
     )
+
+
+@router.get("/{assignment_version_id}/data", response_model=ExistingRatingDataResponse)
+def get_existing_assignment_rating_data(
+    assignment_version_id: str,
+    user_data: dict = Depends(require_user_access)
+):
+    """
+    Retrieves existing rating responses for a specific assignment version.
+    Returns 404 if no rating data exists.
+    """
+    rating_data = get_existing_rating_data(assignment_version_id)
+    return rating_data
