@@ -32,7 +32,7 @@ def handle_assignment_version_generation(
 
     # Call non-streaming structured output
     try:
-        result = process_gpt_prompt_json(messages, model="gpt-4.1", max_out=8000)
+        result = process_gpt_prompt_json(messages, model="gpt-4.1", max_out=16000)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 

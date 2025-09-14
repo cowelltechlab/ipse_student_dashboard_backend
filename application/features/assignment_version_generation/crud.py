@@ -168,7 +168,7 @@ def handle_assignment_version_generation(
         result_text = process_gpt_prompt_json(
             messages=messages,
             model="gpt-4o-2024-08-06",
-            override_max_tokens=8000,
+            override_max_tokens=16000,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
@@ -182,16 +182,30 @@ def handle_assignment_version_generation(
     # Validate schema, order, and template rules
     data_obj = validate_and_order_result(result_text, template_required)
 
-    # Persist JSON (keep raw and parsed for debugging if you want)
+    # Persist JSON with version history
+    current_timestamp = datetime.datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+
+    # Save current version to history before updating (if it exists)
+    if "final_generated_content" in version_doc and version_doc["final_generated_content"]:
+        # Initialize generation_history if it doesn't exist
+        if "generation_history" not in version_doc:
+            version_doc["generation_history"] = []
+
+        # Add current version to history
+        current_version = version_doc["final_generated_content"].copy()
+        current_version["timestamp"] = version_doc.get("date_modified", current_timestamp)
+        current_version["generation_type"] = "regeneration"  # This is a regeneration of existing content
+        version_doc["generation_history"].append(current_version)
+
     version_doc["selected_options"] = selected_options
     # Choose a single, consistent field name:
     version_doc["additional_edit_suggestions"] = additional_edit_suggestions or ""
     version_doc["finalized"] = False
     version_doc["final_generated_content"] = {
         "json_content": data_obj,
-        "raw_text": result_text,  # optional
+        "raw_text": result_text,
     }
-    version_doc["date_modified"] = datetime.datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
+    version_doc["date_modified"] = current_timestamp
 
     try:
         versions_container.replace_item(item=version_doc["id"], body=version_doc)
@@ -233,7 +247,9 @@ def handle_assignment_version_update(assignment_version_id: str, updated_json_co
     # 3) Validate and normalize order
     validated = validate_and_order_result(updated_json_content, template_required)
 
-    # 4) Preserve original JSON once (if not already saved)
+    # 4) Preserve original JSON once (if not already saved) and save current version to history
+    current_timestamp = datetime.datetime.utcnow().isoformat() + "Z"
+
     if "original_generated_json_content" not in version_doc:
         # Handle legacy docs that stored HTML instead of JSON
         legacy_html = (
@@ -251,10 +267,22 @@ def handle_assignment_version_update(assignment_version_id: str, updated_json_co
         if original_json is not None:
             version_doc["original_generated_json_content"] = original_json
 
+    # Save current version to history before updating (if it exists)
+    if "final_generated_content" in version_doc and version_doc["final_generated_content"]:
+        # Initialize generation_history if it doesn't exist
+        if "generation_history" not in version_doc:
+            version_doc["generation_history"] = []
+
+        # Add current version to history
+        current_version = version_doc["final_generated_content"].copy()
+        current_version["timestamp"] = version_doc.get("date_modified", current_timestamp)
+        current_version["generation_type"] = "edit"  # This is a manual edit
+        version_doc["generation_history"].append(current_version)
+
     # 5) Write the new JSON
     version_doc["final_generated_content"] = {"json_content": validated}
     version_doc["finalized"] = False
-    version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
+    version_doc["date_modified"] = current_timestamp
 
     # 6) Save
     try:
