@@ -1,6 +1,12 @@
 from typing import List, Optional
 from pydantic import BaseModel, EmailStr
+from application.features.tutor_students.schemas import TutoredStudent
 
+
+
+class TutoredStudent(BaseModel):
+    student_id: int
+    name: str
 
 class UserLogin(BaseModel):
     email: str
@@ -28,14 +34,12 @@ class UserResponse(BaseModel):
     profile_picture_url: Optional[str] = None
     is_active: Optional[bool] = None
 
-    # Used in home page display
     profile_tag: Optional[str] = None
     
-    # Used only for students, for home page display / navigation
     student_profile: Optional[StudentProfile] = None
     
-    # Invite URL for unactivated users
     invite_url: Optional[str] = None
+    tutored_students: Optional[List[TutoredStudent]] = None
 
 
 class RegisterUserRequest(BaseModel):

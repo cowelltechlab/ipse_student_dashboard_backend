@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status, HTTPException
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, logger, status, HTTPException
 from typing import List, Optional, Dict, Set
 from application.database.mssql_crud_helpers import fetch_all
 from application.features.auth.auth_helpers import hash_password
@@ -14,6 +14,13 @@ from application.features.users.crud.user_management import delete_user_db
 
 from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest
 from application.services.email_sender import send_invite_email
+
+# ---------------------- ADDED IMPORTS ----------------------
+from collections import defaultdict
+from application.features.tutor_students.crud import get_all_tutor_students
+# Map year name -> code for compact items we return to the frontend
+# CODE_FROM_NAME = {"Freshman": "FR", "Sophomore": "SO", "Junior": "JR", "Senior": "SR"}
+# ----------------------------------------------------------
 
 load_dotenv()
 
@@ -60,6 +67,21 @@ async def get_users(
         tutor_user_id=tutor_user_id
     )
 
+    # Build a map of tutor_id -> [{ student_id, code, name }]
+    tutored_map = defaultdict(list)
+    try:
+        flat = get_all_tutor_students()
+        for r in flat:
+            # r has: tutor_id, student_id, student_year, etc.
+            year_name = r.get("student_year")
+            tutored_map[r["tutor_id"]].append(
+                {
+                    "student_id": r["student_id"],
+                    "name": year_name,
+                }
+            )
+    except Exception as e:
+        logger.error(f"Error building tutored_map: {e}")
     
 
     return [
@@ -79,7 +101,8 @@ async def get_users(
             student_profile = StudentProfile(
                 student_id = user["student_id"],
                 year_name =  user["year_name"]
-            ) if "student_id" in user and "year_name" in user else None
+            ) if "student_id" in user and "year_name" in user else None,
+            tutored_students = tutored_map.get(user["id"], [])
         )
         for user in users
     ]
@@ -208,5 +231,3 @@ async def delete_user(
         )
     
     return {"message": f"User with ID {user_id} deleted successfully."}
-
-
