@@ -142,3 +142,35 @@ def get_user_email_by_id(user_id: int) -> Optional[str]:
         # TODO: integrate into future logging functionality
         print(f"Error: {str(e)}")
         return None
+
+
+def get_user_by_student_id(student_id: int) -> Optional[Dict]:
+    """
+    Retrieves user information by student ID.
+    Joins Students table with Users table to get user_id from student_id.
+
+    :param student_id: ID of the student
+    :returns: User record if found, None otherwise
+    """
+    try:
+        query = """
+        SELECT u.id, u.email, u.gt_email, u.first_name, u.last_name
+        FROM Users u
+        JOIN Students s ON u.id = s.user_id
+        WHERE s.id = ?
+        """
+
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(query, (student_id,))
+
+            record = cursor.fetchone()
+            if not record:
+                return None
+
+            column_names = [column[0] for column in cursor.description]
+            return dict(zip(column_names, record))
+
+    except pyodbc.Error as e:
+        print(f"Error getting user by student ID: {str(e)}")
+        return None

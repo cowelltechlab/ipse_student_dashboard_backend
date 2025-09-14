@@ -1,6 +1,8 @@
 import os
-from fastapi import HTTPException, APIRouter
-from application.features.auth.schemas import UserLogin, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest
+from fastapi import HTTPException, APIRouter, Depends
+from application.features.auth.crud.user_crud import get_user_by_student_id
+from application.features.auth.permissions import require_admin_access
+from application.features.auth.schemas import UserLogin, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest, AdminResetPasswordRequest
 from application.features.auth.auth_helpers import validate_user_email_login, hash_password
 from application.features.auth.token_service import create_token_response
 from application.features.auth.crud import (
@@ -9,7 +11,8 @@ from application.features.auth.crud import (
     validate_password_reset_token,
     update_user_password,
     mark_password_reset_token_used,
-    get_user_email_by_id
+    get_user_email_by_id,
+    
 )
 from application.services.email_sender import send_password_reset_email
 
@@ -107,5 +110,39 @@ async def reset_password(request: ResetPasswordRequest):
         )
     
     mark_password_reset_token_used(request.token)
-    
+
     return {"message": "Password has been successfully reset."}
+
+
+@router.post("/admin-reset-password")
+async def admin_reset_password(
+    request: AdminResetPasswordRequest,
+    admin_data: dict = Depends(require_admin_access)
+):
+    """
+    Admin-only endpoint to reset a student's password by student ID.
+    Does not require email verification or reset tokens.
+    """
+    # Get user information from student ID
+    user = get_user_by_student_id(request.student_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Student with ID {request.student_id} not found."
+        )
+
+    user_id = user["id"]
+    hashed_password = hash_password(request.new_password)
+
+    # Update the password
+    success = update_user_password(user_id, hashed_password)
+    if not success:
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to update password. Please try again."
+        )
+
+    return {
+        "message": f"Password successfully reset for student {request.student_id} ({user['first_name']} {user['last_name']})."
+    }
