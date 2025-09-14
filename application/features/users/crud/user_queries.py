@@ -1,11 +1,17 @@
+import os
 from typing import List, Dict, Optional
+
+from dotenv import load_dotenv
 from application.database.mssql_connection import get_sql_db_connection
 import pyodbc
 from fastapi import HTTPException
 
 from application.database.nosql_connection import get_cosmos_db_connection
 
-DATABASE_NAME = "ai-prompt-storage"
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+
+
 CONTAINER_NAME = "ai-student-profile"
 
 client = get_cosmos_db_connection()

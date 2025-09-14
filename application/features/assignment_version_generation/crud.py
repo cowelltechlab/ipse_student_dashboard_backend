@@ -1,6 +1,7 @@
 import datetime
 import json
-from typing import List, Optional
+import os
+from dotenv import load_dotenv
 from fastapi import HTTPException
 import pyodbc
 import uuid
@@ -16,7 +17,9 @@ from application.features.gpt.crud import process_gpt_prompt_json
 
 
 # Constants
-DATABASE_NAME = "ai-prompt-storage"
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+
 PROFILE_CONTAINER_NAME = "ai-student-profile"
 VERSIONS_CONTAINER_NAME = "ai-assignment-versions-v2"
 

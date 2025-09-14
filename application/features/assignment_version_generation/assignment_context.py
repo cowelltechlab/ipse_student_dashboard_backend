@@ -1,15 +1,19 @@
 # assignment_context.py
 import json
 import datetime
+import os
+from dotenv import load_dotenv
 import pyodbc
 from fastapi import HTTPException
 
 from application.database.mssql_connection import get_sql_db_connection
 from application.database.nosql_connection import get_cosmos_db_connection
 
-DATABASE_NAME = "ai-prompt-storage"
 PROFILE_CONTAINER_NAME = "ai-student-profile"
 VERSIONS_CONTAINER_NAME = "ai-assignment-versions-v2"
+
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
 
 _cosmos = get_cosmos_db_connection()
 _db = _cosmos.get_database_client(DATABASE_NAME)

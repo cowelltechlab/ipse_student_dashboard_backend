@@ -1,11 +1,15 @@
 import datetime
+import os
+from dotenv import load_dotenv
 from fastapi import HTTPException
 from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.assignment_version_generation.assignment_context import build_prompt_for_version
 from gpt_client_nonstream import process_gpt_prompt_json
 
 
-DATABASE_NAME = "ai-prompt-storage"
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+
 PROFILE_CONTAINER_NAME = "ai-student-profile"
 VERSIONS_CONTAINER_NAME = "ai-assignment-versions-v2"
 

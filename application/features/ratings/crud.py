@@ -1,5 +1,7 @@
 
 import datetime
+import os
+from dotenv import load_dotenv
 import pyodbc
 from typing import List
 from fastapi import HTTPException
@@ -11,7 +13,9 @@ from application.features.assignment_version_generation.schemas import LearningP
 from application.features.student_profile.schemas import StudentProfileResponse, StudentClass, ProfileSummaries
 
 # Database configuration
-DATABASE_NAME = "ai-prompt-storage"
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+
 PROFILE_CONTAINER_NAME = "ai-student-profile"
 VERSIONS_CONTAINER_NAME = "ai-assignment-versions-v2"
 

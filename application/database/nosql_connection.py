@@ -12,6 +12,6 @@ def get_cosmos_db_connection():
 
 def get_container():
     client = get_cosmos_db_connection()
-    database = client.get_database_client("ai-prompt-storage")
-    container = database.get_container_client("ai-assignment-versions-v2")
+    DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+    container = client.get_database_client(DATABASE_NAME).get_container_client("ai-assignment-versions-v2")
     return container

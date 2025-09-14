@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 from fastapi import HTTPException
 from typing import Optional
 import uuid
@@ -8,7 +10,9 @@ from application.features.gpt.crud import summarize_best_ways_to_learn, summariz
 
 import pyodbc
 
-DATABASE_NAME = "ai-prompt-storage"
+load_dotenv()
+DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+
 CONTAINER_NAME = "ai-student-profile"
 
 client = get_cosmos_db_connection()
