@@ -61,7 +61,7 @@ def get_saml_settings() -> dict:
         },
         "security": {
             "authnRequestsSigned": True,     # GT requires this
-            "wantAssertionsSigned": True,    # GT will sign assertions
+            "wantAssertionsSigned": False,    # GT will sign assertions
             "wantMessagesSigned": False,     # keep False unless GT requires it
             "signatureAlgorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
             "digestAlgorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
