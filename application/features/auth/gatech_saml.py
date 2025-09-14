@@ -61,8 +61,8 @@ def get_saml_settings() -> dict:
         },
         "security": {
             "authnRequestsSigned": True,     # GT requires this
-            "wantAssertionsSigned": False,    # GT will sign assertions
-            "wantMessagesSigned": False,     
+            "wantAssertionsSigned": False,   
+            "wantMessagesSigned": True,     
             "signatureAlgorithm": "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256",
             "digestAlgorithm": "http://www.w3.org/2001/04/xmlenc#sha256",
             "wantAttributeStatement": True,
@@ -151,23 +151,18 @@ def validate_saml_response(saml_auth: OneLogin_Saml2_Auth) -> None:
         HTTPException: If SAML response is invalid
     """
     errors = saml_auth.get_errors()
-    
+    last_reason = saml_auth.get_last_error_reason()
     if errors:
-        error_msg = f"SAML authentication failed: {', '.join(errors)}"
-        last_error_reason = saml_auth.get_last_error_reason()
-        if last_error_reason:
-            error_msg += f" - {last_error_reason}"
-        
-        raise HTTPException(
-            status_code=401,
-            detail=error_msg
-        )
-    
+        msg = f"SAML authentication failed: {', '.join(errors)}"
+        if last_reason:
+            msg += f" - {last_reason}"
+        raise HTTPException(status_code=401, detail=msg)
+
     if not saml_auth.is_authenticated():
-        raise HTTPException(
-            status_code=401,
-            detail="SAML authentication failed: User not authenticated"
-        )
+        msg = "SAML authentication failed: User not authenticated"
+        if last_reason:
+            msg += f" - {last_reason}"
+        raise HTTPException(status_code=401, detail=msg)
 
 def get_sso_url(request: Request) -> str:
     """

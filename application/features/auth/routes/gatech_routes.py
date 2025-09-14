@@ -1,5 +1,5 @@
 import os
-from email.quoprimime import quote
+from urllib.parse import quote, urlencode
 from fastapi import HTTPException, APIRouter, Request, Form, Response
 from fastapi.responses import RedirectResponse
 from application.features.auth.gatech_saml import (
@@ -44,14 +44,22 @@ async def gatech_saml_callback(
         if not frontend:
             raise RuntimeError("FRONTEND_BASE_URL not configured")
 
-        redirect_url = f"{frontend}/auth/callback?sso=gatech&access_token={quote(token_response.access_token)}"
+        params = {"sso": "gatech", "access_token": token_response.access_token}
+        redirect_url = f"{frontend}/auth/callback?{urlencode(params)}"
+
+
         return RedirectResponse(redirect_url, status_code=302)
 
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Georgia Tech SAML callback failed: {e}")
+        try:
+            print("SAML last_error_reason:", auth.get_last_error_reason())
+        except Exception:
+            pass
+        print(f"Georgia Tech SAML callback failed: {e!r}")
         raise HTTPException(status_code=500, detail="Georgia Tech SSO authentication failed.")
+
 
 
 @router.get("/gatech/saml2/metadata")
