@@ -35,8 +35,9 @@ def convert_html_to_word_bytes(html_content: str) -> bytes:
             numbered_list_count = 0  # Reset counter for new sections
         
         elif element.name == 'hr':
-            # Add a page break or section break for HR tags
-            doc.add_page_break()
+            # Add a horizontal line separator instead of page break
+            paragraph = doc.add_paragraph()
+            # paragraph.add_run("_" * 50)  # Add a line of underscores as separator
             numbered_list_count = 0  # Reset counter at section breaks
         
         elif element.name == 'p':
