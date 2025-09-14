@@ -294,8 +294,18 @@ def get_assignment_by_id(assignment_id: int):
         assignment_data["versions"] = []
 
         if versions:
+            # Filter to only include versions that have final_generated_content
+            versions_with_content = [
+                v for v in versions
+                if v.get("final_generated_content") is not None
+            ]
+
+            # If no versions have final_generated_content, don't return the assignment
+            if not versions_with_content:
+                return None
+
             versions_sorted = sorted(
-                versions,
+                versions_with_content,
                 key=lambda v: v.get("date_modified", ""),
                 reverse=True
             )
@@ -304,12 +314,12 @@ def get_assignment_by_id(assignment_id: int):
             modifier_ids = list({v.get("modifier_id") for v in versions_sorted if v.get("modifier_id")})
             modifier_info_map = get_users_with_roles(modifier_ids)
 
-            # Overall metadata
-            assignment_data["finalized"] = any(v.get("finalized") for v in versions)
+            # Overall metadata (based on versions with final_generated_content only)
+            assignment_data["finalized"] = any(v.get("finalized") for v in versions_with_content)
             assignment_data["date_modified"] = versions_sorted[0].get("date_modified")
 
-            ratings = [v.get("rating") for v in versions if v.get("rating")]
-            final_version = next((v for v in versions if v.get("finalized")), None)
+            ratings = [v.get("rating") for v in versions_with_content if v.get("rating")]
+            final_version = next((v for v in versions_with_content if v.get("finalized")), None)
             assignment_data["final_version_id"] = final_version.get("id") if final_version else None
             if final_version and final_version.get("rating"):
                 assignment_data["rating_status"] = "Rated"
@@ -334,9 +344,8 @@ def get_assignment_by_id(assignment_id: int):
                     "rating_status": "Rated" if v.get("rating") else "Pending"
                 })
         else:
-            assignment_data["finalized"] = False
-            assignment_data["rating_status"] = "Pending"
-            assignment_data["date_modified"] = None
+            # No versions at all - don't return the assignment
+            return None
 
         return assignment_data
 
