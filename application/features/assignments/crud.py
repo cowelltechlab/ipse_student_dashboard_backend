@@ -145,17 +145,19 @@ def get_all_assignments(tutor_user_id: Optional[int] = None):
             SELECT 
                 a.id,
                 a.student_id,
-            a.title,
-            a.class_id,
-            a.date_created,
-            a.blob_url,
-            a.source_format,
-            u.first_name,
-            u.last_name
-        FROM Assignments a
-        INNER JOIN Students s ON a.student_id = s.id
-        INNER JOIN Users u ON s.user_id = u.id
-        """
+                a.title,
+                a.class_id,
+                a.date_created,
+                a.blob_url,
+                a.source_format,
+                u.first_name,
+                u.last_name
+            FROM Assignments a
+            INNER JOIN Students s ON a.student_id = s.id
+            INNER JOIN Users u ON s.user_id = u.id
+            """
+
+        
 
         with get_sql_db_connection() as conn:
             cursor = conn.cursor()
@@ -292,9 +294,13 @@ def get_assignment_by_id(assignment_id: int):
                 if v.get("final_generated_content") is not None
             ]
 
-            # If no versions have final_generated_content, don't return the assignment
+            # If no versions have final_generated_content, return assignment with empty versions
             if not versions_with_content:
-                return None
+                assignment_data["finalized"] = False
+                assignment_data["rating_status"] = "Pending"
+                assignment_data["date_modified"] = None
+                assignment_data["final_version_id"] = None
+                return assignment_data
 
             versions_sorted = sorted(
                 versions_with_content,
@@ -336,8 +342,11 @@ def get_assignment_by_id(assignment_id: int):
                     "rating_status": "Rated" if v.get("rating") else "Pending"
                 })
         else:
-            # No versions at all - don't return the assignment
-            return None
+            # No versions at all - return assignment with empty versions array
+            assignment_data["finalized"] = False
+            assignment_data["rating_status"] = "Pending"
+            assignment_data["date_modified"] = None
+            assignment_data["final_version_id"] = None
 
         return assignment_data
 

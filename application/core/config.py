@@ -1,5 +1,7 @@
 from functools import lru_cache
+import os
 from typing import Optional
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from application.core.secret_manager import SecretManager
 
@@ -7,14 +9,9 @@ from application.core.secret_manager import SecretManager
 class Settings(BaseSettings):
     project_name: str = "ipse_dashboard"
     key_vault_name: str = "cowell-tech-lab-secrets"
-    db_url: str = (
-        "Driver={ODBC Driver 18 for SQL Server};"
-        "Server=tcp:ai-for-higher-learning.database.windows.net,1433;"
-        "Database=ai-for-higher-learning;"
-        "Encrypt=yes;"
-        "TrustServerCertificate=no;"
-        "Authentication=ActiveDirectoryInteractive;"
-    )
+    load_dotenv()
+    
+    db_url: str = os.getenv("DB_URL")
     # db_url: str = None
     # api_key: str = None
     jwt_secret: Optional[str] = None
