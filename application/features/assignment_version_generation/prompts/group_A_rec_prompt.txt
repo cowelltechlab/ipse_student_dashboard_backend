@@ -68,7 +68,7 @@ Step 1: Identify Skills for Success (Capacity-Challenge Analysis)
 •	Define the target academic skills needed for the assignment.
 •	Identify at least three skills required to succeed (e.g., planning, organizing, memory, evidence use, communication, etc.).
 •	Compare these to the student’s existing skills and challenges.
-•	Show the capacity-challenge discrepancy – where the student needs to grow in skills to meet assignment expectations.
+•	Show the capacity-challenge discrepancy – where the student needs to grow in skills to meet assignment expectations. Tie this directly to the student profile.
 •	Avoid vague or shallow mismatches like:
 o	"needs motivation"
 o	"needs to focus"
@@ -85,18 +85,9 @@ UDL has three areas of intervention (engagement, representation, and action and 
 •	Executive Function - Internalize: Helping them develop independence and self-direction over time. The student can use the tool or skill independently. Example: The student creates their own checklist system for future projects.
 Include at least 3 guidelines from each UDL 3.0 area described on https://udlguidelines.cast.org/. The UDL areas are below:
 •	Engagement (the why of learning): Offer options for welcoming interest, sustaining effort and persistence, and emotional capacity, defined as: 
-o	Access - Welcoming interests and identities, Honor learners’ whole selves: Optimize choice and autonomy, Develop agency in the learning process; Optimize relevance, value and authenticity, Connect learning to experiences that are meaningful and valuable; nurture joy and play, Spark joy and playfulness in the learning process; Address biases, threats, and distractions, Foster spaces to learn and take risks.
-o	Support - Sustain Effort and Persistence, Tackle challenges with focus and determination: Clarify the meaning and purpose of goals, Emphasize the goal and why it matters;  optimize challenge and support, Set high expectations using flexible tools and supports.;  foster collaboration, interdependence, and collective learning, Learn from and with one another; foster belonging and community, Cultivate spaces where learners are wanted and where learners want to be; offer action-oriented feedback, Guide learning by emphasizing the role of effort and process.
-o	Executive Function – Emotional Capacity - Harness the power of emotions and motivation in learning: Recognize expectations, beliefs, and motivations, Set goals that inspire confidence and ownership of learning; Develop awareness of self and others, promote individual and collective reflection, Develop and manage healthy emotional responses and interactions.; Promote individual and collective reflection, Increase awareness around progress toward goals and how to learn from mistakes. Cultivate empathy and restorative practices, Learn from others’ perspectives and repair harm.
 •	Representation (the what of learning): Offer options for perception, language and symbols, and building knowledge, defined as: 
-o	Access – Perception, Interact with flexible content that offers multiple modalities and perspectives: Support opportunities to customize the display of information, Use accessible materials with settings that can be adjusted based on needs and preferences; Support multiple ways to perceive information, Share information in more ways than images and text alone; Represent a diversity of perspectives and identities in authentic ways, Learn from multiple and varying perspectives.
-o	Support - Language & Symbols, Communicate through languages that create a shared understanding: Clarify vocabulary, symbols, and language structures, Construct meaning from words, symbols, and numbers using different representations; Support decoding of text, mathematical notation, and symbols, Make sure text and symbols don't get in the way of the learning goal; Cultivate understanding and respect across languages and dialects,Use translations, descriptions, movement, and images to support learning in unfamiliar or complex languages; Address biases in the use of language and symbol, Honor a wide variety of forms of language. Illustrate through multiple media, Make learning come alive with simulations, graphics, activities, and videos.
-o	Executive Function – Building Knowledge, Construct meaning and generate new understanding: Connect prior knowledge to new learning, Build connections to prior understandings and experiences; Highlight and explore patterns, critical features, big ideas, and relationships, Accentuate important information and how it relates to the learning goal; Cultivate multiple ways of knowing and making meaning, Honor multiple and diverse ways of developing understandings of the world; Maximize transfer and generalization, Apply learning to new contexts.
 •	Action & Expression (the how of learning): Offer options for interaction, expression and communication, and Strategy Development, defined as:
-o	Access – Interaction, Interact with accessible materials and tools: Vary and honor the methods for response, navigation, and movement. interact with tools and environments that make learning physically accessible; Optimize access to accessible materials and assistive and accessible technologies and tools; Open doors to learning with accessible tools and devices.
-o	Support - Expression and Communication, Compose and share ideas using tools that help attain learning goals: Use multiple media for communication, Express learning in flexible ways; Use multiple tools for construction, composition, and creativity, Share thoughts and ideas using tools that complement the learning goal; Build fluencies with graduated support for practice and performance, Apply and gradually release scaffolds to support learner agency; Address biases related to modes of expression and communication, Honor a wide variety of forms of communication.
-o	Executive Function - Strategy Development, Strategize and act on plans to make the most out of learning: Set meaningful goals, Practice setting challenging and authentic goals; Anticipate and plan for challenges, Formulate reasonable plans for reaching goals; Organize information and resources, Support organization and memory using flexible tools and processes; Enhance capacity for monitoring progress, Analyze growth over time and how to build from it; Challenge exclusionary practice, Work toward building more inclusive spaces and systems.
-
+- Each guideline should be **linked to the student profile**: e.g., “Because the student has a goal of improving writing, provide an outline template to build planning skills.”  
 ________________________________________
 
 Step 3: Develop 6 UDL Assignment Options for the Student based on Identified Guidelines and Capacity-Challenge Analysis.
@@ -113,6 +104,14 @@ Guidance for Novel/Experiential Options:
 •	Turn a passive activity into an interactive one (e.g., instead of watching a video, attend a workshop or simulation and document observations).
 •	Integrate cross-disciplinary or sensory experiences that deepen understanding (e.g., creating a short photo essay after observing a location connected to the topic).
 •	Always specify how the student will capture, organize, and use information from the experience in ways that develop academic skills.
+
+- Each option must:  
+  - Connect to **student’s strengths, goals, or interests** if at all possible.  
+  - Build **transferable skills** the student can apply beyond this class.  
+  - Be **clear, rigorous, and doable** without extra professor work.  
+  - Show **how the student will capture and organize** information.  
+
+
 All suggestions must:
 ✅ Address a specific capacity-building need and/or challenge-reduction need.
 ✅ Build a transferable learning skill.
@@ -156,20 +155,21 @@ o	“Use gestures” (unless integrated into academic thinking)
 ________________________________________
 Step 4: Finalize the 3 Best Assignment Options
 Out of the six generated options above, choose the 3 options that will most effectively:
+✅ Prioritize options that build on the student's learning goals, short term, and long term goals
 ✅ Close the gap between the assignment demands and the student’s goals, based on the student’s skills
-✅ Help improve learning, grades, and understanding
+✅ Help improve learning, grades, and understanding, especially helping the student move toward their long and short term goals
 ✅ Ensure the assignment is challenging but not overwhelming
-✅ Build toward independence and self-determination
+✅ Build skills aligned with **this student’s short- and/or long-term goals**.  
 ✅ Require no changes to lectures or professor involvement
 ________________________________________
 Step 5: Student-Facing Output
 Each option must include:
-✅ Name of the strategy. e.g., Make a video response, Use an essay template, Summarize reading, Group Note-Taker Role). Include an emoji specific to the options to support understanding.
+✅ Name of the strategy. (e.g., Make a video response, Use an essay template, Summarize reading, Group Note-Taker Role). Include an emoji specific to the options to support understanding.
 ✅ What the student will do in 1-2 short statements
-✅ Three Explanation Statements. These must FRAME OPTIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES. Instead, emphasize how this change will help them complete the task successfully by providing support, building skills, or encouraging independence, and/or explicitly state how this builds on their strengths, goals, hobbies, interests, and achievements. ONLY mention a hobby/interest/goal if they are directly relevant to the assignment. Do not force connections. 
-o	How this option builds on the student’s existing strengths, goals, achievements and interests
+✅ Explanations (3)**. These should be highly personalized for the student. This should not sound generic. These must FRAME OPTIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES. Instead, emphasize how this change will help them complete the task successfully by providing support, building skills, or encouraging independence, and/or explicitly state how this builds on their strengths, goals, hobbies, interests, and achievements. ONLY mention a hobby/interest/goal if they are directly relevant to the assignment. Do not force connections. 
+o	How this option builds on the student’s strengths, goals, achievements and interests. Reference these specifically, especially goals.
 o	What about this option might present a challenge or barrier. ##FRAME ASSIGNMENT ACCOMMODATIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES.##
-o	Describe how this option will help build toward the student’s class goals OR long-term goals
+o	Describe how this option will help build skills aligned with **this student’s short- and/or long-term goals**. Reference the student's spcific goals by name (e.g., this will build organizational skills for tunning a business in thhe future; this will help you learn more abour psychology; this will work on your hoal of being on time). **You must reference's student's SPECIFIC learning goal, SPECIFIC short term goal, or SPECIFIC long term after school goals or interest** whichever is most relevant. do NOT just say 'work toward your short term goal, say what the goal is (e.g., this will build focus to get things in on time, Builds communication and organization skills for restaurant work).
 Important Notes
 •	Use UDL and causal agency theory internally, but do not mention UDL or technical terms in the final explanation.
 •	Use a simplified text for adults with reading disabilities without being childish (e.g., do a presentation NOT do a show and tell). Student-facing output must be simple, clean, and respectful. Use short, direct sentences about 5-7 words long. Explanations should be 1-2 sentences.
