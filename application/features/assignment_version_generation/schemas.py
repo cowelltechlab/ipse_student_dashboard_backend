@@ -32,7 +32,7 @@ class AssignmentGenerationOptionsResponse(BaseModel):
 
 class AssignmentVersionGenerationResponse(BaseModel):
     version_document_id: str
-    json_content: Dict[str, Any]
+    html_content: str
 
 
 class SupportToolsModel(BaseModel):
@@ -79,7 +79,7 @@ class AssignmentJsonContent(BaseModel):
 
 
 class AssignmentUpdateBody(BaseModel):
-    updated_json_content: AssignmentJsonContent = Field(..., description="Full assignment JSON matching the generation schema.")
+    updated_html_content: str = Field(..., description="Full assignment HTML content.")
 
 class SupportTools(BaseModel):
     toolsHtml: str
@@ -92,6 +92,16 @@ class AssignmentJson(BaseModel):
     promptsHtml: str
     supportTools: SupportTools
     motivationalMessageHtml: str
+
+# Legacy JSON-based schemas (kept for backward compatibility)
+class AssignmentVersionGenerationJsonResponse(BaseModel):
+    """Legacy response model - use AssignmentVersionGenerationResponse instead"""
+    version_document_id: str
+    json_content: Dict[str, Any]
+
+class AssignmentUpdateJsonBody(BaseModel):
+    """Legacy update body - use AssignmentUpdateBody instead"""
+    updated_json_content: AssignmentJsonContent = Field(..., description="Full assignment JSON matching the generation schema.")
 
 # What the frontend sends:
 class UpdateAssignmentRequest(BaseModel):
