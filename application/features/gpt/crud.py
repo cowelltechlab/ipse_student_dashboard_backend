@@ -64,7 +64,7 @@ def process_gpt_prompt_json(
             "format": {
                 "type": "json_schema",
                 "name": "AssignmentPackage",
-                "strict": False,
+                "strict": True,
                 "schema": ASSIGNMENT_PACKAGE_JSON_SCHEMA,  # <-- raw JSON Schema dict
             }
         },
@@ -161,29 +161,3 @@ def generate_vision_statement(student_info: str) -> str:
     Student info: {student_info}
     """
     return process_gpt_prompt(prompt, model="gpt-4")
-def generate_gpt_prompt(assignment, student, profile):
-    return f"""
-    You are an AI system following UDL guidelines from https://udlguidelines.cast.org/.
-
-    1. Original Assignment: {assignment.html_content}
-
-    2. UDL Recommendations:
-    MME: {profile.get('udl_reasons', {}).get('Engagement', 'N/A')}
-    MMR: {profile.get('udl_reasons', {}).get('Representation', 'N/A')}
-    MMAE: {profile.get('udl_reasons', {}).get('Expression', 'N/A')}
-
-    3. Requested Recommendations:
-    - Use student strengths: {profile['strengths']}
-    - Avoid student challenges: {profile['challenges']}
-
-    4. Additional User Requests:
-    - Adjust reading level to: {student.reading_level}
-    - Adjust writing level to: {student.writing_level}
-
-    ### Your Tasks
-    A. Rewrite the assignment incorporating ONLY the above
-    B. Reword based on reading/writing level
-
-    Output:
-    - Fully revised HTML assignment only. Do not output markdown or explanation.
-    """
