@@ -11,8 +11,8 @@ def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
     Counts how many tokens a text will consume for the specified model.
     """
     # Map new/unknown models to a known encoding
-    if model.startswith("gpt-4.1") or model.startswith("gpt-5-mini"):
-        # GPT-4.1 and gpt-5-mini families both use cl100k_base
+    if model.startswith("gpt-4.1") or model.startswith("gpt-4o"):
+        # GPT-4.1 and gpt-4o families both use cl100k_base
         enc = tiktoken.get_encoding("cl100k_base")
     else:
         try:

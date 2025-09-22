@@ -42,6 +42,21 @@ Rules:
 REQUIRED OUTPUT FORMAT (MUST FOLLOW EXACTLY):
 • Output a formatted HTML output ONLY. All *Html values must be valid HTML fragments (no <!DOCTYPE>, <html>, <head>, or <body> wrappers).
 • Use semantic headings inside fragments (e.g., <h2>Assignment Instructions</h2>), lists, and paragraphs as needed.
+-Use <ul> for bullet lists.
+- Use <ol> only for true sequences or steps.
+- Never put bullet items inside <ol>.
+- Do not rely on data-list="bullet"; it is not a standard attribute.
+- Code blocks must be outside any list and use <pre><code>…</code></pre> (or Quill’s ql-code-block), not list tags.
+- Return ONLY a raw HTML fragment.
+- Do not wrap in triple backticks.
+- Do not include a language tag like html.
+- Do not escape characters as \n, \u200d, etc.
+
+- No editor artifacts. Strip data-list, contenteditable, .ql-ui, and Quill wrappers.
+
+- List hygiene. Use <ul> for bullets, <ol> for true steps.
+- Nest sublists inside the parent <li> (not as a sibling).
+
 The output should generally follow this format, unless the student explicitly asks for a simpler assignment. 
 1.	Assignment Instructions (always present)
 [Plain language version of the original assignment, with the student’s selected option(s) integrated as the assigned way to complete the task. ##Do not point out accommodations. DO NOT COMPARE TO THE ORIGINAL. For example, “you will write 1–2 paragraphs,” NOT “a short version of the paper.”## Preserve theory names (e.g., Maslow’s Hierarchy) and other topic-specific words exactly, with a 2–5 word explanation. Keep instructions short, simple, respectful, and action-focused.]

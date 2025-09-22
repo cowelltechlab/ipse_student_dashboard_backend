@@ -18,7 +18,7 @@ def _parse_args(raw: str) -> dict:
 
 def stream_sections_with_tools(
     messages: List[Dict[str, Any]],
-    model: str = "gpt-5-mini",
+    model: str = "gpt-4o",
     on_complete: Callable[[dict], None] | None = None
 ) -> Iterator[str]:
     assembled: Dict[str, Any] = {
@@ -58,7 +58,7 @@ def stream_sections_with_tools(
             input=messages,
             tools=EMIT_SECTION_TOOL,
             tool_choice="auto",
-            temperature=0.2,
+            # temperature=0.2,
             max_output_tokens=9000
         ) as stream:
             for event in stream:
