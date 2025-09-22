@@ -289,7 +289,7 @@ def handle_assignment_version_generation(
         prompt = "\n".join([msg["content"] for msg in messages if msg["role"] == "user"])
         result_html = process_gpt_prompt_html(
             prompt=prompt,
-            model="gpt-4",
+            model="gpt-5-mini",
             override_max_tokens=16000,
         )
     except Exception as e:

@@ -70,43 +70,43 @@ def generate_new_assignment_version(
     
 
 
-@router.post("/assignment-generation/{assignment_version_id}/stream")
-def stream_assignment_version(
-    assignment_version_id: str,
-    selected_options: list[str] = Body(...),
-    additional_edit_suggestions: str | None = Body("")
-):
-    messages, persist_ctx = build_prompt_for_version(
-        assignment_version_id=assignment_version_id,
-        selected_options=selected_options,
-        additional_edit_suggestions=additional_edit_suggestions or ""
-    )
+# @router.post("/assignment-generation/{assignment_version_id}/stream")
+# def stream_assignment_version(
+#     assignment_version_id: str,
+#     selected_options: list[str] = Body(...),
+#     additional_edit_suggestions: str | None = Body("")
+# ):
+#     messages, persist_ctx = build_prompt_for_version(
+#         assignment_version_id=assignment_version_id,
+#         selected_options=selected_options,
+#         additional_edit_suggestions=additional_edit_suggestions or ""
+#     )
 
-    def persist_final(obj: dict):
-        version_doc = persist_ctx["version_doc"]
-        version_doc["selected_options"] = persist_ctx["selected_options"]
-        version_doc["additional_edit_suggestions"] = persist_ctx["additional_edit_suggestions"]
-        version_doc["finalized"] = False
+#     def persist_final(obj: dict):
+#         version_doc = persist_ctx["version_doc"]
+#         version_doc["selected_options"] = persist_ctx["selected_options"]
+#         version_doc["additional_edit_suggestions"] = persist_ctx["additional_edit_suggestions"]
+#         version_doc["finalized"] = False
 
-        # Convert JSON to HTML before saving
-        html_content = convert_json_to_html(obj)
-        version_doc["final_generated_content"] = {"html_content": html_content}
+#         # Convert JSON to HTML before saving
+#         html_content = convert_json_to_html(obj)
+#         version_doc["final_generated_content"] = {"html_content": html_content}
 
-        version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
-        versions_container.replace_item(item=version_doc["id"], body=version_doc)
-
-
-    def event_source():
-        for frame in stream_sections_with_tools(
-            messages,
-            model="gpt-4o-2024-08-06",
-            on_complete=persist_final
-        ):
-
-            yield frame
+#         version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
+#         versions_container.replace_item(item=version_doc["id"], body=version_doc)
 
 
-    return StreamingResponse(event_source(), media_type="text/event-stream")
+#     def event_source():
+#         for frame in stream_sections_with_tools(
+#             messages,
+#             model="gpt-5-mini",
+#             on_complete=persist_final
+#         ):
+
+#             yield frame
+
+
+#     return StreamingResponse(event_source(), media_type="text/event-stream")
 
 
 

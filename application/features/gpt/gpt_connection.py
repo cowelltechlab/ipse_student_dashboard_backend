@@ -4,12 +4,15 @@ from openai import OpenAI
 
 client = OpenAI()
 
+import tiktoken
+
 def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
     """
     Counts how many tokens a text will consume for the specified model.
     """
     # Map new/unknown models to a known encoding
-    if model.startswith("gpt-4.1"):
+    if model.startswith("gpt-4.1") or model.startswith("gpt-5-mini"):
+        # GPT-4.1 and gpt-5-mini families both use cl100k_base
         enc = tiktoken.get_encoding("cl100k_base")
     else:
         try:
@@ -20,9 +23,10 @@ def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
 
 
 
+
 def get_gpt_response(
     prompt: str,
-    model: str = "gpt-3.5-turbo",
+    model: str = "gpt-4o",
     override_max_tokens: Optional[int] = None
 ) -> str:
     if not client.api_key:
@@ -48,8 +52,8 @@ def get_gpt_response(
     resp = client.chat.completions.create(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        max_tokens=max_output_tokens,
-        temperature=0.7,
+        max_completion_tokens=max_output_tokens,
+        # temperature=0.7,
     )
 
     return resp.choices[0].message.content.strip()
