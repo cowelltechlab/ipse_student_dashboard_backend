@@ -11,8 +11,86 @@ from application.features.assignment_version_generation.helpers import generate_
 from application.database.nosql_connection import get_cosmos_db_connection
 
 
-from application.features.assignment_version_generation.template_verification_helpers import needs_template, validate_and_order_result
-from application.features.gpt.crud import process_gpt_prompt_json
+from application.features.gpt.crud import process_gpt_prompt_html
+
+
+def convert_json_to_html(json_content: dict) -> str:
+    """
+    Convert legacy JSON assignment content to a single HTML block.
+
+    Args:
+        json_content: Legacy JSON object with structured HTML sections
+
+    Returns:
+        Combined HTML string with all sections
+    """
+    html_parts = []
+    html_parts.append('<div class="assignment-content">')
+
+    # Assignment Instructions
+    if "assignmentInstructionsHtml" in json_content:
+        html_parts.extend([
+            '  <section class="instructions">',
+            '    <h2>Assignment Instructions</h2>',
+            f'    {json_content["assignmentInstructionsHtml"]}',
+            '  </section>'
+        ])
+
+    # Step-by-Step Plan
+    if "stepByStepPlanHtml" in json_content:
+        html_parts.extend([
+            '  <section class="plan">',
+            '    <h2>Step-by-Step Plan</h2>',
+            f'    {json_content["stepByStepPlanHtml"]}',
+            '  </section>'
+        ])
+
+    # Prompts
+    if "promptsHtml" in json_content:
+        html_parts.extend([
+            '  <section class="prompts">',
+            '    <h2>Prompts</h2>',
+            f'    {json_content["promptsHtml"]}',
+            '  </section>'
+        ])
+
+    # Support Tools
+    support_tools = json_content.get("supportTools", {})
+    if support_tools:
+        html_parts.extend([
+            '  <section class="support-tools">',
+            '    <h2>Tools and Resources</h2>'
+        ])
+
+        if "toolsHtml" in support_tools:
+            html_parts.append(f'    {support_tools["toolsHtml"]}')
+
+        if "aiPromptingHtml" in support_tools:
+            html_parts.extend([
+                '    <h3>AI Prompting Guide</h3>',
+                f'    {support_tools["aiPromptingHtml"]}'
+            ])
+
+        if "aiPolicyHtml" in support_tools:
+            html_parts.extend([
+                '    <h3>AI Policy</h3>',
+                f'    {support_tools["aiPolicyHtml"]}'
+            ])
+
+        html_parts.append('  </section>')
+
+    # Motivational Message
+    if "motivationalMessageHtml" in json_content:
+        html_parts.extend([
+            '  <section class="motivation">',
+            '    <h2>Motivation</h2>',
+            f'    {json_content["motivationalMessageHtml"]}',
+            '  </section>'
+        ])
+
+    html_parts.append('</div>')
+
+    return '\n'.join(html_parts)
 
 
 
@@ -153,39 +231,71 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
     }
 
 
+def get_html_content_from_document(version_doc: dict) -> str | None:
+    """
+    Extract HTML content from version document, converting legacy JSON if needed.
+
+    Args:
+        version_doc: Version document from database
+
+    Returns:
+        HTML content string or None if no content found
+    """
+    final_content = version_doc.get("final_generated_content", {})
+
+    # Check for new HTML format first
+    if "html_content" in final_content:
+        return final_content["html_content"]
+
+    # Check for legacy JSON format
+    if "json_content" in final_content:
+        json_content = final_content["json_content"]
+        # Convert JSON to HTML
+        html_content = convert_json_to_html(json_content)
+
+        # Update the document to use HTML format (migrate on-the-fly)
+        version_doc["final_generated_content"] = {"html_content": html_content}
+        try:
+            versions_container.replace_item(item=version_doc["id"], body=version_doc)
+        except Exception as e:
+            # If migration fails, just return the converted HTML without persisting
+            pass
+
+        return html_content
+
+    # Check for very old format with direct HTML fields
+    if "generated_html" in final_content or "raw_text" in final_content:
+        return final_content.get("generated_html") or final_content.get("raw_text")
+
+    return None
+
+
 def handle_assignment_version_generation(
     assignment_version_id: str,
     selected_options: list[str],
     additional_edit_suggestions: str | None
 ):
-    # Build messages + context using the JSON header (non-streaming)
+    # Build messages + context for HTML generation
     messages, ctx = build_prompt_for_version(
         assignment_version_id=assignment_version_id,
         selected_options=selected_options,
         additional_edit_suggestions=additional_edit_suggestions or "",
-        for_stream=False,  # IMPORTANT: ensures json_header is used
+        for_stream=False
     )
 
-    # Call non-streaming structured output model
+    # Call HTML generation model
     try:
-        result_text = process_gpt_prompt_json(
-            messages=messages,
-            model="gpt-4o-2024-08-06",
+        # Convert messages to a single prompt string for HTML generation
+        prompt = "\n".join([msg["content"] for msg in messages if msg["role"] == "user"])
+        result_html = process_gpt_prompt_html(
+            prompt=prompt,
+            model="gpt-4o",
             override_max_tokens=16000,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 
-    # Determine if a template is required (pre-validate)
     version_doc = ctx["version_doc"]
-    assignment_type = version_doc.get("assignment_type") or ""  # or map id->name upstream
-    selected_options_str = json.dumps(ctx.get("selected_options", []), indent=2)
-    template_required = needs_template(selected_options_str, assignment_type)
-
-    # Validate schema, order, and template rules
-    data_obj = validate_and_order_result(result_text, template_required)
-
-    # Persist JSON with version history
     current_timestamp = datetime.datetime.utcnow().replace(tzinfo=None).isoformat() + "Z"
 
     # Save current version to history before updating (if it exists)
@@ -201,12 +311,10 @@ def handle_assignment_version_generation(
         version_doc["generation_history"].append(current_version)
 
     version_doc["selected_options"] = selected_options
-    # Choose a single, consistent field name:
     version_doc["additional_edit_suggestions"] = additional_edit_suggestions or ""
     version_doc["finalized"] = False
     version_doc["final_generated_content"] = {
-        "json_content": data_obj,
-        "raw_text": result_text,
+        "html_content": result_html
     }
     version_doc["date_modified"] = current_timestamp
 
@@ -217,14 +325,14 @@ def handle_assignment_version_generation(
 
     return {
         "version_document_id": version_doc["id"],
-        "json_content": data_obj,
+        "html_content": result_html,
     }
 
 
 
 
-# For PUT endpoint. Replaces the full JSON object. Preserves the original once.
-def handle_assignment_version_update(assignment_version_id: str, updated_json_content: dict) -> dict:
+# For PUT endpoint. Replaces the full HTML content. Preserves the original.
+def handle_assignment_version_update(assignment_version_id: str, updated_html: str) -> dict:
     # 1) Load
     try:
         version_doc = versions_container.read_item(
@@ -234,41 +342,18 @@ def handle_assignment_version_update(assignment_version_id: str, updated_json_co
     except Exception:
         raise HTTPException(status_code=404, detail="Assignment version not found")
 
-    # 2) Decide if a template is required for this assignment
-    #    Reuse your same trigger logic from generation time.
-    selected_options = version_doc.get("selected_options", [])
-    assignment_type   = version_doc.get("assignment_type") or version_doc.get("assignment", {}).get("assignment_type")
-    # Normalize to string list for the helper
-    try:
-        selected_options_str = json.dumps(selected_options, indent=2)
-    except Exception:
-        selected_options_str = str(selected_options)
+    # 2) Basic validation - ensure it's HTML content
+    if not isinstance(updated_html, str) or not updated_html.strip():
+        raise HTTPException(status_code=400, detail="Invalid HTML content provided")
 
-    # If you defined _needs_template elsewhere, import and reuse it.
-    template_required = needs_template(selected_options_str, assignment_type)
-
-    # 3) Validate and normalize order
-    validated = validate_and_order_result(updated_json_content, template_required)
-
-    # 4) Preserve original JSON once (if not already saved) and save current version to history
+    # 3) Preserve original content once (if not already saved) and save current version to history
     current_timestamp = datetime.datetime.utcnow().isoformat() + "Z"
 
-    if "original_generated_json_content" not in version_doc:
-        # Handle legacy docs that stored HTML instead of JSON
-        legacy_html = (
-            version_doc.get("final_generated_content", {}).get("html_content")
-            if isinstance(version_doc.get("final_generated_content"), dict)
-            else None
-        )
-        if legacy_html:
-            version_doc["original_generated_html_content"] = legacy_html
-        original_json = (
-            version_doc.get("final_generated_content", {}).get("json_content")
-            if isinstance(version_doc.get("final_generated_content"), dict)
-            else None
-        )
-        if original_json is not None:
-            version_doc["original_generated_json_content"] = original_json
+    if "original_generated_content" not in version_doc:
+        # Store the original generated content
+        original_content = version_doc.get("final_generated_content")
+        if original_content:
+            version_doc["original_generated_content"] = original_content
 
     # Save current version to history before updating (if it exists)
     if "final_generated_content" in version_doc and version_doc["final_generated_content"]:
@@ -282,19 +367,117 @@ def handle_assignment_version_update(assignment_version_id: str, updated_json_co
         current_version["generation_type"] = "edit"  # This is a manual edit
         version_doc["generation_history"].append(current_version)
 
-    # 5) Write the new JSON
-    version_doc["final_generated_content"] = {"json_content": validated}
+    # 4) Write the new HTML
+    version_doc["final_generated_content"] = {"html_content": updated_html}
     version_doc["finalized"] = False
     version_doc["date_modified"] = current_timestamp
 
-    # 6) Save
+    # 5) Save
     try:
         versions_container.replace_item(item=version_doc["id"], body=version_doc)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to update version document: {str(e)}")
 
-    # 7) Return
+    # 6) Return
     return {
         "version_document_id": version_doc["id"],
-        "json_content": validated
+        "html_content": updated_html
+    }
+
+
+def get_assignment_version_html(assignment_version_id: str) -> dict:
+    """
+    Get the HTML content for an assignment version, converting legacy JSON if needed.
+
+    Args:
+        assignment_version_id: The ID of the assignment version
+
+    Returns:
+        Dictionary with version_document_id and html_content
+    """
+    try:
+        version_doc = versions_container.read_item(
+            item=assignment_version_id,
+            partition_key=assignment_version_id
+        )
+    except Exception:
+        raise HTTPException(status_code=404, detail="Assignment version not found")
+
+    html_content = get_html_content_from_document(version_doc)
+
+    if html_content is None:
+        raise HTTPException(status_code=404, detail="No content found for this assignment version")
+
+    return {
+        "version_document_id": version_doc["id"],
+        "html_content": html_content
+    }
+
+
+def migrate_legacy_json_to_html(assignment_version_id: str = None) -> dict:
+    """
+    Migrate legacy JSON content to HTML format.
+
+    Args:
+        assignment_version_id: Optional specific version to migrate. If None, migrates all legacy versions.
+
+    Returns:
+        Migration results summary
+    """
+    migrated_count = 0
+    error_count = 0
+    errors = []
+
+    if assignment_version_id:
+        # Migrate specific version
+        try:
+            version_doc = versions_container.read_item(
+                item=assignment_version_id,
+                partition_key=assignment_version_id
+            )
+
+            final_content = version_doc.get("final_generated_content", {})
+            if "json_content" in final_content and "html_content" not in final_content:
+                html_content = convert_json_to_html(final_content["json_content"])
+                version_doc["final_generated_content"] = {"html_content": html_content}
+                version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
+
+                versions_container.replace_item(item=version_doc["id"], body=version_doc)
+                migrated_count = 1
+
+        except Exception as e:
+            error_count = 1
+            errors.append(f"Error migrating {assignment_version_id}: {str(e)}")
+
+    else:
+        # Migrate all legacy versions
+        try:
+            # Query for documents with legacy JSON format
+            legacy_docs = list(versions_container.query_items(
+                query="SELECT * FROM c WHERE IS_DEFINED(c.final_generated_content.json_content) AND NOT IS_DEFINED(c.final_generated_content.html_content)",
+                enable_cross_partition_query=True
+            ))
+
+            for doc in legacy_docs:
+                try:
+                    json_content = doc["final_generated_content"]["json_content"]
+                    html_content = convert_json_to_html(json_content)
+
+                    doc["final_generated_content"] = {"html_content": html_content}
+                    doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
+
+                    versions_container.replace_item(item=doc["id"], body=doc)
+                    migrated_count += 1
+
+                except Exception as e:
+                    error_count += 1
+                    errors.append(f"Error migrating {doc.get('id', 'unknown')}: {str(e)}")
+
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Migration failed: {str(e)}")
+
+    return {
+        "migrated_count": migrated_count,
+        "error_count": error_count,
+        "errors": errors[:10]  # Limit to first 10 errors
     }

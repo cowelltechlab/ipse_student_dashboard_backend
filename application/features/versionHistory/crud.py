@@ -8,6 +8,41 @@ from bs4 import BeautifulSoup
 import io
 import re
 
+# Import legacy conversion utilities
+from application.features.assignment_version_generation.crud import convert_json_to_html
+
+
+def get_html_content_from_version_document(document: dict) -> str:
+    """
+    Extract HTML content from version document, handling both new and legacy formats.
+
+    Args:
+        document: Version document from database
+
+    Returns:
+        HTML content string
+    """
+    final_content = document.get("final_generated_content", {})
+
+    # Check for new HTML format first
+    if "html_content" in final_content:
+        return final_content["html_content"]
+
+    # Check for legacy JSON format
+    if "json_content" in final_content:
+        json_content = final_content["json_content"]
+        return convert_json_to_html(json_content)
+
+    # Check for very old format with direct HTML fields
+    if "generated_html" in final_content:
+        return final_content["generated_html"]
+
+    if "raw_text" in final_content:
+        return final_content["raw_text"]
+
+    # Fallback - no content found
+    return "<p>No content available</p>"
+
 
 def convert_html_to_word_bytes(html_content: str) -> bytes:
     """
@@ -138,46 +173,11 @@ def download_assignment_version(container, document_version_id: str) -> dict:
         
         item = items[0]
         
-        # Extract content from final_generated_content.json_content
-        final_content = item.get("final_generated_content", {}).get("json_content", {})
-        
-        if not final_content:
+        # Get HTML content using the unified helper that handles all formats
+        combined_html = get_html_content_from_version_document(item)
+
+        if not combined_html or combined_html == "<p>No content available</p>":
             raise HTTPException(status_code=400, detail="No final content available for download")
-        
-        # Combine all HTML sections with counter reset divs to fix numbered list continuity
-        html_sections = []
-        
-        # Wrap each section to ensure numbered lists restart
-        def wrap_section_with_counter_reset(html):
-            return f'<div style="counter-reset: list-item;">{html}</div>'
-        
-        # Assignment instructions
-        if final_content.get("assignmentInstructionsHtml"):
-            html_sections.append(wrap_section_with_counter_reset(final_content["assignmentInstructionsHtml"]))
-        
-        # Step by step plan
-        if final_content.get("stepByStepPlanHtml"):
-            html_sections.append(wrap_section_with_counter_reset(final_content["stepByStepPlanHtml"]))
-        
-        # Brainstorm prompts
-        if final_content.get("promptsHtml"):
-            html_sections.append(wrap_section_with_counter_reset(final_content["promptsHtml"]))
-        
-        # Support tools
-        support_tools = final_content.get("supportTools", {})
-        if support_tools.get("toolsHtml"):
-            html_sections.append(wrap_section_with_counter_reset(support_tools["toolsHtml"]))
-        if support_tools.get("aiPromptingHtml"):
-            html_sections.append(wrap_section_with_counter_reset(support_tools["aiPromptingHtml"]))
-        if support_tools.get("aiPolicyHtml"):
-            html_sections.append(wrap_section_with_counter_reset(support_tools["aiPolicyHtml"]))
-        
-        # Motivational message
-        if final_content.get("motivationalMessageHtml"):
-            html_sections.append(wrap_section_with_counter_reset(final_content["motivationalMessageHtml"]))
-        
-        # Combine all sections with section breaks
-        combined_html = "\n<hr>\n".join(html_sections)
         
         # Convert to Word document
         word_bytes = convert_html_to_word_bytes(combined_html)
@@ -192,6 +192,8 @@ def download_assignment_version(container, document_version_id: str) -> dict:
             "file_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             "file_content": word_bytes
         }
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to download version: {str(e)}")
 

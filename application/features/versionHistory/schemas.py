@@ -46,6 +46,7 @@ class GeneratedOption(BaseModel):
 
 
 class FinalGeneratedContent(BaseModel):
+    """Legacy schema - kept for backward compatibility"""
     html_content: str
 
 
@@ -59,10 +60,19 @@ class GeneratedOption(BaseModel):
     selection_logic: Optional[str] = None
     internal_id: Optional[str] = None
 
-class FinalGeneratedContent(BaseModel):
+class FinalGeneratedContentFlexible(BaseModel):
+    """Flexible schema that supports both legacy JSON and new HTML formats"""
     model_config = ConfigDict(extra='ignore')
-    # Your data shows: {'json_content': {...}}
-    json_content: Dict[str, Any]
+
+    # New HTML format
+    html_content: Optional[str] = None
+
+    # Legacy JSON format
+    json_content: Optional[Dict[str, Any]] = None
+
+    # Very old formats
+    generated_html: Optional[str] = None
+    raw_text: Optional[str] = None
 
 class AssignmentVersionResponse(BaseModel):
     # Ignore Cosmos system fields like _rid, _self, _etag, _attachments, _ts
@@ -89,7 +99,7 @@ class AssignmentVersionResponse(BaseModel):
         validation_alias=AliasChoices('additional_edit_suggestions', 'extra_ideas_for_changes'),
     )
 
-    final_generated_content: Optional[FinalGeneratedContent] = None
+    final_generated_content: Optional[FinalGeneratedContentFlexible] = None
     original_generated_json_content: Optional[Dict[str, Any]] = None
 
 

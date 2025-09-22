@@ -3,12 +3,12 @@ from typing import Dict, List, Optional
 from .gpt_connection import get_gpt_response
 from openai import OpenAI
 
-def process_gpt_prompt(prompt: str, model: str = "gpt-3.5-turbo") -> str:
+def process_gpt_prompt(prompt: str, model: str = "gpt-4o") -> str:
     # You could add extra processing here if needed
     return get_gpt_response(prompt, model)
 
 
-def process_gpt_prompt_version_suggestion_json(prompt: str, model: str = "gpt-4", override_max_tokens: Optional[int] = None
+def process_gpt_prompt_version_suggestion_json(prompt: str, model: str = "gpt-4o", override_max_tokens: Optional[int] = None
 ) -> dict:
     response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
 
@@ -54,11 +54,11 @@ ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
 
 def process_gpt_prompt_json(
     messages: List[Dict],
-    model: str = "gpt-4o-2024-08-06",
+    model: str = "gpt-4o",
     override_max_tokens: int | None = None
 ) -> dict:
     resp = client.responses.create(
-        model="gpt-4o-2024-08-06",
+        model="gpt-4o",
         input=messages,
         text={
             "format": {
@@ -68,7 +68,7 @@ def process_gpt_prompt_json(
                 "schema": ASSIGNMENT_PACKAGE_JSON_SCHEMA,  # <-- raw JSON Schema dict
             }
         },
-        temperature=0.2,
+        # temperature=0.2,
         max_output_tokens=8000,
     )
     obj = json.loads(resp.output_text)
@@ -79,7 +79,7 @@ def process_gpt_prompt_json(
 
 def process_gpt_prompt_html(
     prompt: str,
-    model: str = "gpt-4.1",
+    model: str = "gpt-4o",
     override_max_tokens: Optional[int] = None
 ) -> str:
     """
@@ -88,9 +88,9 @@ def process_gpt_prompt_html(
     """
     response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
 
-    # Optionally, validate that the output is HTML
-    if not response_text.lower().startswith("<!doctype html") and not response_text.lower().startswith("<html"):
-        raise ValueError(f"Expected HTML but got unexpected content:\n{response_text[:200]}...")
+    # # Optionally, validate that the output is HTML
+    # if not response_text.lower().startswith("<!doctype html") and not response_text.lower().startswith("<html"):
+    #     raise ValueError(f"Expected HTML but got unexpected content:\n{response_text[:200]}...")
 
     return response_text
 
@@ -105,7 +105,7 @@ def summarize_strengths(strengths: list[str]) -> str:
     NO quotation marks on any phrases. Response should be output as plain text.
     Strengths: {', '.join(strengths)}
     """
-    return process_gpt_prompt(prompt, model="gpt-4")
+    return process_gpt_prompt(prompt, model="gpt-4o")
 
 def summarize_short_term_goals(short_term: str) -> str:
     prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST) of these short-term goals in **first person**.
@@ -118,7 +118,7 @@ def summarize_short_term_goals(short_term: str) -> str:
 
     Short-term goals: {short_term}
     """
-    return process_gpt_prompt(prompt, model="gpt-4")
+    return process_gpt_prompt(prompt, model="gpt-4o")
 
 def summarize_long_term_goals(long_term: str) -> str:
     prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST)  of these long-term goals in **first person**.
@@ -131,7 +131,7 @@ def summarize_long_term_goals(long_term: str) -> str:
 
     Long-term goals: {long_term}
     """
-    return process_gpt_prompt(prompt, model="gpt-4")
+    return process_gpt_prompt(prompt, model="gpt-4o")
 
 def summarize_best_ways_to_learn(best_ways: str) -> str:
     prompt = f"""Write a short, 1 sentence summary (5-10 words AT MOST) of the best ways for me to learn, in **first person**.
@@ -146,7 +146,7 @@ def summarize_best_ways_to_learn(best_ways: str) -> str:
     These should not be a numbered list, but instead a comma-separated list of phrases.
     Best ways to learn: {best_ways}
     """
-    return process_gpt_prompt(prompt, model="gpt-4")
+    return process_gpt_prompt(prompt, model="gpt-4o")
 
 def generate_vision_statement(student_info: str) -> str:
     prompt = f"""Write a **first-person** vision statement, 1-2 sentences long (each sentence 5-7 words), using plain, simple language (no greater than 4th grade level).
@@ -160,4 +160,4 @@ def generate_vision_statement(student_info: str) -> str:
 
     Student info: {student_info}
     """
-    return process_gpt_prompt(prompt, model="gpt-4")
+    return process_gpt_prompt(prompt, model="gpt-4o")

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, Response
 from application.database.nosql_connection import get_container
 from application.features.versionHistory import crud
-from application.features.versionHistory.schemas import AssignmentVersionResponse, AssignmentVersionDownloadResponse
+from application.features.versionHistory.schemas import AssignmentVersionResponse
 from application.features.auth.permissions import require_user_access 
 
 router = APIRouter()

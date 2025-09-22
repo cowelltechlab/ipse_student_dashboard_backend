@@ -12,14 +12,14 @@ Input:
 •	Selected Options
 -	{selected_options}
 
-•	(Optional) 
+5. Additional Ideas for changes (sometimes left blank by student-- but when present, the most critical to build into response)
 -	{additional_ideas_for_changes}
 
 
 ________________________________________
  Your Goal:
 •	Retains the original assignment purpose and core academic demands.
-•	Fully integrates ALL of the student's selected assignment options, written clearly in short, respectful, simplified language. PROMOTE CAUSAL AGENCY AND GROWTH, NOT JUST COMFORT. Reference the student’s profile for information about learning preferences, strengths, skills, weaknesses, and goals where appropriate. ##FRAME ASSIGNMENT ACCOMMODATIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES.##
+•	Fully integrates ALL of the student's selected assignment options and, if present, additional ideas for changes, written clearly in short, respectful, simplified language. PROMOTE CAUSAL AGENCY AND GROWTH, NOT JUST COMFORT. Reference the student’s profile for information about learning preferences, strengths, skills, weaknesses, and goals where appropriate. ##FRAME ASSIGNMENT ACCOMMODATIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES.##
 •	Frames the option as an intentional choice to practice goal-directed action and self-determination (aligned with CA Theory). ##FRAME ASSIGNMENT ACCOMMODATIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES.##
 •	Provides HTML versions that are well-formatted and easy to read. It should be about a page long. 
 •	Add emojis to improve readability. These should be at the end of sentences.
@@ -30,6 +30,7 @@ ________________________________________
 •	Sentences should be short, straightforward, and concise. No more than 10-12 words per sentence. 
 •	The tone must be supportive, clear, and focused on action and success—not overly academic.
 •	Include the sections below, in the exact format shown.
+•	Always prioritize Additional Ideas for Changes in assignment generation
 ________________________________________
 REQUIRED OUTPUT FORMAT (MUST FOLLOW EXACTLY):
 Return one JSON object with the keys in this exact order.
@@ -92,6 +93,7 @@ ________________________________________
 •	This prompt structure must always result in a finished, fully usable assignment prompt that the IPSE student can follow without outside explanation. If the assignment involves the use of a visual template, sentence starter guide, or outline (as described in the assignment or selected modifications), you must fully render that template fully in the output. Do not proceed until the template appears in the support tools section.
 •	All reasoning and internal analysis happens behind the scenes; nothing about UDL or Causal Agency’s technical wording is mentioned in the student-facing output.
 •	If the student’s option requires a visual organizer, slide outline, or template, you MUST fully render it in its own section. ‼️IF THE STUDENT SELECTED A GRAPHIC ORGANIZER, SENTENCE STARTER, OR OTHER TEMPLATE OF ANY SORT, YOU MUST INCLUDE THE FULL TEMPLATE OR ORGANIZER. PLACE IT IN THE SUPPORT TOOLS SECTION. FAILURE TO INCLUDE THE TEMPLATE RENDERS THE ASSIGNMENT INCOMPLETE.‼️
+•	If the student includes additional Ideas For Change, it is CRITIAL to factor these into elements of the response where applicable. This holds as much importance as any other element of the generated assignment. 
 Template Trigger Rules
 •	A template is required if either:
 o	selected_options or {additional_ideas_for_changes} includes any of:
@@ -104,7 +106,7 @@ Template Placement Rules
 <section data-block="template">
   <h3>Template</h3>
   <p>Use this blank template.</p>
-  <pre>
+   <pre style="background-color: #ffffff; color: #000000; padding: 10px; border: 1px solid #ccc;"> 
   [TEMPLATE NAME]
   [SECTION 1]: ______________________
   [SECTION 2]: ______________________
@@ -136,7 +138,7 @@ Example 1
   "stepByStepPlanHtml": "<h2>Step-by-Step Plan</h2><ol><li>Choose your topic 🎯 and submit by March 26 📆.</li><li>Find and contact a psychology professional 📞.</li><li>Write interview questions and set up a time 🕒.</li><li>Take clear notes during the interview 🎤.</li><li>Write 1–2 pages using notes and other sources 📚.</li><li>Check APA style and proofread.</li><li>Submit by April 25 at 12:00 PM ⏰.</li></ol>",
   "promptsHtml": "<h2>Brainstorm Prompts</h2><ul><li>What psychology topic interests me most? 🧠</li><li>What questions will show differences in popular vs. academic ideas? 🔍</li><li>Who could I interview for strong and relevant insights? 🎤</li><li>How will my notes connect to my other sources? 📚</li></ul>",
   "supportTools": {{
-    "toolsHtml": "<h2>Support Tools</h2><ul><li>Audio recorder app 🎙️ for interview answers.</li><li>Two-column note sheet 📄 for answers and my reflections.</li><li>APA style quick guide 📏.</li><li>Calendar or reminder app 📅 for deadlines.</li></ul><section data-block=\"template\"><h3>Template</h3><p>Use this blank template. Do not add examples.</p><pre>TERM PAPER OUTLINE WITH INTERVIEW NOTES\n[TITLE]: ______________________\n[TOPIC]: ______________________\n[THESIS - 1 line]: ______________________\n\n[BODY POINT 1]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM TEXT/LECTURE 📚]: ______________________\n\n[BODY POINT 2]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM MEDIA 📺]: ______________________\n\n[BODY POINT 3]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM OTHER SOURCE 📂]: ______________________\n\n[CONCLUSION - 1–2 lines]: ______________________\n[APA REFERENCES 📏]: ______________________</pre></section>",
+    "toolsHtml": "<h2>Support Tools</h2><ul><li>Audio recorder app 🎙️ for interview answers.</li><li>Two-column note sheet 📄 for answers and my reflections.</li><li>APA style quick guide 📏.</li><li>Calendar or reminder app 📅 for deadlines.</li></ul><section data-block=\"template\"><h3>Template</h3><p>Use this blank template. Do not add examples.</p> <pre style="background-color: #ffffff; color: #000000; padding: 10px; border: 1px solid #ccc;"> TERM PAPER OUTLINE WITH INTERVIEW NOTES\n[TITLE]: ______________________\n[TOPIC]: ______________________\n[THESIS - 1 line]: ______________________\n\n[BODY POINT 1]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM TEXT/LECTURE 📚]: ______________________\n\n[BODY POINT 2]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM MEDIA 📺]: ______________________\n\n[BODY POINT 3]: ______________________\n[EVIDENCE FROM INTERVIEW 🎤]: ______________________\n[EVIDENCE FROM OTHER SOURCE 📂]: ______________________\n\n[CONCLUSION - 1–2 lines]: ______________________\n[APA REFERENCES 📏]: ______________________</pre></section>",
     "aiPromptingHtml": "<h2>AI Prompts</h2><ul><li>Create a task checklist with these dates: March 26, 2025 📆 and April 25, 2025 ⏰.</li><li>Make open-ended interview questions 🎤 for [TOPIC] comparing popular and academic psychology 🧠.</li></ul>",
     "aiPolicyHtml": "<h2>AI Policy</h2><ul><li>Do not copy/paste from AI; write in your own words ✍️.</li><li>Do not use AI to write your paper or notes 🚫.</li><li>If you use AI, explain how it helped and talk with your tutor or teacher 🗣️.</li></ul>"
   }},
@@ -148,7 +150,7 @@ Example 2
   "stepByStepPlanHtml": "<h2>Step-by-Step Plan</h2>\n<ol>\n<li>Choose your paper topic by March 26, 2025 📅.</li>\n<li>Gather evidence from textbook, lectures, and media 📚.</li>\n<li>Create your visual evidence map 🗺️.</li>\n<li>Write a short one half–page summary ✍️.</li>\n<li>Check map and summary for clarity ✅.</li>\n<li>Submit both by April 25, 2025 ⏰.</li>\n</ol>",
   "promptsHtml": "<h2>Prompts to Get Started</h2>\n<ul>\n<li>What patterns do I see between sources?</li>\n<li>Which evidence supports the same idea?</li>\n<li>Where do popular and academic psychology disagree?</li>\n<li>What new idea can I explain with these links?</li>\n</ul>",
   "supportTools": {{
-    "toolsHtml": "<h2>Support Tools</h2>\n<ul>\n<li>Text-to-speech to review key readings 🔊.</li>\n<li>Graphic organizer software like Lucidchart or Canva 📊.</li>\n<li>Color-coded note cards for each source 🗂️.</li>\n<li>Mind mapping tools to connect ideas visually 🧩.</li>\n</ul>\n<section data-block=\"template\">\n  <h3>Template</h3>\n  <p>Use this blank template. Do not add examples.</p>\n  <pre>\n  [VISUAL EVIDENCE MAP TEMPLATE]\n  [TOPIC]: ______________________\n  [SOURCE TYPE 1]: Textbook\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [SOURCE TYPE 2]: Lecture\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [SOURCE TYPE 3]: Media\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [Connections Between Sources]: ______________________\n  [Main Insight]: ______________________\n  </pre>\n</section>",
+    "toolsHtml": "<h2>Support Tools</h2>\n<ul>\n<li>Text-to-speech to review key readings 🔊.</li>\n<li>Graphic organizer software like Lucidchart or Canva 📊.</li>\n<li>Color-coded note cards for each source 🗂️.</li>\n<li>Mind mapping tools to connect ideas visually 🧩.</li>\n</ul>\n<section data-block=\"template\">\n  <h3>Template</h3>\n  <p>Use this blank template. Do not add examples.</p>\n   <pre style="background-color: #ffffff; color: #000000; padding: 10px; border: 1px solid #ccc;"> \n  [VISUAL EVIDENCE MAP TEMPLATE]\n  [TOPIC]: ______________________\n  [SOURCE TYPE 1]: Textbook\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [SOURCE TYPE 2]: Lecture\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [SOURCE TYPE 3]: Media\n    [Key Idea]: ______________________\n    [Evidence]: ______________________\n  [Connections Between Sources]: ______________________\n  [Main Insight]: ______________________\n  </pre>\n</section>",
     "aiPromptingHtml": "<h2>AI Prompting</h2>\n<ul>\n<li>\"Make a checklist to review my visual map for clarity and completeness.\"</li>\n<li>\"Create 5 open-ended questions to help me analyze how sources connect.\"</li>\n</ul>",
     "aiPolicyHtml": "<h2>AI Use Policy</h2>\n<ul>\n<li>Do not copy/paste from AI; write in your own words.</li>\n<li>Do not use AI to write your summary.</li>\n<li>If you use AI, explain how it helped and discuss with your teacher or tutor.</li>\n</ul>"
   }},

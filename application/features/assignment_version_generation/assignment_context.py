@@ -165,78 +165,78 @@ def build_prompt_for_version(
             additional_ideas_for_changes=additional_edit_suggestions or ""
         )
 
-    # System header for tool-call streaming (updated to new schema)
-    tool_stream_header = (
-        """
-        You must NOT write plain text to the user.
+    # # System header for tool-call streaming (updated to new schema)
+    # tool_stream_header = (
+    #     """
+    #     You must NOT write plain text to the user.
 
-        Call the tool "emit_section" exactly once per finished section, in this order:
-        1. assignmentInstructionsHtml           (REQUIRED)
-        2. stepByStepPlanHtml                   (REQUIRED)
-        3. promptsHtml                          (REQUIRED)
-        4. supportTools.toolsHtml               (REQUIRED)
-        5. supportTools.aiPromptingHtml         (REQUIRED)
-        6. supportTools.aiPolicyHtml            (REQUIRED)
-        7. motivationalMessageHtml              (REQUIRED)
+    #     Call the tool "emit_section" exactly once per finished section, in this order:
+    #     1. assignmentInstructionsHtml           (REQUIRED)
+    #     2. stepByStepPlanHtml                   (REQUIRED)
+    #     3. promptsHtml                          (REQUIRED)
+    #     4. supportTools.toolsHtml               (REQUIRED)
+    #     5. supportTools.aiPromptingHtml         (REQUIRED)
+    #     6. supportTools.aiPolicyHtml            (REQUIRED)
+    #     7. motivationalMessageHtml              (REQUIRED)
 
-        IMPORTANT EMISSION RULES
-        • Emit ALL seven sections above within a SINGLE response.
-        • Do NOT wait for tool results. Do NOT stop after the first call.
-        • After emitting one section, immediately emit the next, until all are emitted in order.
-        • Each tool call must include the complete HTML fragment in field "html".
-        • Fragments must NOT include <!DOCTYPE>, <html>, <head>, or <body> wrappers.
-        • Sentences should be concise (≤ 10–12 words). Grade-4 reading level. Adult, respectful tone.
-        • Place emojis at the END of sentences (inside fragments).
+    #     IMPORTANT EMISSION RULES
+    #     • Emit ALL seven sections above within a SINGLE response.
+    #     • Do NOT wait for tool results. Do NOT stop after the first call.
+    #     • After emitting one section, immediately emit the next, until all are emitted in order.
+    #     • Each tool call must include the complete HTML fragment in field "html".
+    #     • Fragments must NOT include <!DOCTYPE>, <html>, <head>, or <body> wrappers.
+    #     • Sentences should be concise (≤ 10–12 words). Grade-4 reading level. Adult, respectful tone.
+    #     • Place emojis at the END of sentences (inside fragments).
 
-        TEMPLATE RULES (embedded inside supportTools.toolsHtml ONLY)
-        • If a template is REQUIRED (per prompt Template Trigger Rules), include exactly one block:
-        <section data-block="template">
-            <h3>Template</h3>
-            <p>Use this blank template.</p>
-            <pre>
-            [TEMPLATE NAME]
-            [SECTION 1]: ______________________
-            [SECTION 2]: ______________________
-            ...
-            </pre>
-        </section>
-        • The <pre> contains only labels/placeholders; no examples or filled content.
-        • Do NOT emit any separate template keys (e.g., no template.title, no template.bodyHtml).
+    #     TEMPLATE RULES (embedded inside supportTools.toolsHtml ONLY)
+    #     • If a template is REQUIRED (per prompt Template Trigger Rules), include exactly one block:
+    #     <section data-block="template">
+    #         <h3>Template</h3>
+    #         <p>Use this blank template.</p>
+    #         <pre>
+    #         [TEMPLATE NAME]
+    #         [SECTION 1]: ______________________
+    #         [SECTION 2]: ______________________
+    #         ...
+    #         </pre>
+    #     </section>
+    #     • The <pre> contains only labels/placeholders; no examples or filled content.
+    #     • Do NOT emit any separate template keys (e.g., no template.title, no template.bodyHtml).
 
-        GRADING & DUE DATES
-        • assignmentInstructionsHtml must include a short grading description tied to success skills and chosen options.
-        • If due dates appear in inputs, repeat them in stepByStepPlanHtml and reference them in assignmentInstructionsHtml.
+    #     GRADING & DUE DATES
+    #     • assignmentInstructionsHtml must include a short grading description tied to success skills and chosen options.
+    #     • If due dates appear in inputs, repeat them in stepByStepPlanHtml and reference them in assignmentInstructionsHtml.
 
-        CONTENT SAFETY & SCOPE
-        • Do NOT identify or label weaknesses. Frame supports as solutions to a goal-discrepancy.
-        • Preserve course technical terms exactly; add 2–5 word explanations when needed.
-        • Keep outer JSON key order in mind (this stream prepares those fields).
+    #     CONTENT SAFETY & SCOPE
+    #     • Do NOT identify or label weaknesses. Frame supports as solutions to a goal-discrepancy.
+    #     • Preserve course technical terms exactly; add 2–5 word explanations when needed.
+    #     • Keep outer JSON key order in mind (this stream prepares those fields).
 
-        GROUP LOGIC (applies automatically based on the user message content)
-        • If the user message includes student profile fields, you may reference strengths/goals
-        without naming weaknesses, per rules.
-        • If no student profile fields are present (Group B case), do NOT include or infer personal data.
+    #     GROUP LOGIC (applies automatically based on the user message content)
+    #     • If the user message includes student profile fields, you may reference strengths/goals
+    #     without naming weaknesses, per rules.
+    #     • If no student profile fields are present (Group B case), do NOT include or infer personal data.
 
-        FINAL SELF-CHECK (before emitting the last section)
-        • If Template Trigger Rules fired, confirm supportTools.toolsHtml contains one (1)
-        <section data-block="template"> with a single <pre>.
-        • Insert a final non-rendered HTML comment into supportTools.toolsHtml with:
-        <!-- TEMPLATE_REQUIRED: yes|no ; TEMPLATE_TYPE: essay|presentation|lab|reading|project|other -->
-        """
-    )
+    #     FINAL SELF-CHECK (before emitting the last section)
+    #     • If Template Trigger Rules fired, confirm supportTools.toolsHtml contains one (1)
+    #     <section data-block="template"> with a single <pre>.
+    #     • Insert a final non-rendered HTML comment into supportTools.toolsHtml with:
+    #     <!-- TEMPLATE_REQUIRED: yes|no ; TEMPLATE_TYPE: essay|presentation|lab|reading|project|other -->
+    #     """
+    # )
 
-    # System header for final-JSON (non-stream) call (kept in sync with new spec)
-    json_header = (
-        "Return one JSON object following the spec in the prompt (no tools). "
-        "Keys must be in this exact order: "
-        "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools, motivationalMessageHtml. "
-        "Inside supportTools, include keys in this exact order: toolsHtml, aiPromptingHtml, aiPolicyHtml. "
-        "Omit no keys (all are required). "
-        "All *Html values are valid HTML fragments (no outer HTML wrappers). "
-        "If a template is required, it must appear only inside supportTools.toolsHtml as a single "
-        "<section data-block=\"template\"> containing exactly one <pre> block. "
-        "Sentences ≤ 10–12 words, Grade-4 reading level, respectful adult tone, emojis at sentence ends."
-    )
+    # # System header for final-JSON (non-stream) call (kept in sync with new spec)
+    # json_header = (
+    #     "Return one JSON object following the spec in the prompt (no tools). "
+    #     "Keys must be in this exact order: "
+    #     "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools, motivationalMessageHtml. "
+    #     "Inside supportTools, include keys in this exact order: toolsHtml, aiPromptingHtml, aiPolicyHtml. "
+    #     "Omit no keys (all are required). "
+    #     "All *Html values are valid HTML fragments (no outer HTML wrappers). "
+    #     "If a template is required, it must appear only inside supportTools.toolsHtml as a single "
+    #     "<section data-block=\"template\"> containing exactly one <pre> block. "
+    #     "Sentences ≤ 10–12 words, Grade-4 reading level, respectful adult tone, emojis at sentence ends."
+    # )
 
 
     messages = []
@@ -245,9 +245,9 @@ def build_prompt_for_version(
         "selected_options": selected_options,
         "additional_edit_suggestions": additional_edit_suggestions or "",
     }
-    if for_stream:
-        messages.append({"role": "system", "content": tool_stream_header})
-    else:
-        messages.append({"role": "system", "content": json_header})
+    # if for_stream:
+    #     messages.append({"role": "system", "content": tool_stream_header})
+    # else:
+    #     messages.append({"role": "system", "content": json_header})
     messages.append({"role": "user", "content": user_prompt})
     return messages, persist_ctx

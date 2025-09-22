@@ -5,7 +5,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.assignment_version_generation.assignment_context import build_prompt_for_version, versions_container
-from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation, handle_assignment_version_generation, handle_assignment_version_update
+from application.features.assignment_version_generation.crud import handle_assignment_suggestion_generation, handle_assignment_version_generation, handle_assignment_version_update, get_assignment_version_html, migrate_legacy_json_to_html, convert_json_to_html
 from application.features.auth.permissions import require_user_access
 
 
@@ -32,7 +32,7 @@ def generate_assignment_options(assignment_id: int, _user=Depends(require_user_a
     "/assignment-generation/{assignment_version_id}",
     response_model=AssignmentVersionGenerationResponse,
     status_code=status.HTTP_200_OK,
-    summary="Generate a new assignment version JSON"
+    summary="Generate a new assignment version HTML"
 )
 def generate_new_assignment_version(
     assignment_version_id: str,
@@ -70,39 +70,43 @@ def generate_new_assignment_version(
     
 
 
-@router.post("/assignment-generation/{assignment_version_id}/stream")
-def stream_assignment_version(
-    assignment_version_id: str,
-    selected_options: list[str] = Body(...),
-    additional_edit_suggestions: str | None = Body("")
-):
-    messages, persist_ctx = build_prompt_for_version(
-        assignment_version_id=assignment_version_id,
-        selected_options=selected_options,
-        additional_edit_suggestions=additional_edit_suggestions or ""
-    )
+# @router.post("/assignment-generation/{assignment_version_id}/stream")
+# def stream_assignment_version(
+#     assignment_version_id: str,
+#     selected_options: list[str] = Body(...),
+#     additional_edit_suggestions: str | None = Body("")
+# ):
+#     messages, persist_ctx = build_prompt_for_version(
+#         assignment_version_id=assignment_version_id,
+#         selected_options=selected_options,
+#         additional_edit_suggestions=additional_edit_suggestions or ""
+#     )
 
-    def persist_final(obj: dict):
-        version_doc = persist_ctx["version_doc"]
-        version_doc["selected_options"] = persist_ctx["selected_options"]
-        version_doc["additional_edit_suggestions"] = persist_ctx["additional_edit_suggestions"]
-        version_doc["finalized"] = False
-        version_doc["final_generated_content"] = {"json_content": obj}
-        version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
-        versions_container.replace_item(item=version_doc["id"], body=version_doc)
+#     def persist_final(obj: dict):
+#         version_doc = persist_ctx["version_doc"]
+#         version_doc["selected_options"] = persist_ctx["selected_options"]
+#         version_doc["additional_edit_suggestions"] = persist_ctx["additional_edit_suggestions"]
+#         version_doc["finalized"] = False
 
+#         # Convert JSON to HTML before saving
+#         html_content = convert_json_to_html(obj)
+#         version_doc["final_generated_content"] = {"html_content": html_content}
 
-    def event_source():
-        for frame in stream_sections_with_tools(
-            messages,
-            model="gpt-4o-2024-08-06",
-            on_complete=persist_final
-        ):
-
-            yield frame
+#         version_doc["date_modified"] = datetime.datetime.utcnow().isoformat() + "Z"
+#         versions_container.replace_item(item=version_doc["id"], body=version_doc)
 
 
-    return StreamingResponse(event_source(), media_type="text/event-stream")
+#     def event_source():
+#         for frame in stream_sections_with_tools(
+#             messages,
+#             model="gpt-4o",
+#             on_complete=persist_final
+#         ):
+
+#             yield frame
+
+
+#     return StreamingResponse(event_source(), media_type="text/event-stream")
 
 
 
@@ -117,5 +121,30 @@ def update_assignment_version(
 ):
     return handle_assignment_version_update(
         assignment_version_id,
-        body.updated_json_content
+        body.updated_html_content
     )
+
+
+@router.get(
+    "/assignment-generation/{assignment_version_id}/html",
+    response_model=AssignmentVersionGenerationResponse,
+    summary="Get assignment version HTML content (with legacy conversion)"
+)
+def get_assignment_version_html_content(
+    assignment_version_id: str,
+    _user = Depends(require_user_access)
+):
+    """Get HTML content for an assignment version, automatically converting legacy JSON if needed."""
+    return get_assignment_version_html(assignment_version_id)
+
+
+@router.post(
+    "/assignment-generation/migrate",
+    summary="Migrate legacy JSON content to HTML format"
+)
+def migrate_legacy_content(
+    assignment_version_id: str = None,
+    _user = Depends(require_user_access)
+):
+    """Migrate legacy JSON content to HTML format. If assignment_version_id is provided, migrates only that version."""
+    return migrate_legacy_json_to_html(assignment_version_id)
