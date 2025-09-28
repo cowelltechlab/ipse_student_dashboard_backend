@@ -397,3 +397,25 @@ def get_all_assignment_types():
     Fetch all types of assignments from AssigntmentTypes table 
     """
     return fetch_all(table_name="AssignmentTypes")
+
+def delete_assignment_by_id(assignment_id: int):
+    """
+    Delete an assignment by ID.
+    """
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("DELETE Assignments WHERE id = ?", (assignment_id,))
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assignment with id {assignment_id} not found.")
+            conn.commit()
+    
+        # Delete associated versions from Cosmos DB
+        container = get_container()
+        query = f"SELECT * FROM c WHERE c.assignment_id = {assignment_id}"
+        items = list(container.query_items(query=query, enable_cross_partition_query=True))
+        for item in items:
+            container.delete_item(item, partition_key=item['assignment_id'])
+            
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

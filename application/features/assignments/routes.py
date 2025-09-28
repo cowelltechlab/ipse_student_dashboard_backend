@@ -13,6 +13,7 @@ from application.features.assignments.schemas import (
     AssignmentTypeListResponse
 )
 from application.features.assignments.crud import (
+    delete_assignment_by_id,
     get_all_assignment_types,
     get_all_assignments_by_student_id, 
     get_assignment_by_id, 
@@ -232,3 +233,12 @@ def update_class_route(
     if "error" in updated_assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=updated_assignment["error"])
     return updated_assignment
+
+@router.delete("/id/{assignment_id}")
+def delete_assignment(
+    assignment_id: int,
+    _user = Depends(require_user_access)
+):
+    """Delete an assignment."""
+    delete_assignment_by_id(assignment_id)
+    return {"success": True, "message": f"Assignment with id {assignment_id} deleted."}

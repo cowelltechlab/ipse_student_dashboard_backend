@@ -29,6 +29,7 @@ class AssignmentUpdate(BaseModel):
     class_id: Optional[int] = None
     content: Optional[str] = None
     date_created: Optional[datetime] = None
+    assignment_type_id: Optional[int] = None
 
 
 class AssignmentListResponse(AssignmentBase):
