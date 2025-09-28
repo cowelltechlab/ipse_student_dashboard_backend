@@ -1,17 +1,59 @@
-from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status, Depends
+from fastapi import APIRouter, Body, File, Form, HTTPException, UploadFile, status, Depends, Query
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
+import io
 
 from requests import Session
 from application.features.student_profile.crud import (
-    create_or_update_profile, get_complete_profile, get_prefill_profile, get_user_id_from_student, handle_post_ppt_urls, update_student_profile, update_user_profile_picture
+    create_or_update_profile, export_profiles_to_csv, export_profiles_to_json, get_all_complete_profiles, get_complete_profile, get_prefill_profile, get_user_id_from_student, handle_post_ppt_urls, update_student_profile, update_user_profile_picture
 )
 from application.features.student_profile.schemas import (
     PPtUrlsPayload, StudentProfileCreate, StudentProfilePrefillResponse, StudentProfileResponse, StudentProfileUpdate
 )
-from application.features.auth.permissions import require_user_access
+from application.features.auth.permissions import require_admin_access, require_user_access
 from application.utils.blob_upload import upload_profile_picture
 
 router = APIRouter()
+
+@router.get("/", response_model=List[StudentProfileResponse])
+def get_student_profiles(
+    _user=Depends(require_admin_access),
+):
+    all_profiles = get_all_complete_profiles()
+    return all_profiles
+
+
+@router.get("/export")
+def export_student_profiles(
+    format: str = Query(default="csv", regex="^(csv|json)$"),
+    # _user=Depends(require_admin_access),
+):
+    """
+    Export all student profiles in the specified format (csv or json).
+    Returns a downloadable file.
+    """
+    if format.lower() == "csv":
+        content = export_profiles_to_csv()
+        media_type = "text/csv"
+        filename = "student_profiles.csv"
+    elif format.lower() == "json":
+        content = export_profiles_to_json()
+        media_type = "application/json"
+        filename = "student_profiles.json"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid format. Use 'csv' or 'json'.")
+
+    if not content:
+        raise HTTPException(status_code=404, detail="No student profiles found to export.")
+
+    # Create file-like object from string content
+    file_obj = io.StringIO(content)
+
+    return StreamingResponse(
+        io.BytesIO(content.encode('utf-8')),
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 @router.post("/{user_id}", status_code=status.HTTP_201_CREATED)
 def upsert_student_profile(
