@@ -46,8 +46,7 @@ def export_student_profiles(
     if not content:
         raise HTTPException(status_code=404, detail="No student profiles found to export.")
 
-    # Create file-like object from string content
-    file_obj = io.StringIO(content)
+
 
     return StreamingResponse(
         io.BytesIO(content.encode('utf-8')),

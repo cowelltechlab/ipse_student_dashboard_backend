@@ -230,7 +230,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
             # Year name and user name
             cursor.execute(
                 """
-                SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url
+                SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url, s.group_type
                 FROM dbo.Students s
                 INNER JOIN dbo.Years y ON s.year_id = y.id
                 INNER JOIN dbo.Users u ON s.user_id = u.id
@@ -248,6 +248,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
             profile_picture_url = row[6] if row else None
             ppt_embed_url = row[7] if row else None
             ppt_edit_url = row[8] if row else None
+            group_type = row[9] if row else None
 
             # Classes
             cursor.execute(
@@ -289,6 +290,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         "year_name": year_name,
         "ppt_embed_url": ppt_embed_url,
         "ppt_edit_url": ppt_edit_url,
+        "group_type": group_type,
         "classes": classes,
         "strengths": doc.get("strengths"),
         "challenges": doc.get("challenges"),
@@ -574,7 +576,7 @@ def flatten_profile_for_export(profile: dict) -> dict:
     # Basic fields
     basic_fields = [
         'student_id', 'user_id', 'first_name', 'last_name', 'email', 'gt_email',
-        'profile_picture_url', 'year_name', 'ppt_embed_url', 'ppt_edit_url'
+        'profile_picture_url', 'year_name', 'ppt_embed_url', 'ppt_edit_url', 'group_type'
     ]
 
     for field in basic_fields:
