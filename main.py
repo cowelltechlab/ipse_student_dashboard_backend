@@ -1,3 +1,5 @@
+import loader  # Loads all environment variables from correct .env file
+
 from application.app import application as app
 
 if __name__ == "__main__":
