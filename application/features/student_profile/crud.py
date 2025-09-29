@@ -3,9 +3,12 @@ from dotenv import load_dotenv
 from fastapi import HTTPException
 from typing import Optional
 import uuid
+import csv
+import io
+import json
 from application.database.mssql_connection import get_sql_db_connection
 from application.features.student_profile.schemas import StudentProfileCreate, StudentProfileUpdate
-from application.database.nosql_connection import get_cosmos_db_connection  
+from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.gpt.crud import summarize_best_ways_to_learn, summarize_long_term_goals, summarize_short_term_goals, summarize_strengths, generate_vision_statement
 
 import pyodbc
@@ -172,6 +175,34 @@ def create_or_update_profile(data: StudentProfileCreate) -> dict:
         "cosmos_doc_id": doc_body["id"],
     }
 
+def get_all_complete_profiles() -> list:
+    """
+    Get all student profiles by fetching all student IDs and calling get_complete_profile for each.
+    Returns a list of complete profile dictionaries.
+    """
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Get all student IDs that have active status
+            cursor.execute("SELECT id FROM dbo.Students WHERE active_status = 1")
+            student_ids = [row[0] for row in cursor.fetchall()]
+
+    except pyodbc.Error as e:
+        return [{"error": f"Database error: {str(e)}"}]
+    except Exception as e:
+        return [{"error": f"Unexpected error: {str(e)}"}]
+
+    # Get complete profile for each student
+    profiles = []
+    for student_id in student_ids:
+        profile = get_complete_profile(student_id)
+        if profile and "error" not in profile:
+            profiles.append(profile)
+
+    return profiles
+    
+
 def get_complete_profile(student_id: int) -> Optional[dict]:
     """
     • Pull core attributes from Cosmos
@@ -199,7 +230,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
             # Year name and user name
             cursor.execute(
                 """
-                SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url
+                SELECT y.name, u.id, u.first_name, u.last_name, u.email, u.gt_email, u.profile_picture_url, s.ppt_embed_url, s.ppt_edit_url, s.group_type
                 FROM dbo.Students s
                 INNER JOIN dbo.Years y ON s.year_id = y.id
                 INNER JOIN dbo.Users u ON s.user_id = u.id
@@ -217,6 +248,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
             profile_picture_url = row[6] if row else None
             ppt_embed_url = row[7] if row else None
             ppt_edit_url = row[8] if row else None
+            group_type = row[9] if row else None
 
             # Classes
             cursor.execute(
@@ -258,6 +290,7 @@ def get_complete_profile(student_id: int) -> Optional[dict]:
         "year_name": year_name,
         "ppt_embed_url": ppt_embed_url,
         "ppt_edit_url": ppt_edit_url,
+        "group_type": group_type,
         "classes": classes,
         "strengths": doc.get("strengths"),
         "challenges": doc.get("challenges"),
@@ -531,3 +564,101 @@ def handle_post_ppt_urls(student_id: int, embed_url: str, edit_url: str) -> str:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def flatten_profile_for_export(profile: dict) -> dict:
+    """
+    Flatten nested profile data for CSV export.
+    Converts lists and nested objects to string representations.
+    """
+    flattened = {}
+
+    # Basic fields
+    basic_fields = [
+        'student_id', 'user_id', 'first_name', 'last_name', 'email', 'gt_email',
+        'profile_picture_url', 'year_name', 'ppt_embed_url', 'ppt_edit_url', 'group_type'
+    ]
+
+    for field in basic_fields:
+        flattened[field] = profile.get(field, '')
+
+    # Convert list fields to comma-separated strings
+    list_fields = ['strengths', 'challenges', 'best_ways_to_help']
+    for field in list_fields:
+        value = profile.get(field, [])
+        flattened[field] = ', '.join(value) if isinstance(value, list) else str(value)
+
+    # String fields
+    string_fields = ['long_term_goals', 'short_term_goals', 'hobbies_and_interests']
+    for field in string_fields:
+        flattened[field] = profile.get(field, '')
+
+    # Classes - convert to simplified string
+    classes = profile.get('classes', [])
+    if classes:
+        class_names = [f"{cls.get('class_name', '')} ({cls.get('course_code', '')})" for cls in classes]
+        flattened['classes'] = '; '.join(class_names)
+        flattened['class_goals'] = '; '.join([cls.get('learning_goal', '') for cls in classes])
+    else:
+        flattened['classes'] = ''
+        flattened['class_goals'] = ''
+
+    # Profile summaries
+    summaries = profile.get('profile_summaries', {})
+    if summaries:
+        flattened['strengths_summary'] = summaries.get('strengths_short', '')
+        flattened['short_term_goals_summary'] = summaries.get('short_term_goals', '')
+        flattened['long_term_goals_summary'] = summaries.get('long_term_goals', '')
+        flattened['best_ways_to_help_summary'] = summaries.get('best_ways_to_help', '')
+        flattened['vision_statement'] = summaries.get('vision', '')
+    else:
+        flattened['strengths_summary'] = ''
+        flattened['short_term_goals_summary'] = ''
+        flattened['long_term_goals_summary'] = ''
+        flattened['best_ways_to_help_summary'] = ''
+        flattened['vision_statement'] = ''
+
+    return flattened
+
+
+def export_profiles_to_csv() -> str:
+    """
+    Export all student profiles to CSV format.
+    Returns CSV content as a string.
+    """
+    profiles = get_all_complete_profiles()
+
+    if not profiles:
+        return ""
+
+    # Filter out any error profiles
+    valid_profiles = [p for p in profiles if "error" not in p]
+
+    if not valid_profiles:
+        return ""
+
+    # Flatten profiles for CSV
+    flattened_profiles = [flatten_profile_for_export(profile) for profile in valid_profiles]
+
+    # Create CSV in memory
+    output = io.StringIO()
+    if flattened_profiles:
+        fieldnames = flattened_profiles[0].keys()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerows(flattened_profiles)
+
+    return output.getvalue()
+
+
+def export_profiles_to_json() -> str:
+    """
+    Export all student profiles to formatted JSON.
+    Returns JSON content as a string.
+    """
+    profiles = get_all_complete_profiles()
+
+    # Filter out any error profiles
+    valid_profiles = [p for p in profiles if "error" not in p]
+
+    return json.dumps(valid_profiles, indent=2, default=str)

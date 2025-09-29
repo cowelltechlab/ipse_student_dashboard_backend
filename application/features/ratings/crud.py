@@ -196,6 +196,7 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
             email=user_info["email"],
             gt_email=user_info["gt_email"],
             year_name=year_name,
+            group_type=student_info["group_type"],
             profile_picture_url=user_info["profile_picture_url"],
             ppt_embed_url=student_info["ppt_embed_url"],
             ppt_edit_url=student_info["ppt_edit_url"],

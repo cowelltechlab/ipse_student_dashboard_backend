@@ -79,6 +79,7 @@ class StudentProfileResponse(BaseModel):
     profile_picture_url: Optional[str]
     ppt_embed_url: Optional[str]
     ppt_edit_url: Optional[str]
+    group_type: Optional[str]
     classes: List[StudentClass]
     strengths: List[str]
     challenges: List[str]

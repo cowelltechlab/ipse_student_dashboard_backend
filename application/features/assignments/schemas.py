@@ -29,6 +29,7 @@ class AssignmentUpdate(BaseModel):
     class_id: Optional[int] = None
     content: Optional[str] = None
     date_created: Optional[datetime] = None
+    assignment_type_id: Optional[int] = None
 
 
 class AssignmentListResponse(AssignmentBase):
@@ -109,3 +110,20 @@ class AssignmentCreateResponse(BaseModel):
 class AssignmentTypeListResponse(BaseModel):
     id: int
     type: str
+
+
+class AssignmentTextCreate(BaseModel):
+    student_id: int
+    title: str
+    class_id: int
+    content: str
+    assignment_type_id: Optional[int] = None
+    date_created: Optional[datetime] = None
+
+
+class AssignmentTextBulkCreate(BaseModel):
+    student_ids: List[int]
+    title: str
+    class_id: int
+    content: str
+    assignment_type_id: Optional[int] = None

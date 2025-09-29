@@ -152,7 +152,7 @@ def generate_vision_statement(student_info: str) -> str:
     prompt = f"""Write a **first-person** vision statement, 1-2 sentences long (each sentence 5-7 words), using plain, simple language (no greater than 4th grade level).
     Make it **motivating**, connecting my present learning to my future dreams.
     Frame it as a positive challenge I am working on, with steps I will take.
-    Follow Wehmeyer’s Causal Agency Theory by focusing on tools, self-direction, self-monitoring, and growth toward my goals.
+    Follow Wehmeyer's Causal Agency Theory by focusing on tools, self-direction, self-monitoring, and growth toward my goals.
     Avoid weaknesses, instead highlight confidence and purposeful action.
     NO quotation marks on any phrases. Response should be output as plain text.
 
@@ -161,3 +161,48 @@ def generate_vision_statement(student_info: str) -> str:
     Student info: {student_info}
     """
     return process_gpt_prompt(prompt, model="gpt-4o")
+
+
+def generate_html_from_text(text_content: str) -> str:
+    """Generate simple HTML formatting from raw text content for display. DO NOT CHANGE ANYTHING ABOUT THE INPUT CONTENT EXCEPT FOR THE HTML FORMATTING."""
+    prompt = f"""Convert the following raw text into clean, simple HTML for display purposes.
+
+Requirements:
+- Wrap paragraphs in <p> tags
+- Convert line breaks to proper paragraph separation
+- Format any lists as <ul>/<ol> with <li> items if detected
+- Make headers bold using <strong> tags if detected
+- Keep formatting simple and clean
+- Do NOT add <html>, <head>, or <body> tags - just the content
+- Preserve the original meaning and structure
+- If there are numbered instructions or steps, format them as an ordered list
+- If there are bullet points or dashes, format them as an unordered list
+- Do NOT add any new content, links, or images
+- DO NOT CHANGE THE ASSIGNMENT CONTENT IN ANY WAY - ONLY ADD HTML FORMATTING
+
+Output ONLY the HTML content, nothing else. DO not include any explanations or extra text. Do not add any additional content like ``` or ```html.
+
+Text to convert:
+{text_content}
+"""
+    try:
+        return process_gpt_prompt_html(prompt, model="gpt-4o", override_max_tokens=1000)
+    except Exception as e:
+        # Fallback to basic HTML formatting if GPT fails
+        print(f"GPT HTML generation failed: {e}")
+        return generate_basic_html_fallback(text_content)
+
+
+def generate_basic_html_fallback(text_content: str) -> str:
+    """Basic HTML formatting fallback if GPT is unavailable."""
+    # Split by double line breaks for paragraphs
+    paragraphs = text_content.split('\n\n')
+    html_paragraphs = []
+
+    for paragraph in paragraphs:
+        if paragraph.strip():
+            # Clean up single line breaks within paragraphs
+            cleaned = paragraph.replace('\n', ' ').strip()
+            html_paragraphs.append(f"<p>{cleaned}</p>")
+
+    return '\n'.join(html_paragraphs)
