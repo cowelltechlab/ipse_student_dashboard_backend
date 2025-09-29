@@ -415,7 +415,8 @@ def delete_assignment_by_id(assignment_id: int):
         query = f"SELECT * FROM c WHERE c.assignment_id = {assignment_id}"
         items = list(container.query_items(query=query, enable_cross_partition_query=True))
         for item in items:
-            container.delete_item(item, partition_key=item['assignment_id'])
-            
+            item_id = item['id']
+            container.delete_item(item, partition_key=item_id)
+
     except pyodbc.Error as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

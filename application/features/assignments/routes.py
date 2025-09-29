@@ -6,11 +6,13 @@ from fastapi import Depends, File, Form, HTTPException, APIRouter, UploadFile, s
 
 from application.features.assignments.schemas import (
     AssignmentCreate,
-    AssignmentCreateResponse, 
-    AssignmentListResponse, 
-    AssignmentDetailResponse, 
+    AssignmentCreateResponse,
+    AssignmentListResponse,
+    AssignmentDetailResponse,
     AssignmentUpdate,
-    AssignmentTypeListResponse
+    AssignmentTypeListResponse,
+    AssignmentTextCreate,
+    AssignmentTextBulkCreate
 )
 from application.features.assignments.crud import (
     delete_assignment_by_id,
@@ -26,6 +28,7 @@ from application.features.auth.permissions import require_user_access
 from application.services.html_extractors import extract_html_from_file
 from application.services.upload_to_blob import upload_to_blob
 from application.services.text_extractors import extract_text_from_file
+from application.features.gpt.crud import generate_html_from_text
 
 
 # router = APIRouter()
@@ -216,25 +219,84 @@ async def upload_many_assignment_files(
                 assignment_type_id=assignment_type_id
             )
         )
-    
+
     # 5. Store in SQL DB
     response = await create_many_assignments(assignment_data)
     return response
 
 
-@router.put("/id/{assignment_id}", response_model=AssignmentDetailResponse)
+@router.post("/text", response_model=AssignmentDetailResponse, status_code=status.HTTP_201_CREATED)
+async def create_assignment_from_text(
+    assignment_data: AssignmentTextCreate,
+    _user = Depends(require_user_access)
+):
+    """Create a new assignment from raw text content."""
+    # Generate HTML content from text using GPT
+    html_content = generate_html_from_text(assignment_data.content)
+
+    # Convert to AssignmentCreate schema
+    assignment_create_data = AssignmentCreate(
+        student_id=assignment_data.student_id,
+        title=assignment_data.title,
+        class_id=assignment_data.class_id,
+        content=assignment_data.content,
+        html_content=html_content,  # GPT-generated HTML content
+        blob_url=None,  # No file upload
+        source_format="text",  # Mark as text input
+        date_created=assignment_data.date_created or datetime.datetime.now(datetime.timezone.utc),
+        assignment_type_id=assignment_data.assignment_type_id
+    )
+
+    created_assignment = add_assignment(assignment_create_data.model_dump())
+    return created_assignment
+
+
+@router.post("/text/bulk", response_model=List[AssignmentCreateResponse], status_code=status.HTTP_201_CREATED)
+async def create_many_assignments_from_text(
+    assignment_data: AssignmentTextBulkCreate,
+    _user = Depends(require_user_access)
+):
+    """Create assignments for multiple students using the same raw text content."""
+    # Generate HTML content once for all students (efficiency)
+    html_content = generate_html_from_text(assignment_data.content)
+
+    assignment_create_list = []
+
+    for student_id in assignment_data.student_ids:
+        assignment_create_list.append(
+            AssignmentCreate(
+                student_id=student_id,
+                title=assignment_data.title,
+                class_id=assignment_data.class_id,
+                content=assignment_data.content,
+                html_content=html_content,  # GPT-generated HTML content (reused)
+                blob_url=None,  # No file upload
+                source_format="text",  # Mark as text input
+                date_created=datetime.datetime.now(datetime.timezone.utc),
+                assignment_type_id=assignment_data.assignment_type_id
+            )
+        )
+
+    # Use existing bulk creation logic
+    assignment_data_dicts = [data.model_dump() for data in assignment_create_list]
+    created_assignment_records = await add_many_assignments(assignment_data_dicts)
+    return created_assignment_records
+
+
+@router.put("/{assignment_id}")
 def update_class_route(
-    assignment_id: int, 
+    assignment_id: int,
     data: AssignmentUpdate = Body(...),
     _user = Depends(require_user_access)
 ):
-    """Update a class."""
+    """Update an assignment."""
     updated_assignment = update_assignment(assignment_id, data.dict(exclude_unset=True))
     if "error" in updated_assignment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=updated_assignment["error"])
-    return updated_assignment
 
-@router.delete("/id/{assignment_id}")
+    return {"success": True, "message": "Assignment updated successfully"}
+
+@router.delete("/{assignment_id}")
 def delete_assignment(
     assignment_id: int,
     _user = Depends(require_user_access)
