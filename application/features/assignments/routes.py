@@ -26,7 +26,7 @@ from application.features.assignments.crud import (
 )
 from application.features.auth.permissions import require_user_access
 from application.services.html_extractors import extract_html_from_file
-from application.services.upload_to_blob import upload_to_blob
+from application.services.upload_to_blob import upload_to_blob, upload_html_as_word_to_blob
 from application.services.text_extractors import extract_text_from_file
 from application.features.gpt.crud import generate_html_from_text
 
@@ -234,6 +234,13 @@ async def create_assignment_from_text(
     # Generate HTML content from text using GPT
     html_content = generate_html_from_text(assignment_data.content)
 
+    # Upload HTML content as Word document to blob storage
+    blob_url = await upload_html_as_word_to_blob(
+        html_content=html_content,
+        title=assignment_data.title,
+        student_id=assignment_data.student_id
+    )
+
     # Convert to AssignmentCreate schema
     assignment_create_data = AssignmentCreate(
         student_id=assignment_data.student_id,
@@ -241,8 +248,8 @@ async def create_assignment_from_text(
         class_id=assignment_data.class_id,
         content=assignment_data.content,
         html_content=html_content,  # GPT-generated HTML content
-        blob_url=None,  # No file upload
-        source_format="text",  # Mark as text input
+        blob_url=blob_url,  # Word document download URL
+        source_format="docx",  # Mark as Word document
         date_created=assignment_data.date_created or datetime.datetime.now(datetime.timezone.utc),
         assignment_type_id=assignment_data.assignment_type_id
     )
@@ -263,6 +270,13 @@ async def create_many_assignments_from_text(
     assignment_create_list = []
 
     for student_id in assignment_data.student_ids:
+        # Create unique Word document for each student
+        blob_url = await upload_html_as_word_to_blob(
+            html_content=html_content,
+            title=assignment_data.title,
+            student_id=student_id
+        )
+
         assignment_create_list.append(
             AssignmentCreate(
                 student_id=student_id,
@@ -270,8 +284,8 @@ async def create_many_assignments_from_text(
                 class_id=assignment_data.class_id,
                 content=assignment_data.content,
                 html_content=html_content,  # GPT-generated HTML content (reused)
-                blob_url=None,  # No file upload
-                source_format="text",  # Mark as text input
+                blob_url=blob_url,  # Unique Word document download URL per student
+                source_format="docx",  # Mark as Word document
                 date_created=datetime.datetime.now(datetime.timezone.utc),
                 assignment_type_id=assignment_data.assignment_type_id
             )

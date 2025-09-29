@@ -164,7 +164,7 @@ def generate_vision_statement(student_info: str) -> str:
 
 
 def generate_html_from_text(text_content: str) -> str:
-    """Generate simple HTML formatting from raw text content for display."""
+    """Generate simple HTML formatting from raw text content for display. DO NOT CHANGE ANYTHING ABOUT THE INPUT CONTENT EXCEPT FOR THE HTML FORMATTING."""
     prompt = f"""Convert the following raw text into clean, simple HTML for display purposes.
 
 Requirements:
@@ -177,6 +177,10 @@ Requirements:
 - Preserve the original meaning and structure
 - If there are numbered instructions or steps, format them as an ordered list
 - If there are bullet points or dashes, format them as an unordered list
+- Do NOT add any new content, links, or images
+- DO NOT CHANGE THE ASSIGNMENT CONTENT IN ANY WAY - ONLY ADD HTML FORMATTING
+
+Output ONLY the HTML content, nothing else. DO not include any explanations or extra text. Do not add any additional content like ``` or ```html.
 
 Text to convert:
 {text_content}
