@@ -45,7 +45,10 @@ async def gatech_saml_callback(
             raise RuntimeError("FRONTEND_BASE_URL not configured")
 
         params = {"sso": "gatech", "access_token": token_response.access_token}
+        print("FRONTEND_BASE_URL =", os.getenv("FRONTEND_BASE_URL"))
         redirect_url = f"{frontend}/auth/callback?{urlencode(params)}"
+        
+        print("Redirecting to:", redirect_url)
 
 
         return RedirectResponse(redirect_url, status_code=302)
