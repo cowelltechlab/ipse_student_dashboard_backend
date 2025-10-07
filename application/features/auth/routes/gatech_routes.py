@@ -17,6 +17,7 @@ router = APIRouter()
 async def gatech_sso_login(request: Request):
     auth = init_saml_auth(request)
     url = auth.login()  
+    print("final redirect to:", os.getenv("FRONTEND_BASE_URL"))
     return RedirectResponse(url, status_code=302)
 
 

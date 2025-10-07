@@ -1,4 +1,6 @@
 import loader  # Loads all environment variables from correct .env file
+loader.load_config()
+
 
 from application.app import application as app
 
