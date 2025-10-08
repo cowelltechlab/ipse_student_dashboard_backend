@@ -1,6 +1,6 @@
 import os
 from fastapi import HTTPException, APIRouter, Depends
-from application.features.auth.crud.user_crud import get_user_by_student_id
+from application.features.users.crud.user_queries import get_user_with_roles_by_id
 from application.features.auth.permissions import require_admin_access
 from application.features.auth.schemas import UserLogin, TokenResponse, ForgotPasswordRequest, ResetPasswordRequest, AdminResetPasswordRequest
 from application.features.auth.auth_helpers import validate_user_email_login, hash_password
@@ -120,23 +120,22 @@ async def admin_reset_password(
     admin_data: dict = Depends(require_admin_access)
 ):
     """
-    Admin-only endpoint to reset a student's password by student ID.
+    Admin-only endpoint to reset a user's password by user ID.
     Does not require email verification or reset tokens.
     """
-    # Get user information from student ID
-    user = get_user_by_student_id(request.student_id)
+    # Get user information from user ID
+    user = get_user_with_roles_by_id(request.user_id)
 
     if not user:
         raise HTTPException(
             status_code=404,
-            detail=f"Student with ID {request.student_id} not found."
+            detail=f"User with ID {request.user_id} not found."
         )
 
-    user_id = user["id"]
     hashed_password = hash_password(request.new_password)
 
     # Update the password
-    success = update_user_password(user_id, hashed_password)
+    success = update_user_password(request.user_id, hashed_password)
     if not success:
         raise HTTPException(
             status_code=500,
@@ -144,5 +143,5 @@ async def admin_reset_password(
         )
 
     return {
-        "message": f"Password successfully reset for student {request.student_id} ({user['first_name']} {user['last_name']})."
+        "message": f"Password successfully reset for user {request.user_id} ({user['first_name']} {user['last_name']})."
     }

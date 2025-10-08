@@ -17,6 +17,7 @@ def get_students_with_details(tutor_user_id: Optional[int] = None) -> List[Dict]
                 query = """
                     SELECT
                         s.id AS student_id,
+                        u.id AS user_id,
                         u.first_name,
                         u.last_name,
                         u.email,
@@ -38,6 +39,7 @@ def get_students_with_details(tutor_user_id: Optional[int] = None) -> List[Dict]
                 query = """
                     SELECT
                         s.id AS student_id,
+                        u.id AS user_id,
                         u.first_name,
                         u.last_name,
                         u.email,
@@ -85,6 +87,7 @@ def update_student_group_type(student_id: int, group_type: str) -> Dict:
             cursor.execute("""
                 SELECT
                     s.id AS student_id,
+                    u.id AS user_id,
                     u.first_name,
                     u.last_name,
                     u.profile_picture_url,
@@ -146,6 +149,7 @@ def update_student_ppt_urls(student_id: int, ppt_embed_url: Optional[str] = None
             cursor.execute("""
                 SELECT
                     s.id AS student_id,
+                    u.id AS user_id,
                     u.first_name,
                     u.last_name,
                     u.profile_picture_url,
@@ -209,6 +213,7 @@ def update_student_email(student_id: int, email: Optional[str] = None, gt_email:
             cursor.execute("""
                 SELECT
                     s.id AS student_id,
+                    u.id AS user_id,
                     u.first_name,
                     u.last_name,
                     u.email,

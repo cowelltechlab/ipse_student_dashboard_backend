@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 class StudentDetailsResponse(BaseModel):
     student_id: int
+    user_id: int
     first_name: str
     last_name: str
     email: Optional[str]

@@ -15,7 +15,7 @@ def load_config():
     # 3) Load the env-specific file and LET IT OVERRIDE base/OS if needed
     load_dotenv(env_path, override=True)
 
-    # 4) Optional hardening: normalize and validate critical URLs
-    fb = os.getenv("FRONTEND_BASE_URL", "").strip().strip('"').strip("'")
-    if not fb or "localhost" in fb:
-        raise RuntimeError(f"FRONTEND_BASE_URL misconfigured: {fb!r}")
+    # # 4) Optional hardening: normalize and validate critical URLs
+    # fb = os.getenv("FRONTEND_BASE_URL", "").strip().strip('"').strip("'")
+    # if not fb or "localhost" in fb:
+    #     raise RuntimeError(f"FRONTEND_BASE_URL misconfigured: {fb!r}")

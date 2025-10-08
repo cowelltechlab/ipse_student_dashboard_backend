@@ -62,5 +62,5 @@ class ResetPasswordRequest(BaseModel):
 
 
 class AdminResetPasswordRequest(BaseModel):
-    student_id: int
+    user_id: int
     new_password: str
