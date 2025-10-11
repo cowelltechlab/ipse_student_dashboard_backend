@@ -127,3 +127,67 @@ class AssignmentTextBulkCreate(BaseModel):
     class_id: int
     content: str
     assignment_type_id: Optional[int] = None
+
+
+# Export Schemas
+class StudentInfoExport(BaseModel):
+    id: int
+    user_id: int
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    gt_email: Optional[str] = None
+    year_name: Optional[str] = None
+    reading_level: Optional[str] = None
+    writing_level: Optional[str] = None
+    group_type: Optional[str] = None
+
+
+class ClassAssociationExport(BaseModel):
+    class_id: int
+    class_name: str
+    course_code: Optional[str] = None
+    term: Optional[str] = None
+    type: Optional[str] = None
+    learning_goal: Optional[str] = None
+
+
+class AssignmentVersionExport(BaseModel):
+    """Complete version document from Cosmos DB"""
+    id: str
+    assignment_id: int
+    version_number: Optional[int] = None
+    modifier_id: Optional[int] = None
+    student_id: Optional[int] = None
+    finalized: Optional[bool] = False
+    date_modified: Optional[str] = None
+    generated_options: Optional[List[dict]] = None
+    selected_options: Optional[List[str]] = None
+    skills_for_success: Optional[str] = None
+    output_reasoning: Optional[str] = None
+    final_generated_content: Optional[dict] = None
+    original_generated_content: Optional[dict] = None
+    generation_history: Optional[List[dict]] = None
+    rating_data: Optional[dict] = None
+    additional_edit_suggestions: Optional[str] = None
+
+
+class AssignmentExport(BaseModel):
+    assignment_id: int
+    title: str
+    content: str
+    html_content: Optional[str] = None
+    date_created: datetime
+    blob_url: Optional[str] = None
+    source_format: Optional[str] = None
+    assignment_type: Optional[str] = None
+    assignment_type_id: Optional[int] = None
+    class_info: Optional[ClassInfo] = None
+    versions: List[AssignmentVersionExport] = []
+
+
+class StudentAssignmentExportResponse(BaseModel):
+    student: StudentInfoExport
+    classes: List[ClassAssociationExport]
+    assignments: List[AssignmentExport]
+    export_metadata: dict
