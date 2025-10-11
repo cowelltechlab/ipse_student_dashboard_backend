@@ -28,6 +28,7 @@ class AssignmentGenerationOptionsResponse(BaseModel):
     skills_for_success: str
     learning_pathways: List[LearningPathwayOption]
     version_document_id: str
+    additional_edit_suggestions: Optional[str] = ""
 
 
 class AssignmentVersionGenerationResponse(BaseModel):

@@ -107,7 +107,39 @@ db = client.get_database_client(DATABASE_NAME)
 profile_container = db.get_container_client(PROFILE_CONTAINER_NAME)
 versions_container = db.get_container_client(VERSIONS_CONTAINER_NAME)
 
-def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int) -> dict:
+def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int, from_version: str = None) -> dict:
+    # If from_version is provided, retrieve and return the stored options
+    if from_version:
+        try:
+            version_doc = versions_container.read_item(
+                item=from_version,
+                partition_key=from_version
+            )
+        except Exception:
+            raise HTTPException(status_code=404, detail="Version document not found")
+
+        # Verify this version belongs to the requested assignment
+        if version_doc.get("assignment_id") != assignment_id:
+            raise HTTPException(status_code=400, detail="Version does not belong to this assignment")
+
+        # Get the stored options and selected ones
+        generated_options = version_doc.get("generated_options", [])
+        selected_option_ids = version_doc.get("selected_options", [])
+        additional_edit_suggestions = version_doc.get("additional_edit_suggestions", "")
+
+        # Mark which options were selected
+        for option in generated_options:
+            option_id = option.get("internal_id")
+            option["selected"] = option_id in selected_option_ids
+
+        return {
+            "skills_for_success": version_doc.get("skills_for_success", ""),
+            "learning_pathways": generated_options,
+            "version_document_id": from_version,
+            "additional_edit_suggestions": additional_edit_suggestions
+        }
+
+    # Otherwise, proceed with normal generation flow
     try:
         with get_sql_db_connection() as conn:
             with conn.cursor() as cursor:
@@ -227,7 +259,8 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
     return {
         "skills_for_success": new_doc["skills_for_success"],
         "learning_pathways": new_doc["generated_options"],
-        "version_document_id": doc_id
+        "version_document_id": doc_id,
+        "additional_edit_suggestions": ""
     }
 
 
