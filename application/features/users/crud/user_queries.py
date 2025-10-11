@@ -320,6 +320,9 @@ def update_user_email(user_id: int, email: Optional[str] = None, gt_email: Optio
 
     except HTTPException:
         raise
+    except pyodbc.IntegrityError as e:
+        # Re-raise integrity errors (e.g., duplicate email constraint violations)
+        raise HTTPException(status_code=409, detail=f"Email already exists.")
     except pyodbc.Error as e:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
