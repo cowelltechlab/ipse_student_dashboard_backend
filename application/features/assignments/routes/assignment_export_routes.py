@@ -8,6 +8,7 @@ from application.features.assignments.schemas import StudentAssignmentExportResp
 from application.features.assignments.crud import (
     export_student_assignments_json,
     export_student_assignments_download,
+    export_complete_student_data,
 )
 from application.features.auth.permissions import require_user_access
 
@@ -92,6 +93,61 @@ def export_student_data_download(
 
     from datetime import datetime as dt, timezone
     filename = f"student_{student_id}_export_{dt.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.zip"
+
+    return Response(
+        content=zip_bytes,
+        media_type="application/zip",
+        headers={
+            "Content-Disposition": f"attachment; filename=\"{filename}\""
+        }
+    )
+
+
+@router.get("/export/student/{student_id}/complete")
+def export_complete_student_data_download(
+    student_id: int,
+    assignment_ids: Optional[str] = Query(None, description="Comma-separated list of assignment IDs to filter by"),
+    _user = Depends(require_user_access)
+):
+    """
+    Export COMPLETE student data combining profile and assignments in one comprehensive ZIP.
+
+    This is the most comprehensive export available, including:
+    - Complete student profile (strengths, challenges, goals, interests)
+    - All classes with learning goals
+    - PowerPoint achievements tracking
+    - All assignments with original content
+    - All assignment versions and regenerations
+    - All ratings and feedback history
+    - Rating history for each version
+
+    ZIP contains:
+    - student_profile.txt: Complete detailed profile
+    - student_profile.json: Profile in JSON format for programmatic access
+    - classes_and_learning_goals.txt: Enrolled classes with goals
+    - assignments_summary.csv: Spreadsheet overview of all assignments
+    - assignments/ folder: Individual folders for each assignment
+    - export_metadata.txt: Information about the export contents
+
+    Args:
+        student_id: The student's internal ID
+        assignment_ids: Optional comma-separated list of assignment IDs to filter (e.g., "1,2,3")
+
+    Returns:
+        Comprehensive ZIP file with all student data
+    """
+    # Parse assignment_ids if provided
+    parsed_assignment_ids = None
+    if assignment_ids:
+        try:
+            parsed_assignment_ids = [int(aid.strip()) for aid in assignment_ids.split(",")]
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid assignment_ids format. Use comma-separated integers.")
+
+    zip_bytes = export_complete_student_data(student_id, parsed_assignment_ids)
+
+    from datetime import datetime as dt, timezone
+    filename = f"student_{student_id}_complete_export_{dt.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.zip"
 
     return Response(
         content=zip_bytes,

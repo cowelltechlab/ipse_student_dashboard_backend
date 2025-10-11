@@ -12,6 +12,7 @@ import io
 import csv
 
 from application.features.versionHistory.crud import get_html_content_from_version_document, convert_html_to_word_bytes
+from application.features.student_profile.crud import get_complete_profile
 
 
 def export_student_assignments_json(student_id: int, assignment_ids: Optional[List[int]] = None) -> dict:
@@ -416,3 +417,253 @@ def export_student_assignments_download(student_id: int, assignment_ids: Optiona
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Download export error: {str(e)}")
+
+
+def export_complete_student_data(student_id: int, assignment_ids: Optional[List[int]] = None) -> bytes:
+    """
+    Export complete student data combining profile and assignments in one comprehensive ZIP.
+
+    Includes:
+    - Full student profile (strengths, challenges, goals, interests)
+    - All classes with learning goals
+    - PowerPoint achievements URLs
+    - All assignments with versions and ratings (same as assignment export)
+
+    Args:
+        student_id: The student's internal ID
+        assignment_ids: Optional list of assignment IDs to filter by
+
+    Returns:
+        ZIP file as bytes with complete student data
+    """
+    try:
+        # 1. Get student profile data
+        try:
+            profile_data = get_complete_profile(student_id)
+            if not profile_data:
+                raise HTTPException(status_code=404, detail=f"Student profile for id {student_id} not found")
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Failed to fetch student profile: {str(e)}")
+
+        # 2. Get assignment export data
+        assignment_export_data = export_student_assignments_json(student_id, assignment_ids)
+
+        # 3. Create comprehensive ZIP
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # === STUDENT PROFILE SECTION ===
+
+            # Add detailed student profile
+            profile_text = _format_complete_student_profile(profile_data)
+            zip_file.writestr("student_profile.txt", profile_text)
+
+            # Add profile as JSON for programmatic access
+            import json
+            zip_file.writestr("student_profile.json", json.dumps(profile_data, indent=2, default=str))
+
+            # === CLASSES AND GOALS SECTION ===
+            classes_text = _format_classes_and_goals(assignment_export_data["classes"])
+            zip_file.writestr("classes_and_learning_goals.txt", classes_text)
+
+            # === ASSIGNMENTS SECTION ===
+            # Add assignments summary CSV
+            summary_csv = _create_assignments_summary_csv(assignment_export_data["assignments"])
+            zip_file.writestr("assignments_summary.csv", summary_csv)
+
+            # Add individual assignment folders (reuse existing logic)
+            for assignment in assignment_export_data["assignments"]:
+                assignment_id = assignment["assignment_id"]
+                title = assignment["title"]
+                safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in title)[:50]
+                folder_name = f"assignments/assignment_{assignment_id}_{safe_title}"
+
+                # Original assignment
+                if assignment.get("html_content"):
+                    original_word_bytes = convert_html_to_word_bytes(assignment["html_content"])
+                    zip_file.writestr(f"{folder_name}/original_assignment.docx", original_word_bytes)
+                elif assignment.get("content"):
+                    from docx import Document
+                    doc = Document()
+                    doc.add_heading(assignment["title"], 0)
+                    doc.add_paragraph(assignment["content"])
+                    doc_buffer = io.BytesIO()
+                    doc.save(doc_buffer)
+                    doc_buffer.seek(0)
+                    zip_file.writestr(f"{folder_name}/original_assignment.docx", doc_buffer.getvalue())
+
+                # Assignment versions
+                versions = assignment.get("versions", [])
+                all_ratings = []
+
+                for version in versions:
+                    version_num = version.get("version_number", "unknown")
+                    finalized_tag = "_finalized" if version.get("finalized") else ""
+
+                    html_content = get_html_content_from_version_document(version)
+                    version_word_bytes = convert_html_to_word_bytes(html_content)
+
+                    zip_file.writestr(
+                        f"{folder_name}/version_{version_num}{finalized_tag}.docx",
+                        version_word_bytes
+                    )
+
+                    if version.get("rating_data"):
+                        all_ratings.append({
+                            "version_number": version_num,
+                            "finalized": version.get("finalized"),
+                            "rating_data": version.get("rating_data")
+                        })
+
+                # Ratings file
+                if all_ratings:
+                    ratings_text = f"RATINGS FOR ASSIGNMENT {assignment_id}: {title}\n"
+                    ratings_text += "=" * 60 + "\n\n"
+
+                    for rating_info in all_ratings:
+                        ratings_text += f"Version {rating_info['version_number']}"
+                        if rating_info['finalized']:
+                            ratings_text += " (FINALIZED)"
+                        ratings_text += "\n" + "-" * 60 + "\n"
+                        ratings_text += _format_rating_data(rating_info['rating_data'])
+                        ratings_text += "\n\n"
+
+                    zip_file.writestr(f"{folder_name}/ratings.txt", ratings_text)
+                else:
+                    zip_file.writestr(f"{folder_name}/ratings.txt", "No ratings available for this assignment.\n")
+
+            # === EXPORT METADATA ===
+            metadata_text = _format_export_metadata(assignment_export_data, profile_data)
+            zip_file.writestr("export_metadata.txt", metadata_text)
+
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Complete export error: {str(e)}")
+
+
+def _format_complete_student_profile(profile_data: dict) -> str:
+    """Format complete student profile as readable text"""
+    lines = [
+        "=" * 80,
+        "COMPLETE STUDENT PROFILE",
+        "=" * 80,
+        "",
+        "=== BASIC INFORMATION ===",
+        f"Name: {profile_data.get('first_name', '')} {profile_data.get('last_name', '')}",
+        f"Student ID: {profile_data.get('student_id', 'N/A')}",
+        f"User ID: {profile_data.get('user_id', 'N/A')}",
+        f"Email: {profile_data.get('email', 'N/A')}",
+        f"GT Email: {profile_data.get('gt_email', 'N/A')}",
+        f"Year: {profile_data.get('year_name', 'N/A')}",
+        f"Group Type: {profile_data.get('group_type', 'N/A')}",
+        f"Profile Picture: {profile_data.get('profile_picture_url', 'N/A')}",
+        "",
+        "=== ACHIEVEMENTS & POWERPOINT ===",
+        f"PowerPoint Embed URL: {profile_data.get('ppt_embed_url', 'N/A')}",
+        f"PowerPoint Edit URL: {profile_data.get('ppt_edit_url', 'N/A')}",
+        "",
+        "=== STRENGTHS ===",
+    ]
+
+    strengths = profile_data.get('strengths', [])
+    if strengths:
+        for strength in strengths:
+            lines.append(f"  • {strength}")
+    else:
+        lines.append("  No strengths listed")
+
+    lines.extend(["", "=== CHALLENGES ==="])
+    challenges = profile_data.get('challenges', [])
+    if challenges:
+        for challenge in challenges:
+            lines.append(f"  • {challenge}")
+    else:
+        lines.append("  No challenges listed")
+
+    lines.extend([
+        "",
+        "=== GOALS ===",
+        f"Long-term Goals: {profile_data.get('long_term_goals', 'N/A')}",
+        f"Short-term Goals: {profile_data.get('short_term_goals', 'N/A')}",
+        "",
+        "=== BEST WAYS TO HELP ===",
+    ])
+
+    best_ways = profile_data.get('best_ways_to_help', [])
+    if best_ways:
+        for way in best_ways:
+            lines.append(f"  • {way}")
+    else:
+        lines.append("  No best ways listed")
+
+    lines.extend([
+        "",
+        "=== HOBBIES & INTERESTS ===",
+        profile_data.get('hobbies_and_interests', 'N/A'),
+        "",
+    ])
+
+    # Profile summaries if available
+    summaries = profile_data.get('profile_summaries', {})
+    if summaries:
+        lines.extend([
+            "=== AI-GENERATED SUMMARIES ===",
+            "",
+            "Strengths Summary:",
+            summaries.get('strengths_short', 'N/A'),
+            "",
+            "Short-term Goals Summary:",
+            summaries.get('short_term_goals', 'N/A'),
+            "",
+            "Long-term Goals Summary:",
+            summaries.get('long_term_goals', 'N/A'),
+            "",
+            "Best Ways to Help Summary:",
+            summaries.get('best_ways_to_help', 'N/A'),
+            "",
+            "Vision Statement:",
+            summaries.get('vision', 'N/A'),
+        ])
+
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
+def _format_export_metadata(assignment_data: dict, profile_data: dict) -> str:
+    """Format export metadata"""
+    from datetime import datetime as dt
+    lines = [
+        "=" * 60,
+        "EXPORT METADATA",
+        "=" * 60,
+        f"Export Date: {dt.utcnow().isoformat()}",
+        f"Student ID: {profile_data.get('student_id', 'N/A')}",
+        f"Student Name: {profile_data.get('first_name', '')} {profile_data.get('last_name', '')}",
+        f"Total Assignments: {assignment_data['export_metadata']['total_assignments']}",
+        f"Total Classes: {len(assignment_data['classes'])}",
+        "",
+        "=== CONTENTS ===",
+        "  • student_profile.txt - Complete student profile",
+        "  • student_profile.json - Profile in JSON format",
+        "  • classes_and_learning_goals.txt - Enrolled classes and goals",
+        "  • assignments_summary.csv - Spreadsheet of all assignments",
+        "  • assignments/ - Folder containing all assignments",
+        "    ├── Each assignment has its own folder",
+        "    ├── original_assignment.docx - Original assignment",
+        "    ├── version_N.docx - Generated versions",
+        "    └── ratings.txt - Student feedback and ratings",
+        "",
+        "This export contains ALL data for this student including:",
+        "  ✓ Complete profile with strengths, challenges, goals",
+        "  ✓ All class enrollments with learning goals",
+        "  ✓ All assignments with original content",
+        "  ✓ All assignment versions and regenerations",
+        "  ✓ All ratings and feedback history",
+        "  ✓ PowerPoint achievements tracking",
+        "=" * 60
+    ]
+    return "\n".join(lines)

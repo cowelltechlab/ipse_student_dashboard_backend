@@ -17,6 +17,7 @@ from application.features.assignments.crud.assignment_queries import (
 from application.features.assignments.crud.assignment_export import (
     export_student_assignments_json,
     export_student_assignments_download,
+    export_complete_student_data,
 )
 
 __all__ = [
@@ -34,4 +35,5 @@ __all__ = [
     # Export operations
     "export_student_assignments_json",
     "export_student_assignments_download",
+    "export_complete_student_data",
 ]
