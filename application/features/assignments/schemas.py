@@ -169,6 +169,7 @@ class AssignmentVersionExport(BaseModel):
     original_generated_content: Optional[dict] = None
     generation_history: Optional[List[dict]] = None
     rating_data: Optional[dict] = None
+    rating_history: Optional[List[dict]] = None
     additional_edit_suggestions: Optional[str] = None
 
 

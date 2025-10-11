@@ -4,8 +4,19 @@ from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 
 from application.features.auth.permissions import require_user_access
-from application.features.ratings.crud import get_rating_data_by_assignment_version_id, upsert_rating_fields, get_existing_rating_data
-from application.features.ratings.schemas import AssignmentRatingData, RatingUpdateRequest, RatingUpdateResponse, ExistingRatingDataResponse
+from application.features.ratings.crud import (
+    get_rating_data_by_assignment_version_id,
+    upsert_rating_fields,
+    get_existing_rating_data,
+    get_rating_history
+)
+from application.features.ratings.schemas import (
+    AssignmentRatingData,
+    RatingUpdateRequest,
+    RatingUpdateResponse,
+    ExistingRatingDataResponse,
+    RatingHistoryResponse
+)
 
 
 router = APIRouter()
@@ -61,3 +72,16 @@ def get_existing_assignment_rating_data(
     """
     rating_data = get_existing_rating_data(assignment_version_id)
     return rating_data
+
+
+@router.get("/{assignment_version_id}/history", response_model=RatingHistoryResponse)
+def get_assignment_rating_history(
+    assignment_version_id: str,
+    user_data: dict = Depends(require_user_access)
+):
+    """
+    Retrieves the complete rating history for an assignment version.
+    Includes current rating data and all historical snapshots from previous updates.
+    """
+    history_data = get_rating_history(assignment_version_id)
+    return history_data

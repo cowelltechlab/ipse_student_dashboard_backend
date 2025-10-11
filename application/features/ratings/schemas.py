@@ -66,3 +66,18 @@ class ExistingRatingDataResponse(BaseModel):
     options_section: Optional[OptionsRating] = None
     planning_section: Optional[PlanningForFutureRating] = None
     last_rating_update: Optional[str] = None
+
+
+class RatingHistoryEntry(BaseModel):
+    """Historical snapshot of rating data"""
+    rating_data: dict = Field(description="Complete rating data at time of snapshot")
+    timestamp: str = Field(description="ISO timestamp when this rating was saved")
+    update_type: str = Field(default="rating_update", description="Type of update")
+
+
+class RatingHistoryResponse(BaseModel):
+    """Response containing rating history for an assignment version"""
+    assignment_version_id: str
+    current_rating_data: Optional[dict] = None
+    rating_history: List[RatingHistoryEntry] = Field(default=[], description="Historical rating snapshots, oldest to newest")
+    total_updates: int = Field(description="Total number of rating updates (including current)")

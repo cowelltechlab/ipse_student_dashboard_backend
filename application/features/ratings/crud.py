@@ -254,6 +254,7 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
 def upsert_rating_fields(assignment_version_id: str, rating_data: RatingUpdateRequest) -> dict:
     """
     Store or update rating information in the assignment version Cosmos document.
+    Preserves historical rating data similar to how generation_history works.
     """
     try:
         # 1. Find the assignment version document
@@ -262,41 +263,58 @@ def upsert_rating_fields(assignment_version_id: str, rating_data: RatingUpdateRe
             parameters=[{"name": "@id", "value": assignment_version_id}],
             enable_cross_partition_query=True
         ))
-        
+
         if not version_docs:
             raise HTTPException(status_code=404, detail="Assignment version not found")
-        
+
         existing_doc = version_docs[0]
-        
+
         # 2. Convert rating data to dictionary, excluding unset values
         rating_dict = rating_data.dict(exclude_unset=True)
-        
+
         # 3. Convert datetime to ISO format if present
         if "date_modified" in rating_dict and isinstance(rating_dict["date_modified"], datetime.datetime):
             rating_dict["date_modified"] = rating_dict["date_modified"].isoformat()
-        
-        # 4. Add or update the rating fields in the document
+
+        # 4. Preserve existing rating data in history if it exists
+        if "rating_data" in existing_doc and existing_doc["rating_data"]:
+            # Initialize rating_history if it doesn't exist
+            if "rating_history" not in existing_doc:
+                existing_doc["rating_history"] = []
+
+            # Create a snapshot of the current rating data with timestamp
+            current_rating_snapshot = {
+                "rating_data": existing_doc["rating_data"].copy(),
+                "timestamp": existing_doc["rating_data"].get("last_rating_update", datetime.datetime.utcnow().isoformat()),
+                "update_type": "rating_update"
+            }
+
+            # Add to history
+            existing_doc["rating_history"].append(current_rating_snapshot)
+
+        # 5. Add or update the rating fields in the document
         if "rating_data" not in existing_doc:
             existing_doc["rating_data"] = {}
-        
+
         # Update each section if provided
         for section_key, section_data in rating_dict.items():
             if section_key != "date_modified":
                 existing_doc["rating_data"][section_key] = section_data
-        
+
         # Always update the last modified timestamp
         existing_doc["rating_data"]["last_rating_update"] = rating_dict.get("date_modified", datetime.datetime.utcnow().isoformat())
-        
-        # 5. Save back to Cosmos DB
+
+        # 6. Save back to Cosmos DB
         versions_container.replace_item(item=existing_doc["id"], body=existing_doc)
-        
+
         return {
             "success": True,
             "assignment_version_id": assignment_version_id,
             "rating_data": existing_doc["rating_data"],
-            "message": "Rating data saved successfully"
+            "rating_history_count": len(existing_doc.get("rating_history", [])),
+            "message": "Rating data saved successfully with history preserved"
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -339,6 +357,60 @@ def get_existing_rating_data(assignment_version_id: str) -> ExistingRatingDataRe
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve rating data: {str(e)}")
+
+
+def get_rating_history(assignment_version_id: str):
+    """
+    Retrieve the complete rating history for an assignment version.
+    Returns current rating data and all historical snapshots.
+    """
+    try:
+        # Find the assignment version document
+        version_docs = list(versions_container.query_items(
+            query="SELECT * FROM c WHERE c.id = @id",
+            parameters=[{"name": "@id", "value": assignment_version_id}],
+            enable_cross_partition_query=True
+        ))
+
+        if not version_docs:
+            raise HTTPException(status_code=404, detail="Assignment version not found")
+
+        existing_doc = version_docs[0]
+
+        # Get current rating data
+        current_rating_data = existing_doc.get("rating_data")
+
+        # Get rating history (may be empty if no updates have been made yet)
+        rating_history = existing_doc.get("rating_history", [])
+
+        # Calculate total updates (history + current if it exists)
+        total_updates = len(rating_history)
+        if current_rating_data:
+            total_updates += 1
+
+        from application.features.ratings.schemas import RatingHistoryResponse, RatingHistoryEntry
+
+        # Convert history to proper schema objects
+        history_entries = [
+            RatingHistoryEntry(
+                rating_data=entry.get("rating_data", {}),
+                timestamp=entry.get("timestamp", ""),
+                update_type=entry.get("update_type", "rating_update")
+            )
+            for entry in rating_history
+        ]
+
+        return RatingHistoryResponse(
+            assignment_version_id=assignment_version_id,
+            current_rating_data=current_rating_data,
+            rating_history=history_entries,
+            total_updates=total_updates
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve rating history: {str(e)}")
 
 
 def update_rating_fields(
