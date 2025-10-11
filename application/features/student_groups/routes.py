@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict
 
 from application.features.auth.permissions import require_admin_access
-from application.features.student_groups.crud import get_students_with_details, update_student_email, update_student_group_type, update_student_ppt_urls
-from application.features.student_groups.schemas import StudentDetailsResponse, StudentEmailUpdate, StudentGroupTypeUpdate, StudentPptUrlsUpdate
+from application.features.student_groups.crud import get_students_with_details, update_student_group_type, update_student_ppt_urls
+from application.features.student_groups.schemas import StudentDetailsResponse, StudentGroupTypeUpdate, StudentPptUrlsUpdate
 
 router = APIRouter()
 
@@ -39,18 +39,6 @@ async def update_student_group_type_route(
     updated_student = update_student_group_type(student_id, data.group_type)
     return updated_student
 
-@router.patch("/{student_id}/email", response_model=StudentDetailsResponse)
-async def update_student_email_route(
-    student_id: int,
-    data: StudentEmailUpdate,
-    user_data: Dict = Depends(require_admin_access)
-):
-    """Update a student's email."""
-    if data.email is None and data.gt_email is None:
-        raise HTTPException(status_code=400, detail="At least one email must be provided")
-
-    updated_student = update_student_email(student_id, data.email, data.gt_email)
-    return updated_student
 
 @router.patch("/{student_id}/ppt-urls", response_model=StudentDetailsResponse)
 async def update_student_ppt_urls_route(

@@ -258,3 +258,69 @@ def get_user_with_roles_by_id(user_id: int) -> Dict:
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+    
+
+
+def update_user_email(user_id: int, email: Optional[str] = None, gt_email: Optional[str] = None) -> Dict:
+    """Update a user's email and/or gt_email. Either or both can be updated."""
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if user exists
+            cursor.execute("SELECT id FROM Users WHERE id = ?", (user_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+            # Build dynamic update query based on provided fields
+            update_fields = []
+            update_values = []
+
+            if email is not None:
+                update_fields.append("email = ?")
+                update_values.append(email)
+
+            if gt_email is not None:
+                update_fields.append("gt_email = ?")
+                update_values.append(gt_email)
+
+            if not update_fields:
+                raise HTTPException(status_code=400, detail="At least one email must be provided")
+
+            # Execute update
+            update_query = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = ?"
+            update_values.append(user_id)
+            cursor.execute(update_query, update_values)
+            conn.commit()
+
+            # Return updated user details (join with Students if exists)
+            cursor.execute("""
+                SELECT
+                    s.id AS student_id,
+                    u.id AS user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.gt_email,
+                    u.profile_picture_url,
+                    s.group_type,
+                    s.ppt_embed_url,
+                    s.ppt_edit_url
+                FROM Users u
+                LEFT JOIN Students s ON s.user_id = u.id
+                WHERE u.id = ?
+            """, (user_id,))
+
+            result = cursor.fetchone()
+            if result:
+                column_names = [desc[0] for desc in cursor.description]
+                return dict(zip(column_names, result))
+            else:
+                raise HTTPException(status_code=404, detail="Failed to retrieve updated user")
+
+    except HTTPException:
+        raise
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")

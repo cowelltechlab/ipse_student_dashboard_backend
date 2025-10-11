@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr
 
 
+
 class InviteUserRequest(BaseModel):
     school_email: EmailStr
     google_email: Optional[EmailStr]
@@ -18,6 +19,25 @@ class CompleteInviteRequest(BaseModel):
 class DefaultProfilePicture(BaseModel):
     id: int
     url: str
+
+    class Config:
+        from_attributes = True
+
+class UserEmailUpdateData(BaseModel):
+    email: Optional[str] = None
+    gt_email: Optional[str] = None
+
+class UserDetailsResponse(BaseModel):
+    student_id: Optional[int] = None
+    user_id: int
+    first_name: str
+    last_name: str
+    email: Optional[str] = None
+    gt_email: Optional[str] = None
+    profile_picture_url: Optional[str] = None
+    group_type: Optional[str] = None
+    ppt_embed_url: Optional[str] = None
+    ppt_edit_url: Optional[str] = None
 
     class Config:
         from_attributes = True

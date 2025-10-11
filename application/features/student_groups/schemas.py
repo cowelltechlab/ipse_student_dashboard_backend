@@ -25,6 +25,3 @@ class StudentPptUrlsUpdate(BaseModel):
     ppt_embed_url: Optional[str] = None
     ppt_edit_url: Optional[str] = None
 
-class StudentEmailUpdate(BaseModel):
-    email: Optional[str] = None
-    gt_email: Optional[str] = None
