@@ -108,7 +108,7 @@ profile_container = db.get_container_client(PROFILE_CONTAINER_NAME)
 versions_container = db.get_container_client(VERSIONS_CONTAINER_NAME)
 
 def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int, from_version: str = None) -> dict:
-    # If from_version is provided, retrieve and return the stored options
+    # If from_version is provided, retrieve the stored options and create a new version
     if from_version:
         try:
             version_doc = versions_container.read_item(
@@ -126,16 +126,47 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
         generated_options = version_doc.get("generated_options", [])
         selected_option_ids = version_doc.get("selected_options", [])
         additional_edit_suggestions = version_doc.get("additional_edit_suggestions", "")
+        skills_for_success = version_doc.get("skills_for_success", "")
+        student_id = version_doc.get("student_id")
 
         # Mark which options were selected
         for option in generated_options:
             option_id = option.get("internal_id")
             option["selected"] = option_id in selected_option_ids
 
+        # Determine next version number from CosmosDB
+        try:
+            existing_versions = list(versions_container.query_items(
+                query="SELECT VALUE c.version_number FROM c WHERE c.assignment_id = @aid",
+                parameters=[{"name": "@aid", "value": assignment_id}],
+                enable_cross_partition_query=True
+            ))
+            next_version = max(existing_versions or [0]) + 1
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error fetching version numbers: {str(e)}")
+
+        # Create new version document with the same options
+        try:
+            doc_id = str(uuid.uuid4())
+            new_doc = {
+                "id": doc_id,
+                "assignment_id": assignment_id,
+                "modifier_id": modifier_id,
+                "student_id": student_id,
+                "version_number": next_version,
+                "generated_options": generated_options,
+                "skills_for_success": skills_for_success,
+                "finalized": False,
+                "date_modified": datetime.datetime.utcnow().isoformat()
+            }
+            versions_container.create_item(body=new_doc)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error saving new version: {str(e)}")
+
         return {
-            "skills_for_success": version_doc.get("skills_for_success", ""),
+            "skills_for_success": skills_for_success,
             "learning_pathways": generated_options,
-            "version_document_id": from_version,
+            "version_document_id": doc_id,
             "additional_edit_suggestions": additional_edit_suggestions
         }
 
