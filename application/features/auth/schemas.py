@@ -81,3 +81,9 @@ class ResetOwnPasswordRequest(BaseModel):
 class UpdateProfilePictureRequest(BaseModel):
     """Request to update user's own profile picture"""
     profile_picture_url: str
+
+
+class UpdateOwnNameRequest(BaseModel):
+    """Request to update user's own name"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None

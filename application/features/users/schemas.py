@@ -27,6 +27,11 @@ class UserEmailUpdateData(BaseModel):
     email: Optional[str] = None
     gt_email: Optional[str] = None
 
+
+class UserNameUpdateData(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
 class UserDetailsResponse(BaseModel):
     student_id: Optional[int] = None
     user_id: int
