@@ -11,11 +11,11 @@ def create_token_response(user_id: int, expires_delta: int = 1500) -> TokenRespo
     for a given user ID.
     """
     user = get_user_with_roles_by_id(user_id)
-    
+
     first_name = user.get("first_name")
     last_name = user.get("last_name")
     email = user.get("email")
-    school_email = user.get("school_email")
+    school_email = user.get("gt_email")
     
     role_ids = user.get("role_ids", [])
     role_names = user.get("roles", [])

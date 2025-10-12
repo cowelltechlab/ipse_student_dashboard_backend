@@ -41,6 +41,8 @@ async def get_current_user(
             status_code=404, 
             detail="User found in token but not in database"
         )
+    
+    print(user["gt_email"])
 
     return UserResponse(
         id=user["id"],
@@ -95,6 +97,9 @@ async def update_own_email(
         email=email_data.email,
         gt_email=email_data.gt_email
     )
+
+    print(email_data.gt_email)
+
 
     return updated_user
 
