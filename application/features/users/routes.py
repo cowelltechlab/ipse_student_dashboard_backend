@@ -8,11 +8,11 @@ from application.features.auth.crud import get_user_by_email
 from application.features.auth.permissions import _expand_roles, require_admin_access, require_peer_tutor_access, require_teacher_access
 from application.features.auth.schemas import StudentProfile, UserResponse
 from application.features.roles.crud import get_multiple_role_names_from_ids
-from application.features.users.crud.user_queries import get_all_users_with_roles_allowed, get_user_with_roles_by_id, update_user_email
+from application.features.users.crud.user_queries import get_all_users_with_roles_allowed, get_user_with_roles_by_id, update_user_email, update_user_name
 from application.features.users.crud.user_invitations import complete_user_invite, create_invited_user, get_user_id_from_invite_token
 from application.features.users.crud.user_management import delete_user_db
 
-from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest, UserEmailUpdateData, UserDetailsResponse
+from application.features.users.schemas import DefaultProfilePicture, InviteUserRequest, UserEmailUpdateData, UserNameUpdateData, UserDetailsResponse
 from application.services.email_sender import send_invite_email
 
 from collections import defaultdict
@@ -240,4 +240,18 @@ async def update_user_email_route(
         raise HTTPException(status_code=400, detail="At least one email must be provided")
 
     updated_user = update_user_email(user_id, data.email, data.gt_email)
+    return updated_user
+
+
+@router.patch("/{user_id}/name", response_model=UserDetailsResponse)
+async def update_user_name_route(
+    user_id: int,
+    data: UserNameUpdateData,
+    user_data: Dict = Depends(require_admin_access)
+):
+    """Update a user's first and/or last name."""
+    if data.first_name is None and data.last_name is None:
+        raise HTTPException(status_code=400, detail="At least one name field must be provided")
+
+    updated_user = update_user_name(user_id, data.first_name, data.last_name)
     return updated_user

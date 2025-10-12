@@ -327,3 +327,123 @@ def update_user_email(user_id: int, email: Optional[str] = None, gt_email: Optio
         raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def update_user_name(user_id: int, first_name: Optional[str] = None, last_name: Optional[str] = None) -> Dict:
+    """Update a user's first name and/or last name. Either or both can be updated."""
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check if user exists
+            cursor.execute("SELECT id FROM Users WHERE id = ?", (user_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail=f"User with id {user_id} not found")
+
+            # Build dynamic update query based on provided fields
+            update_fields = []
+            update_values = []
+
+            if first_name is not None:
+                update_fields.append("first_name = ?")
+                update_values.append(first_name)
+
+            if last_name is not None:
+                update_fields.append("last_name = ?")
+                update_values.append(last_name)
+
+            if not update_fields:
+                raise HTTPException(status_code=400, detail="At least one name field must be provided")
+
+            # Execute update
+            update_query = f"UPDATE Users SET {', '.join(update_fields)} WHERE id = ?"
+            update_values.append(user_id)
+            cursor.execute(update_query, update_values)
+            conn.commit()
+
+            # Return updated user details (join with Students if exists)
+            cursor.execute("""
+                SELECT
+                    s.id AS student_id,
+                    u.id AS user_id,
+                    u.first_name,
+                    u.last_name,
+                    u.email,
+                    u.gt_email,
+                    u.profile_picture_url,
+                    s.group_type,
+                    s.ppt_embed_url,
+                    s.ppt_edit_url
+                FROM Users u
+                LEFT JOIN Students s ON s.user_id = u.id
+                WHERE u.id = ?
+            """, (user_id,))
+
+            result = cursor.fetchone()
+            if result:
+                column_names = [desc[0] for desc in cursor.description]
+                return dict(zip(column_names, result))
+            else:
+                raise HTTPException(status_code=404, detail="Failed to retrieve updated user")
+
+    except HTTPException:
+        raise
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+
+
+def update_own_password(user_id: int, current_password: str, new_password: str) -> dict:
+    """
+    Update a user's own password after verifying their current password.
+
+    Args:
+        user_id: The user's ID (from JWT token)
+        current_password: User's current password for verification
+        new_password: The new password to set
+
+    Returns:
+        dict with success status and message
+
+    Raises:
+        HTTPException: 404 if user not found, 401 if current password incorrect, 500 on error
+    """
+    from application.features.auth.auth_helpers import verify_password, hash_password
+
+    try:
+        with get_sql_db_connection() as conn:
+            cursor = conn.cursor()
+
+            # 1. Get current user's password hash
+            cursor.execute("SELECT password_hash FROM Users WHERE id = ?", (user_id,))
+            result = cursor.fetchone()
+
+            if not result:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            current_password_hash = result[0]
+
+            # 2. Verify current password
+            if not verify_password(current_password, current_password_hash):
+                raise HTTPException(status_code=401, detail="Current password is incorrect")
+
+            # 3. Hash new password and update
+            new_password_hash = hash_password(new_password)
+            cursor.execute(
+                "UPDATE Users SET password_hash = ? WHERE id = ?",
+                (new_password_hash, user_id)
+            )
+            conn.commit()
+
+            return {
+                "success": True,
+                "message": "Password updated successfully"
+            }
+
+    except HTTPException:
+        raise
+    except pyodbc.Error as e:
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")

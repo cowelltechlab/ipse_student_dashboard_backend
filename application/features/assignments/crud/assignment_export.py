@@ -1,429 +1,18 @@
-from fastapi import HTTPException, status
+"""
+Assignment export functionality - JSON and ZIP downloads
+"""
+from fastapi import HTTPException
 import pyodbc
 from application.database.mssql_connection import get_sql_db_connection
 from application.database.nosql_connection import get_container
-from application.database.mssql_crud_helpers import (
-    create_many_records,
-    create_record,
-    fetch_all, 
-    update_record,
-)
 from datetime import datetime
 from typing import List, Dict, Optional
 import zipfile
 import io
 import csv
 
-from application.features.assignments.schemas import AssignmentCreateResponse, AssignmentDetailResponse
-from application.features.users.crud.user_queries import get_users_with_roles
 from application.features.versionHistory.crud import get_html_content_from_version_document, convert_html_to_word_bytes
-
-TABLE_NAME = "Assignments"
-
-def analyze_assignment_versions(assignment_id: str):
-    container = get_container()
-
-    query = f"SELECT * FROM c WHERE c.assignment_id = '{assignment_id}'"
-    items = list(container.query_items(query=query, enable_cross_partition_query=True))
-
-    if not items:
-        return {
-            "finalized": False,
-            "rating_status": "Pending",
-            "date_modified": None
-        }
-
-    finalized = any(item.get("finalized") for item in items)
-
-    date_modified = max(
-        [
-            datetime.fromisoformat(v["date_modified"]).replace(tzinfo=None)
-            for v in items
-            if "date_modified" in v
-        ],
-        default=None
-    )
-
-    # Find the finalized version, if any
-    finalized_versions = [v for v in items if v.get("finalized")]
-    finalized_version = finalized_versions[0] if finalized_versions else None
-
-    # Check rating for finalized version
-    if finalized_version and finalized_version.get("rating_data"):
-        rating_status = "Rated"
-    else:
-        # Check any versions with meaningful rating
-        if any(v.get("rating_data") for v in items):
-            rating_status = "Partially Rated"
-        else:
-            rating_status = "Pending"
-
-    return {
-        "finalized": finalized,
-        "rating_status": rating_status,
-        "date_modified": date_modified
-    }
-
-
-def get_all_assignment_versions_map():
-    """
-    Fetch all assignment versions from Cosmos DB and return a dict mapping assignment_id to its metadata.
-    """
-    container = get_container()
-
-    query = "SELECT * FROM c"
-    items = list(container.query_items(query=query, enable_cross_partition_query=True))
-
-    grouped = {}
-    for item in items:
-        aid = item.get("assignment_id")
-        if not aid:
-            continue
-        grouped.setdefault(aid, []).append(item)
-
-    result_map = {}
-
-    for assignment_id, versions in grouped.items():
-        finalized = any(v.get("finalized") for v in versions)
-        date_modified = max(
-        [
-            datetime.fromisoformat(v["date_modified"]).replace(tzinfo=None)
-            for v in versions
-            if "date_modified" in v
-        ],
-        default=None
-)
-
-        finalized_versions = [v for v in versions if v.get("finalized")]
-        finalized_version = finalized_versions[0] if finalized_versions else None
-
-        if finalized_version and finalized_version.get("rating_data"):
-            rating_status = "Rated"
-        elif any(v.get("rating_data") for v in versions):
-            rating_status = "Partially Rated"
-        else:
-            rating_status = "Pending"
-
-        result_map[str(assignment_id)] = {
-            "finalized": finalized,
-            "rating_status": rating_status,
-            "date_modified": date_modified,
-            "final_version_id": finalized_version.get("id") if finalized_version else None
-        }
-
-    return result_map
-
-
-''' 
-*** GET ASSIGNMENTS ENDPOINT *** 
-Fetch all assignments in Assignments table
-'''
-def get_all_assignments(tutor_user_id: Optional[int] = None):
-    """
-    Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
-    """
-
-    try:
-        if tutor_user_id is not None:
-            query = """
-            SELECT 
-                a.id,
-                a.student_id,
-                a.title,
-                a.class_id,
-                a.date_created,
-                a.blob_url,
-                a.source_format,
-                u.first_name,
-                u.last_name
-            FROM Assignments a
-            INNER JOIN Students s ON a.student_id = s.id
-            INNER JOIN Users u ON s.user_id = u.id
-            INNER JOIN TutorStudents ts ON ts.student_id = s.id
-            WHERE ts.user_id = ?
-            """
-            params = (tutor_user_id,)
-
-        else:
-            query = """
-            SELECT 
-                a.id,
-                a.student_id,
-                a.title,
-                a.class_id,
-                a.date_created,
-                a.blob_url,
-                a.source_format,
-                u.first_name,
-                u.last_name
-            FROM Assignments a
-            INNER JOIN Students s ON a.student_id = s.id
-            INNER JOIN Users u ON s.user_id = u.id
-            """
-
-        
-
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, params if tutor_user_id is not None else ())
-            records = cursor.fetchall()
-            column_names = [column[0] for column in cursor.description]
-
-            assignment_versions = get_all_assignment_versions_map()
-
-            results = []
-            for row in records:
-                assignment = dict(zip(column_names, row))
-                version_data = assignment_versions.get(str(assignment["id"]), {
-                    "finalized": False,
-                    "rating_status": "Pending",
-                    "date_modified": None,
-                    "final_version_id": None
-                })
-                assignment.update(version_data)
-                results.append(assignment)
-
-            return results
-
-    except pyodbc.Error as e:
-        return {"error": str(e)}
-
-
-def get_all_assignments_by_student_id(student_id):
-    """
-    Fetch all assignments with student info and NoSQL-derived metadata (efficient version).
-    """
-
-    try:
-        query = """
-        SELECT 
-            a.id,
-            a.student_id,
-            a.title,
-            a.class_id,
-            a.date_created,
-            a.blob_url,
-            a.source_format,
-            u.first_name,
-            u.last_name
-        FROM Assignments a
-        INNER JOIN Students s ON a.student_id = s.id
-        INNER JOIN Users u ON s.user_id = u.id
-        WHERE a.student_id = ?
-        """
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (student_id,))
-            records = cursor.fetchall()
-            column_names = [column[0] for column in cursor.description]
-
-            assignment_versions = get_all_assignment_versions_map()
-
-            results = []
-            for row in records:
-                assignment = dict(zip(column_names, row))
-                version_data = assignment_versions.get(str(assignment["id"]), {
-                    "finalized": False,
-                    "rating_status": "Pending",
-                    "date_modified": None,
-                    "final_version_id": None
-                })
-                assignment.update(version_data)
-                results.append(assignment)
-
-            return results
-
-    except pyodbc.Error as e:
-        return {"error": str(e)}
-
-
-def get_assignment_by_id(assignment_id: int):
-    """
-    Fetch a single assignment, including student/class info and NoSQL version metadata.
-    Resolves modifier names and roles in a single query.
-    """
-    try:
-        # 1. Fetch assignment from SQL
-        query = """
-        SELECT 
-            a.id AS assignment_id,
-            a.student_id AS student_id,
-            a.title AS assignment_title,
-            at.type AS assignment_type,
-            a.assignment_type_id AS assignment_type_id,
-            a.content AS assignment_content,
-            a.date_created AS assignment_date_created,
-            a.blob_url AS assignment_blob_url,
-            a.source_format AS assignment_source_format,
-            a.html_content AS assignment_html_content,
-
-            -- Class info
-            c.id AS class_id,
-            c.name AS class_name,
-            c.course_code AS class_course_code,
-
-            -- Student info
-            s.id AS student_internal_id,
-            u.first_name AS student_first_name,
-            u.last_name AS student_last_name
-
-        FROM Assignments a
-        INNER JOIN Students s ON a.student_id = s.id
-        INNER JOIN Users u ON s.user_id = u.id
-        LEFT JOIN AssignmentTypes at ON at.id = a.assignment_type_id
-        LEFT JOIN Classes c ON c.id = a.class_id 
-        WHERE a.id = ?
-        """
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(query, (assignment_id,))
-            record = cursor.fetchone()
-            if not record:
-                return None
-
-            column_names = [column[0] for column in cursor.description]
-            assignment_data = dict(zip(column_names, record))
-
-        # 2. Fetch versions from CosmosDB
-        container = get_container()
-        query = f"SELECT * FROM c WHERE c.assignment_id = {assignment_id}"
-        versions = list(container.query_items(query=query, enable_cross_partition_query=True))
-
-        assignment_data["versions"] = []
-
-        if versions:
-            # Filter to only include versions that have final_generated_content
-            versions_with_content = [
-                v for v in versions
-                if v.get("final_generated_content") is not None
-            ]
-
-            # If no versions have final_generated_content, return assignment with empty versions
-            if not versions_with_content:
-                assignment_data["finalized"] = False
-                assignment_data["rating_status"] = "Pending"
-                assignment_data["date_modified"] = None
-                assignment_data["final_version_id"] = None
-                return assignment_data
-
-            versions_sorted = sorted(
-                versions_with_content,
-                key=lambda v: v.get("date_modified", ""),
-                reverse=True
-            )
-
-            # Extract all modifier_ids to batch query user info
-            modifier_ids = list({v.get("modifier_id") for v in versions_sorted if v.get("modifier_id")})
-            modifier_info_map = get_users_with_roles(modifier_ids)
-
-            # Overall metadata (based on versions with final_generated_content only)
-            assignment_data["finalized"] = any(v.get("finalized") for v in versions_with_content)
-            assignment_data["date_modified"] = versions_sorted[0].get("date_modified")
-
-            ratings = [v.get("rating") for v in versions_with_content if v.get("rating")]
-            final_version = next((v for v in versions_with_content if v.get("finalized")), None)
-            assignment_data["final_version_id"] = final_version.get("id") if final_version else None
-            if final_version and final_version.get("rating"):
-                assignment_data["rating_status"] = "Rated"
-            elif not ratings:
-                assignment_data["rating_status"] = "Pending"
-            else:
-                assignment_data["rating_status"] = "Partially Rated"
-
-            # Populate version details
-            for v in versions_sorted:
-                modifier_id = v.get("modifier_id")
-                modifier_info = modifier_info_map.get(modifier_id) if modifier_id else None
-
-                assignment_data["versions"].append({
-                    "document_id": v.get("id"),
-                    "version_number": v.get("version_number"),
-                    "modified_by": modifier_info["name"] if modifier_info else None,
-                    "modifier_role": modifier_info["role"] if modifier_info else None,
-                    "date_modified": v.get("date_modified"),
-                    "document_url": f"/cosmos/download/{v.get('id')}",
-                    "finalized": v.get("finalized", False),
-                    "rating_status": "Rated" if v.get("rating") else "Pending"
-                })
-        else:
-            # No versions at all - return assignment with empty versions array
-            assignment_data["finalized"] = False
-            assignment_data["rating_status"] = "Pending"
-            assignment_data["date_modified"] = None
-            assignment_data["final_version_id"] = None
-
-        return assignment_data
-
-    except Exception as e:
-        return {"error": str(e)}
-
-
-''' 
-*** POST ASSIGNMENT ENDPOINT *** 
-Add a new Assignment in Assignments table
-'''
-def add_assignment(data):
-    new_record = create_record(TABLE_NAME, data)
-
-    if "error" in new_record:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=new_record["error"]
-        )
-    
-    return AssignmentDetailResponse(**new_record)
-
-'''
-*** POST ASSIGNMENT ENDPOINT *** 
-Add many new assignments in Assignments table
-'''
-async def add_many_assignments(data) -> List[Dict]:
-    new_records = create_many_records(TABLE_NAME, data)
-
-    if new_records and isinstance(new_records, list) and "error" in new_records[0]:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=new_records[0]["error"]
-        )
-
-    response = [AssignmentCreateResponse(**record) for record in new_records]
-    return response
-
-
-def update_assignment(assignment_id, data):
-    """
-    Update existing assignment in Assignments table
-    """
-    return update_record(TABLE_NAME, assignment_id, data)
-
-def get_all_assignment_types():
-    """ 
-    Fetch all types of assignments from AssigntmentTypes table 
-    """
-    return fetch_all(table_name="AssignmentTypes")
-
-def delete_assignment_by_id(assignment_id: int):
-    """
-    Delete an assignment by ID.
-    """
-    try:
-        with get_sql_db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute("DELETE Assignments WHERE id = ?", (assignment_id,))
-            if cursor.rowcount == 0:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Assignment with id {assignment_id} not found.")
-            conn.commit()
-    
-        # Delete associated versions from Cosmos DB
-        container = get_container()
-        query = f"SELECT * FROM c WHERE c.assignment_id = {assignment_id}"
-        items = list(container.query_items(query=query, enable_cross_partition_query=True))
-        for item in items:
-            item_id = item['id']
-            container.delete_item(item, partition_key=item_id)
-
-    except pyodbc.Error as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+from application.features.student_profile.crud import get_complete_profile
 
 
 def export_student_assignments_json(student_id: int, assignment_ids: Optional[List[int]] = None) -> dict:
@@ -828,3 +417,253 @@ def export_student_assignments_download(student_id: int, assignment_ids: Optiona
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Download export error: {str(e)}")
+
+
+def export_complete_student_data(student_id: int, assignment_ids: Optional[List[int]] = None) -> bytes:
+    """
+    Export complete student data combining profile and assignments in one comprehensive ZIP.
+
+    Includes:
+    - Full student profile (strengths, challenges, goals, interests)
+    - All classes with learning goals
+    - PowerPoint achievements URLs
+    - All assignments with versions and ratings (same as assignment export)
+
+    Args:
+        student_id: The student's internal ID
+        assignment_ids: Optional list of assignment IDs to filter by
+
+    Returns:
+        ZIP file as bytes with complete student data
+    """
+    try:
+        # 1. Get student profile data
+        try:
+            profile_data = get_complete_profile(student_id)
+            if not profile_data:
+                raise HTTPException(status_code=404, detail=f"Student profile for id {student_id} not found")
+        except Exception as e:
+            raise HTTPException(status_code=404, detail=f"Failed to fetch student profile: {str(e)}")
+
+        # 2. Get assignment export data
+        assignment_export_data = export_student_assignments_json(student_id, assignment_ids)
+
+        # 3. Create comprehensive ZIP
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            # === STUDENT PROFILE SECTION ===
+
+            # Add detailed student profile
+            profile_text = _format_complete_student_profile(profile_data)
+            zip_file.writestr("student_profile.txt", profile_text)
+
+            # Add profile as JSON for programmatic access
+            import json
+            zip_file.writestr("student_profile.json", json.dumps(profile_data, indent=2, default=str))
+
+            # === CLASSES AND GOALS SECTION ===
+            classes_text = _format_classes_and_goals(assignment_export_data["classes"])
+            zip_file.writestr("classes_and_learning_goals.txt", classes_text)
+
+            # === ASSIGNMENTS SECTION ===
+            # Add assignments summary CSV
+            summary_csv = _create_assignments_summary_csv(assignment_export_data["assignments"])
+            zip_file.writestr("assignments_summary.csv", summary_csv)
+
+            # Add individual assignment folders (reuse existing logic)
+            for assignment in assignment_export_data["assignments"]:
+                assignment_id = assignment["assignment_id"]
+                title = assignment["title"]
+                safe_title = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in title)[:50]
+                folder_name = f"assignments/assignment_{assignment_id}_{safe_title}"
+
+                # Original assignment
+                if assignment.get("html_content"):
+                    original_word_bytes = convert_html_to_word_bytes(assignment["html_content"])
+                    zip_file.writestr(f"{folder_name}/original_assignment.docx", original_word_bytes)
+                elif assignment.get("content"):
+                    from docx import Document
+                    doc = Document()
+                    doc.add_heading(assignment["title"], 0)
+                    doc.add_paragraph(assignment["content"])
+                    doc_buffer = io.BytesIO()
+                    doc.save(doc_buffer)
+                    doc_buffer.seek(0)
+                    zip_file.writestr(f"{folder_name}/original_assignment.docx", doc_buffer.getvalue())
+
+                # Assignment versions
+                versions = assignment.get("versions", [])
+                all_ratings = []
+
+                for version in versions:
+                    version_num = version.get("version_number", "unknown")
+                    finalized_tag = "_finalized" if version.get("finalized") else ""
+
+                    html_content = get_html_content_from_version_document(version)
+                    version_word_bytes = convert_html_to_word_bytes(html_content)
+
+                    zip_file.writestr(
+                        f"{folder_name}/version_{version_num}{finalized_tag}.docx",
+                        version_word_bytes
+                    )
+
+                    if version.get("rating_data"):
+                        all_ratings.append({
+                            "version_number": version_num,
+                            "finalized": version.get("finalized"),
+                            "rating_data": version.get("rating_data")
+                        })
+
+                # Ratings file
+                if all_ratings:
+                    ratings_text = f"RATINGS FOR ASSIGNMENT {assignment_id}: {title}\n"
+                    ratings_text += "=" * 60 + "\n\n"
+
+                    for rating_info in all_ratings:
+                        ratings_text += f"Version {rating_info['version_number']}"
+                        if rating_info['finalized']:
+                            ratings_text += " (FINALIZED)"
+                        ratings_text += "\n" + "-" * 60 + "\n"
+                        ratings_text += _format_rating_data(rating_info['rating_data'])
+                        ratings_text += "\n\n"
+
+                    zip_file.writestr(f"{folder_name}/ratings.txt", ratings_text)
+                else:
+                    zip_file.writestr(f"{folder_name}/ratings.txt", "No ratings available for this assignment.\n")
+
+            # === EXPORT METADATA ===
+            metadata_text = _format_export_metadata(assignment_export_data, profile_data)
+            zip_file.writestr("export_metadata.txt", metadata_text)
+
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Complete export error: {str(e)}")
+
+
+def _format_complete_student_profile(profile_data: dict) -> str:
+    """Format complete student profile as readable text"""
+    lines = [
+        "=" * 80,
+        "COMPLETE STUDENT PROFILE",
+        "=" * 80,
+        "",
+        "=== BASIC INFORMATION ===",
+        f"Name: {profile_data.get('first_name', '')} {profile_data.get('last_name', '')}",
+        f"Student ID: {profile_data.get('student_id', 'N/A')}",
+        f"User ID: {profile_data.get('user_id', 'N/A')}",
+        f"Email: {profile_data.get('email', 'N/A')}",
+        f"GT Email: {profile_data.get('gt_email', 'N/A')}",
+        f"Year: {profile_data.get('year_name', 'N/A')}",
+        f"Group Type: {profile_data.get('group_type', 'N/A')}",
+        f"Profile Picture: {profile_data.get('profile_picture_url', 'N/A')}",
+        "",
+        "=== ACHIEVEMENTS & POWERPOINT ===",
+        f"PowerPoint Embed URL: {profile_data.get('ppt_embed_url', 'N/A')}",
+        f"PowerPoint Edit URL: {profile_data.get('ppt_edit_url', 'N/A')}",
+        "",
+        "=== STRENGTHS ===",
+    ]
+
+    strengths = profile_data.get('strengths', [])
+    if strengths:
+        for strength in strengths:
+            lines.append(f"  • {strength}")
+    else:
+        lines.append("  No strengths listed")
+
+    lines.extend(["", "=== CHALLENGES ==="])
+    challenges = profile_data.get('challenges', [])
+    if challenges:
+        for challenge in challenges:
+            lines.append(f"  • {challenge}")
+    else:
+        lines.append("  No challenges listed")
+
+    lines.extend([
+        "",
+        "=== GOALS ===",
+        f"Long-term Goals: {profile_data.get('long_term_goals', 'N/A')}",
+        f"Short-term Goals: {profile_data.get('short_term_goals', 'N/A')}",
+        "",
+        "=== BEST WAYS TO HELP ===",
+    ])
+
+    best_ways = profile_data.get('best_ways_to_help', [])
+    if best_ways:
+        for way in best_ways:
+            lines.append(f"  • {way}")
+    else:
+        lines.append("  No best ways listed")
+
+    lines.extend([
+        "",
+        "=== HOBBIES & INTERESTS ===",
+        profile_data.get('hobbies_and_interests', 'N/A'),
+        "",
+    ])
+
+    # Profile summaries if available
+    summaries = profile_data.get('profile_summaries', {})
+    if summaries:
+        lines.extend([
+            "=== AI-GENERATED SUMMARIES ===",
+            "",
+            "Strengths Summary:",
+            summaries.get('strengths_short', 'N/A'),
+            "",
+            "Short-term Goals Summary:",
+            summaries.get('short_term_goals', 'N/A'),
+            "",
+            "Long-term Goals Summary:",
+            summaries.get('long_term_goals', 'N/A'),
+            "",
+            "Best Ways to Help Summary:",
+            summaries.get('best_ways_to_help', 'N/A'),
+            "",
+            "Vision Statement:",
+            summaries.get('vision', 'N/A'),
+        ])
+
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
+def _format_export_metadata(assignment_data: dict, profile_data: dict) -> str:
+    """Format export metadata"""
+    from datetime import datetime as dt
+    lines = [
+        "=" * 60,
+        "EXPORT METADATA",
+        "=" * 60,
+        f"Export Date: {dt.utcnow().isoformat()}",
+        f"Student ID: {profile_data.get('student_id', 'N/A')}",
+        f"Student Name: {profile_data.get('first_name', '')} {profile_data.get('last_name', '')}",
+        f"Total Assignments: {assignment_data['export_metadata']['total_assignments']}",
+        f"Total Classes: {len(assignment_data['classes'])}",
+        "",
+        "=== CONTENTS ===",
+        "  • student_profile.txt - Complete student profile",
+        "  • student_profile.json - Profile in JSON format",
+        "  • classes_and_learning_goals.txt - Enrolled classes and goals",
+        "  • assignments_summary.csv - Spreadsheet of all assignments",
+        "  • assignments/ - Folder containing all assignments",
+        "    ├── Each assignment has its own folder",
+        "    ├── original_assignment.docx - Original assignment",
+        "    ├── version_N.docx - Generated versions",
+        "    └── ratings.txt - Student feedback and ratings",
+        "",
+        "This export contains ALL data for this student including:",
+        "  ✓ Complete profile with strengths, challenges, goals",
+        "  ✓ All class enrollments with learning goals",
+        "  ✓ All assignments with original content",
+        "  ✓ All assignment versions and regenerations",
+        "  ✓ All ratings and feedback history",
+        "  ✓ PowerPoint achievements tracking",
+        "=" * 60
+    ]
+    return "\n".join(lines)

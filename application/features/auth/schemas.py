@@ -64,3 +64,26 @@ class ResetPasswordRequest(BaseModel):
 class AdminResetPasswordRequest(BaseModel):
     user_id: int
     new_password: str
+
+
+class UpdateOwnEmailRequest(BaseModel):
+    """Request to update user's own email address"""
+    email: Optional[str] = None
+    gt_email: Optional[str] = None
+
+
+class ResetOwnPasswordRequest(BaseModel):
+    """Request to reset user's own password"""
+    current_password: str
+    new_password: str
+
+
+class UpdateProfilePictureRequest(BaseModel):
+    """Request to update user's own profile picture"""
+    profile_picture_url: str
+
+
+class UpdateOwnNameRequest(BaseModel):
+    """Request to update user's own name"""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None

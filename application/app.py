@@ -12,7 +12,7 @@ from application.features.auth.router import router as auth_router
 from application.features.roles.routes import router as roles_router
 from application.features.studentClasses.routes import router as student_classes_router
 from application.features.users.routes import router as users_router
-from application.features.assignments.routes import router as assignments_router
+from application.features.assignments.router import router as assignments_router
 from application.features.tutor_students.routes import router as tutor_students_router
 from application.features.blob.routes import router as blob_router
 from application.features.gpt.routes import router as gpt_router
