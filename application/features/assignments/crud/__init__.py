@@ -18,6 +18,7 @@ from application.features.assignments.crud.assignment_export import (
     export_student_assignments_json,
     export_student_assignments_download,
     export_complete_student_data,
+    export_all_students_complete_data,
 )
 
 __all__ = [
@@ -36,4 +37,5 @@ __all__ = [
     "export_student_assignments_json",
     "export_student_assignments_download",
     "export_complete_student_data",
+    "export_all_students_complete_data",
 ]

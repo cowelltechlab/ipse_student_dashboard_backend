@@ -760,6 +760,39 @@ def _format_complete_student_profile(profile_data: dict) -> str:
     return "\n".join(lines)
 
 
+def _create_all_students_summary_csv(students_data: List[dict]) -> str:
+    """Create CSV summary of all students with their assignment counts"""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    # Header
+    writer.writerow([
+        "Student ID",
+        "First Name",
+        "Last Name",
+        "Email",
+        "Year",
+        "Total Assignments",
+        "Total Versions",
+        "Has Profile"
+    ])
+
+    # Data rows
+    for student in students_data:
+        writer.writerow([
+            student.get("student_id", ""),
+            student.get("first_name", ""),
+            student.get("last_name", ""),
+            student.get("email", ""),
+            student.get("year_name", ""),
+            student.get("total_assignments", 0),
+            student.get("total_versions", 0),
+            "Yes" if student.get("has_profile") else "No"
+        ])
+
+    return output.getvalue()
+
+
 def _format_export_metadata(assignment_data: dict, profile_data: dict) -> str:
     """Format export metadata"""
     from datetime import datetime as dt
@@ -806,3 +839,149 @@ def _format_export_metadata(assignment_data: dict, profile_data: dict) -> str:
         "=" * 60
     ]
     return "\n".join(lines)
+
+
+def export_all_students_complete_data(
+    student_ids: Optional[List[int]] = None,
+    assignment_ids: Optional[List[int]] = None
+) -> bytes:
+    """
+    Export complete data for ALL students (or filtered subset) in one comprehensive ZIP.
+
+    Creates a master ZIP file containing individual student folders, each with complete data.
+
+    Args:
+        student_ids: Optional list of student IDs to filter by (exports ALL if None)
+        assignment_ids: Optional list of assignment IDs to filter by
+
+    Returns:
+        ZIP file as bytes with all student data
+    """
+    try:
+        from application.features.students.crud import fetch_all_students_with_names
+        from application.features.student_profile.crud import get_complete_profile
+
+        # Get all students (or filtered list)
+        all_students = fetch_all_students_with_names()
+
+        # Filter by student_ids if provided
+        if student_ids:
+            all_students = [s for s in all_students if s.get('id') in student_ids]
+
+        if not all_students:
+            raise HTTPException(status_code=404, detail="No students found")
+
+        # Create master ZIP
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as master_zip:
+            students_summary_data = []
+
+            # Process each student
+            for student in all_students:
+                student_id = student.get('id')
+                first_name = student.get('first_name', 'Unknown')
+                last_name = student.get('last_name', 'Unknown')
+
+                # Sanitize names for folder
+                safe_first = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in first_name)
+                safe_last = "".join(c if c.isalnum() or c in (' ', '-', '_') else '_' for c in last_name)
+                student_folder = f"student_{student_id}_{safe_first}_{safe_last}"
+
+                try:
+                    # Get student's complete export data
+                    student_zip_bytes = export_complete_student_data(student_id, assignment_ids)
+
+                    # Extract the student's ZIP and add contents to master ZIP under student folder
+                    student_zip = zipfile.ZipFile(io.BytesIO(student_zip_bytes), 'r')
+
+                    for file_info in student_zip.filelist:
+                        file_data = student_zip.read(file_info.filename)
+                        master_zip.writestr(f"{student_folder}/{file_info.filename}", file_data)
+
+                    student_zip.close()
+
+                    # Gather summary data
+                    # Get assignment count for summary
+                    assignment_data = export_student_assignments_json(student_id, assignment_ids)
+                    total_assignments = len(assignment_data.get('assignments', []))
+                    total_versions = sum(len(a.get('versions', [])) for a in assignment_data.get('assignments', []))
+
+                    # Check if profile exists
+                    has_profile = False
+                    try:
+                        profile = get_complete_profile(student_id)
+                        has_profile = profile is not None
+                    except:
+                        has_profile = False
+
+                    students_summary_data.append({
+                        "student_id": student_id,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": student.get('email', 'N/A'),
+                        "year_name": student.get('year_name', 'N/A'),
+                        "total_assignments": total_assignments,
+                        "total_versions": total_versions,
+                        "has_profile": has_profile
+                    })
+
+                except Exception as e:
+                    # Log error but continue with other students
+                    error_msg = f"Error exporting student {student_id}: {str(e)}\n"
+                    master_zip.writestr(f"{student_folder}/EXPORT_ERROR.txt", error_msg)
+
+                    students_summary_data.append({
+                        "student_id": student_id,
+                        "first_name": first_name,
+                        "last_name": last_name,
+                        "email": student.get('email', 'N/A'),
+                        "year_name": student.get('year_name', 'N/A'),
+                        "total_assignments": 0,
+                        "total_versions": 0,
+                        "has_profile": False
+                    })
+
+            # Add summary CSV at root level
+            summary_csv = _create_all_students_summary_csv(students_summary_data)
+            master_zip.writestr("export_summary.csv", summary_csv)
+
+            # Add master export metadata
+            from datetime import datetime as dt
+            master_metadata = [
+                "=" * 80,
+                "ALL STUDENTS EXPORT METADATA",
+                "=" * 80,
+                f"Export Date: {dt.utcnow().isoformat()}",
+                f"Total Students Exported: {len(students_summary_data)}",
+                f"Filtered by Student IDs: {student_ids if student_ids else 'No (all students)'}",
+                f"Filtered by Assignment IDs: {assignment_ids if assignment_ids else 'No (all assignments)'}",
+                "",
+                "=== STRUCTURE ===",
+                "This ZIP contains individual folders for each student with:",
+                "  • Complete student profile (txt and json)",
+                "  • All class enrollments with learning goals",
+                "  • All assignments with original content",
+                "  • All assignment versions with complete metadata",
+                "  • Learning pathways with full reasoning",
+                "  • Skills for success for each version",
+                "  • Student's ideas and suggestions",
+                "  • All ratings and feedback history",
+                "  • Rating and generation history",
+                "",
+                "=== FILES ===",
+                "  • export_summary.csv - Overview of all students",
+                "  • student_{id}_{name}/ - Individual student folders",
+                "",
+                "See individual student folders for complete data.",
+                "=" * 80
+            ]
+            master_zip.writestr("export_metadata.txt", "\n".join(master_metadata))
+
+        zip_buffer.seek(0)
+        return zip_buffer.getvalue()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"All students export error: {str(e)}")
