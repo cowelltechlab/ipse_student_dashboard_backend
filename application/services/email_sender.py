@@ -54,24 +54,23 @@ Complete your account setup here: {invite_url}
 
 If you did not request this invitation, you can ignore this email.
 """
-
-    # HTML version
     html_body = f"""
     <html>
-    <body style="font-family: Arial, sans-serif; color: #333;">
-        <img src="https://ipseportalstorage.blob.core.windows.net/app-assets/Create Profile.svg"
-             alt="Logo" style="width:150px; margin-bottom:10px;"/>
-        <h2>Welcome!</h2>
-        <p>You have been invited to join MyChoice.</p>
-        <p>
+      <body style="margin:0; padding:24px; background:#f6f9fc; font-family: Arial, sans-serif; color:#333;">
+        <div style="max-width:600px; margin:0 auto; background:#ffffff; padding:24px; border-radius:8px; text-align:center;">
+          <h2 style="margin:0 0 12px;">Welcome!</h2>
+          <p style="margin:0 0 16px;">You have been invited to join MyChoice.</p>
+          <p style="margin:24px 0;">
             <a href="{invite_url}"
-               style="padding: 10px 20px; color: white; background-color: #007bff;
-                      text-decoration: none; border-radius: 4px;">
-               Complete Setup
+               style="display:inline-block; padding:12px 20px; color:#ffffff; background-color:#007bff; text-decoration:none; border-radius:6px; font-weight:600;">
+              Complete Setup
             </a>
-        </p>
-        <p>If you did not request this invitation, you can safely ignore this email.</p>
-    </body>
+          </p>
+          <p style="margin-top:24px; color:#6b7280; font-size:12px;">
+            If you did not request this invitation, you can safely ignore this email.
+          </p>
+        </div>
+      </body>
     </html>
     """
 
@@ -94,25 +93,24 @@ This link will expire in 1 hour.
 
 If you did not request this password reset, you can safely ignore this email.
 """
-
-    # HTML version
     html_body = f"""
     <html>
-    <body style="font-family: Arial, sans-serif; color: #333;">
-        <img src="https://ipseportalstorage.blob.core.windows.net/app-assets/Create Profile.svg"
-             alt="Logo" style="width:150px; margin-bottom:10px;"/>
-        <h2>Password Reset Request</h2>
-        <p>Someone (hopefully you) has requested a password reset for your account.</p>
-        <p>
+      <body style="margin:0; padding:24px; background:#f6f9fc; font-family: Arial, sans-serif; color:#333;">
+        <div style="max-width:600px; margin:0 auto; background:#ffffff; padding:24px; border-radius:8px; text-align:center;">
+          <h2 style="margin:0 0 12px;">Password Reset Request</h2>
+          <p style="margin:0 0 16px;">Someone (hopefully you) has requested a password reset for your account.</p>
+          <p style="margin:24px 0;">
             <a href="{reset_url}"
-               style="padding: 10px 20px; color: white; background-color: #007bff;
-                      text-decoration: none; border-radius: 4px;">
-               Reset Your Password
+               style="display:inline-block; padding:12px 20px; color:#ffffff; background-color:#007bff; text-decoration:none; border-radius:6px; font-weight:600;">
+              Reset Your Password
             </a>
-        </p>
-        <p><strong>This link will expire in 1 hour.</strong></p>
-        <p>If you did not request this password reset, you can safely ignore this email.</p>
-    </body>
+          </p>
+          <p style="margin:0 0 8px; font-weight:700;">This link will expire in 1 hour.</p>
+          <p style="margin-top:8px; color:#6b7280; font-size:12px;">
+            If you did not request this password reset, you can safely ignore this email.
+          </p>
+        </div>
+      </body>
     </html>
     """
 
