@@ -236,6 +236,140 @@ def _format_rating_data(rating_data: dict) -> str:
     return "\n".join(lines)
 
 
+def _format_generated_options(generated_options: list) -> str:
+    """Format generated options (learning pathways) as readable text"""
+    if not generated_options:
+        return "No learning pathways generated.\n"
+
+    lines = ["LEARNING PATHWAYS (GENERATED OPTIONS)", "=" * 60, ""]
+
+    for i, option in enumerate(generated_options, 1):
+        selected_marker = " ✓ SELECTED" if option.get('selected') else ""
+        lines.extend([
+            f"Option {i}: {option.get('name', 'N/A')}{selected_marker}",
+            "-" * 60,
+            f"Internal ID: {option.get('internal_id', 'N/A')}",
+            "",
+            f"Description:",
+            f"  {option.get('description', 'N/A')}",
+            "",
+            f"Why Good (Existing Skills):",
+            f"  {option.get('why_good_existing', 'N/A')}",
+            "",
+            f"Why Challenge:",
+            f"  {option.get('why_challenge', 'N/A')}",
+            "",
+            f"Why Good (Growth):",
+            f"  {option.get('why_good_growth', 'N/A')}",
+            "",
+            f"Selection Logic:",
+            f"  {option.get('selection_logic', 'N/A')}",
+            "",
+            ""
+        ])
+
+    return "\n".join(lines)
+
+
+def _format_rating_history(rating_history: list) -> str:
+    """Format rating history as readable text"""
+    if not rating_history:
+        return "No rating history available.\n"
+
+    lines = ["RATING HISTORY", "=" * 60, ""]
+
+    for i, entry in enumerate(rating_history, 1):
+        timestamp = entry.get('timestamp', 'N/A')
+        update_type = entry.get('update_type', 'N/A')
+        lines.extend([
+            f"Rating Update #{i}",
+            "-" * 60,
+            f"Timestamp: {timestamp}",
+            f"Update Type: {update_type}",
+            ""
+        ])
+
+        # Format the rating data within this history entry
+        if entry.get('rating_data'):
+            rating_text = _format_rating_data(entry['rating_data'])
+            # Indent the rating data
+            for line in rating_text.split('\n'):
+                if line.strip():
+                    lines.append(f"  {line}")
+
+        lines.extend(["", ""])
+
+    return "\n".join(lines)
+
+
+def _format_generation_history(generation_history: list) -> str:
+    """Format generation history as readable text"""
+    if not generation_history:
+        return "No generation history available.\n"
+
+    lines = ["GENERATION HISTORY", "=" * 60, ""]
+
+    for i, entry in enumerate(generation_history, 1):
+        timestamp = entry.get('timestamp', 'N/A')
+        generation_type = entry.get('generation_type', 'N/A')
+        html_length = len(entry.get('html_content', ''))
+
+        lines.extend([
+            f"Generation #{i}",
+            "-" * 60,
+            f"Timestamp: {timestamp}",
+            f"Generation Type: {generation_type}",
+            f"Content Length: {html_length} characters",
+            "",
+            ""
+        ])
+
+    return "\n".join(lines)
+
+
+def _format_complete_version_details(version: dict) -> str:
+    """Format complete version details including all metadata, options, and history"""
+    lines = [
+        "=" * 80,
+        "COMPLETE VERSION DETAILS",
+        "=" * 80,
+        "",
+        "=== BASIC INFORMATION ===",
+        f"Version Number: {version.get('version_number', 'N/A')}",
+        f"Modifier ID: {version.get('modifier_id', 'N/A')}",
+        f"Student ID: {version.get('student_id', 'N/A')}",
+        f"Assignment ID: {version.get('assignment_id', 'N/A')}",
+        f"Date Modified: {version.get('date_modified', 'N/A')}",
+        f"Finalized: {'Yes' if version.get('finalized') else 'No'}",
+        "",
+        "=== SKILLS FOR SUCCESS ===",
+        version.get('skills_for_success', 'N/A'),
+        "",
+        "=== SELECTED OPTIONS ===",
+        ', '.join(version.get('selected_options', [])) if version.get('selected_options') else 'None',
+        "",
+        "=== STUDENT'S IDEAS BOX (Additional Edit Suggestions) ===",
+        version.get('additional_edit_suggestions', 'N/A') or 'None provided',
+        "",
+        "",
+    ]
+
+    # Add learning pathways
+    lines.append(_format_generated_options(version.get('generated_options', [])))
+    lines.append("")
+
+    # Add generation history
+    lines.append(_format_generation_history(version.get('generation_history', [])))
+    lines.append("")
+
+    # Add rating history
+    lines.append(_format_rating_history(version.get('rating_history', [])))
+    lines.append("")
+
+    lines.append("=" * 80)
+    return "\n".join(lines)
+
+
 def _create_assignments_summary_csv(assignments_data: List[dict]) -> str:
     """Create CSV summary of all assignments"""
     output = io.StringIO()
@@ -291,7 +425,8 @@ def export_student_assignments_download(student_id: int, assignment_ids: Optiona
     - assignments/
         - assignment_{id}_{title}/
             - original_assignment.docx
-            - version_{n}.docx (with metadata)
+            - version_{n}.docx (generated content)
+            - version_{n}_complete_details.txt (all metadata, learning pathways, skills, history)
             - ratings.txt
 
     Args:
@@ -344,7 +479,7 @@ def export_student_assignments_download(student_id: int, assignment_ids: Optiona
                     doc_buffer.seek(0)
                     zip_file.writestr(f"{folder_name}/original_assignment.docx", doc_buffer.getvalue())
 
-                # 4b. Add each version as separate Word doc
+                # 4b. Add each version as separate Word doc and detailed metadata
                 versions = assignment.get("versions", [])
                 all_ratings = []
 
@@ -355,34 +490,19 @@ def export_student_assignments_download(student_id: int, assignment_ids: Optiona
                     # Get HTML content from version
                     html_content = get_html_content_from_version_document(version)
 
-                    # Add metadata header to version document
-                    from docx import Document
-                    doc = Document()
-                    doc.add_heading(f"Version {version_num} Metadata", level=2)
-                    metadata_lines = [
-                        f"Version Number: {version_num}",
-                        f"Modifier ID: {version.get('modifier_id', 'N/A')}",
-                        f"Date Modified: {version.get('date_modified', 'N/A')}",
-                        f"Finalized: {'Yes' if version.get('finalized') else 'No'}",
-                        f"Has Rating: {'Yes' if version.get('rating_data') else 'No'}"
-                    ]
-                    for line in metadata_lines:
-                        doc.add_paragraph(line)
-
-                    doc.add_paragraph("_" * 60)
-                    doc.add_heading("Content", level=2)
-
-                    # Convert HTML content to Word and append
+                    # Convert HTML content to Word document
                     version_word_bytes = convert_html_to_word_bytes(html_content)
-
-                    # Save with metadata
-                    doc_buffer = io.BytesIO()
-                    doc.save(doc_buffer)
-                    doc_buffer.seek(0)
 
                     zip_file.writestr(
                         f"{folder_name}/version_{version_num}{finalized_tag}.docx",
                         version_word_bytes
+                    )
+
+                    # Add complete version details as text file
+                    complete_details = _format_complete_version_details(version)
+                    zip_file.writestr(
+                        f"{folder_name}/version_{version_num}{finalized_tag}_complete_details.txt",
+                        complete_details
                     )
 
                     # Collect ratings
@@ -506,6 +626,13 @@ def export_complete_student_data(student_id: int, assignment_ids: Optional[List[
                     zip_file.writestr(
                         f"{folder_name}/version_{version_num}{finalized_tag}.docx",
                         version_word_bytes
+                    )
+
+                    # Add complete version details as text file
+                    complete_details = _format_complete_version_details(version)
+                    zip_file.writestr(
+                        f"{folder_name}/version_{version_num}{finalized_tag}_complete_details.txt",
+                        complete_details
                     )
 
                     if version.get("rating_data"):
@@ -654,15 +781,27 @@ def _format_export_metadata(assignment_data: dict, profile_data: dict) -> str:
         "  • assignments/ - Folder containing all assignments",
         "    ├── Each assignment has its own folder",
         "    ├── original_assignment.docx - Original assignment",
-        "    ├── version_N.docx - Generated versions",
-        "    └── ratings.txt - Student feedback and ratings",
+        "    ├── version_N.docx - Generated content (final version)",
+        "    ├── version_N_complete_details.txt - Complete metadata including:",
+        "    │   • Skills for success",
+        "    │   • Learning pathways (generated options) with full reasoning",
+        "    │   • Student's ideas for changes",
+        "    │   • Selected options",
+        "    │   • Generation history",
+        "    │   • Rating history",
+        "    └── ratings.txt - Current student feedback and ratings",
         "",
         "This export contains ALL data for this student including:",
         "  ✓ Complete profile with strengths, challenges, goals",
         "  ✓ All class enrollments with learning goals",
         "  ✓ All assignments with original content",
         "  ✓ All assignment versions and regenerations",
+        "  ✓ Learning pathways with full reasoning for each version",
+        "  ✓ Skills for success for each version",
+        "  ✓ Student's ideas and additional suggestions",
         "  ✓ All ratings and feedback history",
+        "  ✓ Rating history showing changes over time",
+        "  ✓ Generation history showing content evolution",
         "  ✓ PowerPoint achievements tracking",
         "=" * 60
     ]

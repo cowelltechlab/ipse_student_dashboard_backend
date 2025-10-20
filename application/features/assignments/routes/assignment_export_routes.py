@@ -71,8 +71,10 @@ def export_student_data_download(
     - assignments_summary.csv: Spreadsheet of all assignments
     - assignments/ folder with individual assignment folders containing:
         - original_assignment.docx
-        - version documents
-        - ratings.txt
+        - version_{n}.docx: Generated content
+        - version_{n}_complete_details.txt: All metadata (learning pathways, skills for success,
+          student's ideas, selected options, generation history, rating history)
+        - ratings.txt: Current ratings
 
     Args:
         student_id: The student's internal ID
@@ -118,8 +120,12 @@ def export_complete_student_data_download(
     - PowerPoint achievements tracking
     - All assignments with original content
     - All assignment versions and regenerations
+    - Learning pathways with full reasoning (generated options)
+    - Skills for success for each version
+    - Student's ideas for changes (additional edit suggestions)
     - All ratings and feedback history
     - Rating history for each version
+    - Generation history for each version
 
     ZIP contains:
     - student_profile.txt: Complete detailed profile
@@ -127,6 +133,7 @@ def export_complete_student_data_download(
     - classes_and_learning_goals.txt: Enrolled classes with goals
     - assignments_summary.csv: Spreadsheet overview of all assignments
     - assignments/ folder: Individual folders for each assignment
+        - version_{n}_complete_details.txt: Complete metadata for each version
     - export_metadata.txt: Information about the export contents
 
     Args:
