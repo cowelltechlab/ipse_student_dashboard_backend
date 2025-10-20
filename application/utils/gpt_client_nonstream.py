@@ -9,6 +9,7 @@ from gpt_client_nonstream import process_gpt_prompt_json
 
 load_dotenv()
 DATABASE_NAME = os.getenv("COSMOS_DATABASE_NAME")
+GPT_MODEL = os.getenv("GPT_MODEL")
 
 PROFILE_CONTAINER_NAME = "ai-student-profile"
 VERSIONS_CONTAINER_NAME = "ai-assignment-versions-v2"
@@ -36,7 +37,7 @@ def handle_assignment_version_generation(
 
     # Call non-streaming structured output
     try:
-        result = process_gpt_prompt_json(messages, model="gpt-4.1", max_out=16000)
+        result = process_gpt_prompt_json(messages, model=GPT_MODEL, max_out=16000)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 

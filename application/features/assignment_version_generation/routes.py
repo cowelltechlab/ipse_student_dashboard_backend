@@ -102,7 +102,7 @@ def generate_new_assignment_version(
 #     def event_source():
 #         for frame in stream_sections_with_tools(
 #             messages,
-#             model="gpt-4o",
+#             model=GPT_MODEL,
 #             on_complete=persist_final
 #         ):
 

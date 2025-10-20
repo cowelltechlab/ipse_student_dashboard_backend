@@ -1,7 +1,13 @@
 import json
+import os
 from typing import Optional
 
+from dotenv import load_dotenv
+
 from application.features.gpt.crud import process_gpt_prompt_json, process_gpt_prompt_version_suggestion_json
+
+load_dotenv()
+GPT_MODEL = os.getenv("GPT_MODEL")
 
 def generate_assignment_modification_suggestions(student_profile: dict, assignment: dict, class_info: dict) -> dict:
     
@@ -40,7 +46,7 @@ def generate_assignment_modification_suggestions(student_profile: dict, assignme
 
 #   TODO: Generate "else" case
 
-    return process_gpt_prompt_version_suggestion_json(prompt, model="gpt-4.1", override_max_tokens=8000)
+    return process_gpt_prompt_version_suggestion_json(prompt, model=GPT_MODEL, override_max_tokens=8000)
 
 
 
@@ -110,4 +116,4 @@ def generate_assignment(student_profile: dict, assignment: dict, class_info: dic
     # TODO: Generate "else" case
 
        
-    return process_gpt_prompt_json(prompt, model="gpt-4.1", override_max_tokens=8000)
+    return process_gpt_prompt_json(prompt, model=GPT_MODEL, override_max_tokens=8000)

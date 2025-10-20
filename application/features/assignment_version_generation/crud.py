@@ -14,6 +14,10 @@ from application.database.nosql_connection import get_cosmos_db_connection
 from application.features.gpt.crud import process_gpt_prompt_html
 
 
+load_dotenv()
+GPT_MODEL = os.getenv("GPT_MODEL")
+
+
 def convert_json_to_html(json_content: dict) -> str:
     """
     Convert legacy JSON assignment content to a single HTML block.
@@ -353,7 +357,7 @@ def handle_assignment_version_generation(
         prompt = "\n".join([msg["content"] for msg in messages if msg["role"] == "user"])
         result_html = process_gpt_prompt_html(
             prompt=prompt,
-            model="gpt-4o",
+            model=GPT_MODEL,
             override_max_tokens=16000,
         )
     except Exception as e:
