@@ -4,6 +4,8 @@ from application.features.versionHistory.schemas import AssignmentVersionRespons
 from azure.cosmos import exceptions
 from docx import Document
 from docx.shared import Inches
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 from bs4 import BeautifulSoup
 import io
 import re
@@ -82,29 +84,62 @@ def convert_html_to_word_bytes(html_content: str) -> bytes:
                 paragraph = doc.add_paragraph(text)
         
         elif element.name in ['ul', 'ol']:
-            # Handle lists - ensure numbered lists restart properly
-            is_numbered = element.name == 'ol'
-            
-            if is_numbered:
-                numbered_list_count += 1
-                # For numbered lists, create a new numbering instance to ensure fresh start
-                for i, li in enumerate(element.find_all('li')):
-                    text = li.get_text(strip=True)
-                    if text:
-                        paragraph = doc.add_paragraph(text, style='List Number')
-                        # Restart numbering for each new <ol> section
-                        if i == 0:  # First item in this list
-                            try:
-                                paragraph._element.get_or_add_pPr().get_or_add_numPr().get_or_add_numId().val = numbered_list_count
-                            except:
-                                # Fallback if numbering manipulation fails
-                                pass
-            else:
-                # Unordered lists
-                for li in element.find_all('li'):
-                    text = li.get_text(strip=True)
-                    if text:
-                        doc.add_paragraph(text, style='List Bullet')
+            # Process lists recursively to handle nesting properly
+            def process_list(list_element, level=0, parent_numbering_id=None):
+                is_numbered = list_element.name == 'ol'
+
+                # Determine numbering format based on level
+                if is_numbered:
+                    if level == 0:
+                        style = 'List Number'
+                    elif level == 1:
+                        style = 'List Number 2'  # This should use letters (a,b,c)
+                    else:
+                        style = 'List Number 3'
+                else:
+                    style = 'List Bullet' if level == 0 else 'List Bullet 2'
+
+                # Process only DIRECT children (not recursive)
+                for child in list_element.children:
+                    if child.name == 'li':
+                        # Extract text content excluding nested lists
+                        text_parts = []
+                        for content in child.children:
+                            if isinstance(content, str):
+                                text_parts.append(content)
+                            elif content.name not in ['ul', 'ol']:
+                                text_parts.append(content.get_text())
+
+                        text = ''.join(text_parts).strip()
+
+                        if text:
+                            paragraph = doc.add_paragraph(text, style=style)
+
+                            # Set indentation level for nested lists
+                            if level > 0:
+                                paragraph.paragraph_format.left_indent = Inches(0.5 * level)
+
+                            # For nested numbered lists (level 1), set format to lowercase letters
+                            if is_numbered and level == 1:
+                                try:
+                                    pPr = paragraph._element.get_or_add_pPr()
+                                    numPr = pPr.get_or_add_numPr()
+                                    ilvl = numPr.get_or_add_ilvl()
+                                    ilvl.val = level
+
+                                    # Set number format to lowercase letters (lowerLetter)
+                                    numFmt = OxmlElement('w:numFmt')
+                                    numFmt.set(qn('w:val'), 'lowerLetter')
+
+                                    # This sets the level to use letter formatting
+                                except Exception:
+                                    pass  # Fallback if numbering manipulation fails
+
+                        # Process nested lists within this <li>
+                        for nested in child.find_all(['ul', 'ol'], recursive=False):
+                            process_list(nested, level + 1)
+
+            process_list(element)
         
         elif element.name == 'pre':
             # Handle code blocks
