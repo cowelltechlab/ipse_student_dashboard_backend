@@ -18,7 +18,7 @@ def _parse_args(raw: str) -> dict:
 
 def stream_sections_with_tools(
     messages: List[Dict[str, Any]],
-    model: str = "gpt-4o",
+    model: str = "gpt-5",
     on_complete: Callable[[dict], None] | None = None
 ) -> Iterator[str]:
     assembled: Dict[str, Any] = {

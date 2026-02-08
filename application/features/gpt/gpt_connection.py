@@ -6,13 +6,13 @@ client = OpenAI()
 
 import tiktoken
 
-def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
+def count_tokens(text: str, model: str = "gpt-5") -> int:
     """
     Counts how many tokens a text will consume for the specified model.
     """
     # Map new/unknown models to a known encoding
-    if model.startswith("gpt-4.1") or model.startswith("gpt-4o"):
-        # GPT-4.1 and gpt-4o families both use cl100k_base
+    if model.startswith("gpt-4.1") or model.startswith("gpt-4o") or model.startswith("gpt-5"):
+        # GPT-4.1, gpt-4o, and gpt-5 families use cl100k_base
         enc = tiktoken.get_encoding("cl100k_base")
     else:
         try:
@@ -26,7 +26,7 @@ def count_tokens(text: str, model: str = "gpt-3.5-turbo") -> int:
 
 def get_gpt_response(
     prompt: str,
-    model: str = "gpt-4o",
+    model: str = "gpt-5",
     override_max_tokens: Optional[int] = None
 ) -> str:
     if not client.api_key:
@@ -37,7 +37,7 @@ def get_gpt_response(
     print(f"Prompt token count: {prompt_tokens}")
 
     # --- Set safe limits ---
-    context_limit = 4096 if "3.5" in model else 128000  # adjust for gpt-4.1
+    context_limit = 4096 if "3.5" in model else 128000  # gpt-4/gpt-5 use large context
     default_max_output_tokens = 500  # keep the original default
     max_output_tokens = override_max_tokens or default_max_output_tokens
 
