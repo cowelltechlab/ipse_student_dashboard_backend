@@ -114,7 +114,7 @@ AI prompts must only build independence, not dependence or reduced function.
 • Do not use AI to write your paper or response.
 • If you use AI, explain how it helped and discuss with your tutor/teacher how it supported your learning and how you could do it without AI.]
 
-7.	Motivational Message (always present)
+7.	Motivational Message (OPTIONAL)
 [One short motivating sentence. Use a generic, respectful message about building agency or building towards future goals. Keep it serious and concise.]
 ________________________________________
 Additional compliance checks (apply within the fields above):
