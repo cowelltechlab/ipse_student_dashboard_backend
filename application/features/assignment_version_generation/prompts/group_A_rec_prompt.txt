@@ -184,11 +184,15 @@ Field Descriptions:
 -	skills_for_success: 1–2 short, direct sentences clearly stating the skills the student will need to focus on to meet the challenge. This should be based on the capacity–challenge discrepancy analysis you performed in step one. Include 1–2 relevant emojis.
 -	learning_pathways: An array of three strategies. Each strategy must include:
 o	name: Short title for the strategy (e.g., "Video Presentation").
-o	description: Brief description of what the student does.
+o	description: ONE short, direct sentence (about 10–15 words) explaining what the student will do. Do NOT write more than one sentence.
 o	why_good_existing: 1–2 short, direct sentences (5–7 words) explaining how this option uses the student’s existing skills and learning preferences.
 o	why_challenge: 1–2 short, direct sentences (5–7 words) explaining how this option may present a challenge to this student. ##FRAME THIS STATEMENT AS A GOAL DISCREPANCY PROBLEM; DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES.##
 o	why_good_growth: 1–2 short, direct sentences (5–7 words) explaining how this option supports growth toward their goals, strengths, or interests, including by developing new skills.
 o	selection_logic: For internal purposes, explain in 1-2 sentences, WHY you selected this option based on the student’s profile and/or assignment. 
+o	image_key (optional): Set this to the SINGLE BEST image filename from the Available Images list below that matches this option’s strategy. Use the exact filename (for example "schedule.png"). If none fit well, leave this field empty.
+
+Available Images (filenames from the storage bucket):
+{available_images}
 
 Return ONLY a valid JSON object in the following format (do not include any explanations, markdown, or extra text):
 {{
@@ -198,25 +202,28 @@ Return ONLY a valid JSON object in the following format (do not include any expl
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string",
+      "image_key": "string"
     }},
     {{
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string",
+      "image_key": "string"
     }},
     {{
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string",
+      "image_key": "string"
     }},
 “output_reasoning”: “string”
   ]

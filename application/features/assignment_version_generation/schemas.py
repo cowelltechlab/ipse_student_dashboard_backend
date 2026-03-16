@@ -10,7 +10,9 @@ class LearningPathwayOption(BaseModel):
     selection_logic: str
     internal_id: str
     selected: bool = False
+    image_key: Optional[str] = None
     emoji: Optional[str] = None
+    image_url: Optional[str] = None
 
 class AssignmentGenerationRequest(BaseModel):
     selected_options: List[str] = Field(..., description="Array of option identifiers (strings).", min_items=0)
