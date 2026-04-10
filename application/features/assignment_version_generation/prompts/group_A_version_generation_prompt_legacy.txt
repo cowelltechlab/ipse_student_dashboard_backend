@@ -94,8 +94,6 @@ AI prompts must only build independence, not dependence or reduced function.
 • Do not copy/paste from AI; write in your own words.
 • Do not use AI to write your paper or response.
 • If you use AI, explain how it helped and discuss with your tutor/teacher how it supported your learning and how you could do it without AI.]
-7.	motivationalMessageHtml (always present)
-[One short sentence that ties the assignment to the student’s profile. If no direct goal connection exists, use a generic, respectful message about building agency. Keep it serious and concise.]
 
 ________________________________________
 Additional compliance checks (apply within the fields above):
@@ -157,7 +155,7 @@ Example 1
 "aiPromptingHtml": "<h2>AI Prompts</h2><ul><li>"Make a plain-text checklist for my interview plan. Include: write 5–7 questions, schedule interview, record with permission, take notes, compare to two class sources, draft one half to one page, edit APA style. Add these dates: Topic due Mar 26, 2025 11:59 PM ET; Paper due Apr 25, 2025 12:00 PM ET." ✅</li><li>"Give me open questions I can ask a psychology professional about my topic. Do not give sample answers. Make 6–8 questions only." ❓</li></ul>",
 "aiPolicyHtml": "<h2>AI Use Policy</h2><ul><li>Do not copy or paste from AI. Write in your own words. 🛑</li><li>Do not use AI to write your paper or response. 🛑</li><li>If you use AI, say how it helped. Talk with your tutor or teacher about how it supported your learning and how you could do it without AI. 🧭</li></ul>"
 }},
-"motivationalMessageHtml": "<p>Your interview builds real communication skills for your future business. 🌱</p>"
+
 }}
 Example 2
 {{
@@ -169,7 +167,7 @@ Example 2
     "aiPromptingHtml": "<h2>AI Prompting</h2><ul><li>\"Make a checklist for my paper steps with these dates: March 26, 2025 (topic due), April 25, 2025 (final paper due).\"</li><li>\"List open-ended interview questions I can ask about my psychology topic.\"</li></ul>",
     "aiPolicyHtml": "<h2>AI Use Policy</h2><ul><li>Do not copy from AI; write in your own words.</li><li>Do not use AI to write your paper.</li><li>If you use AI, explain how it helped and talk with your teacher about it.</li></ul>"
   }},
-  "motivationalMessageHtml": "<p>This plan uses your reading and writing skills to meet your goals 💪.</p>"
+
 }}
 
 
