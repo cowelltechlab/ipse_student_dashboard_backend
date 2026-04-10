@@ -66,7 +66,7 @@ class AssignmentJsonContent(BaseModel):
 
     # Prefer field_validator in v2 (mode="before" replaces pre=True)
     @field_validator("assignmentInstructionsHtml", "stepByStepPlanHtml",
-                     "promptsHtml", "motivationalMessageHtml")
+                     "promptsHtml",)
     def _html_fragments(cls, v: str):
         if not AssignmentJsonContent._is_fragment(v):
             raise ValueError("Must be an HTML fragment without outer wrappers")
@@ -95,7 +95,7 @@ class AssignmentJson(BaseModel):
     stepByStepPlanHtml: str
     promptsHtml: str
     supportTools: SupportTools
-    motivationalMessageHtml: str
+    # motivationalMessageHtml: str
 
 # Legacy JSON-based schemas (kept for backward compatibility)
 class AssignmentVersionGenerationJsonResponse(BaseModel):

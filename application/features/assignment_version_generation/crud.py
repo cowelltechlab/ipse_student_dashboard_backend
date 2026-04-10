@@ -88,16 +88,16 @@ def convert_json_to_html(json_content: dict) -> str:
 
         html_parts.append('  </section>')
 
-    # Motivational Message
-    if "motivationalMessageHtml" in json_content:
-        html_parts.extend([
-            '  <section class="motivation">',
-            '    <h2>Motivation</h2>',
-            f'    {json_content["motivationalMessageHtml"]}',
-            '  </section>'
-        ])
+    # # Motivational Message
+    # if "motivationalMessageHtml" in json_content:
+    #     html_parts.extend([
+    #         '  <section class="motivation">',
+    #         '    <h2>Motivation</h2>',
+    #         f'    {json_content["motivationalMessageHtml"]}',
+    #         '  </section>'
+    #     ])
 
-    html_parts.append('</div>')
+    # html_parts.append('</div>')
 
     return '\n'.join(html_parts)
 

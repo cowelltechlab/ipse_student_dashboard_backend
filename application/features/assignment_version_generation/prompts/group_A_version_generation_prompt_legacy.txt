@@ -57,7 +57,7 @@ Return one JSON object with the keys in this exact order.
     "aiPromptingHtml": "...",
     "aiPolicyHtml": "..."
   }}
-  "motivationalMessageHtml": "...",
+
 }}
 Field requirements and content rules:
 1.	assignmentInstructionsHtml (always present)

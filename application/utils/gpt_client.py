@@ -30,7 +30,7 @@ def stream_sections_with_tools(
             "aiPromptingHtml": None,
             "aiPolicyHtml": None,
         },
-        "motivationalMessageHtml": None,
+
     }
     buffers: Dict[str, str] = {}
 
@@ -123,7 +123,7 @@ def stream_sections_with_tools(
                             "aiPromptingHtml": assembled["supportTools"]["aiPromptingHtml"],
                             "aiPolicyHtml": assembled["supportTools"]["aiPolicyHtml"],
                         },
-                        "motivationalMessageHtml": assembled["motivationalMessageHtml"],
+           
                     }
                     # Optional: validate before persisting (see validator below)
                     if on_complete:

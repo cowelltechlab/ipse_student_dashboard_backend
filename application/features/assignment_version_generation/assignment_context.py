@@ -228,7 +228,7 @@ def build_prompt_for_version(
     # json_header = (
     #     "Return one JSON object following the spec in the prompt (no tools). "
     #     "Keys must be in this exact order: "
-    #     "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools, motivationalMessageHtml. "
+    #     "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools. "
     #     "Inside supportTools, include keys in this exact order: toolsHtml, aiPromptingHtml, aiPolicyHtml. "
     #     "Omit no keys (all are required). "
     #     "All *Html values are valid HTML fragments (no outer HTML wrappers). "

@@ -36,7 +36,6 @@ ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
         "assignmentInstructionsHtml": {"type": "string"},
         "stepByStepPlanHtml": {"type": "string"},
         "promptsHtml": {"type": "string"},
-        "motivationalMessageHtml": {"type": "string"},
         "supportTools": {
             "type": "object",
             "additionalProperties": False,
@@ -53,7 +52,7 @@ ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
         "stepByStepPlanHtml",
         "promptsHtml",
         "supportTools",
-        "motivationalMessageHtml"
+        
     ]
 }
 
