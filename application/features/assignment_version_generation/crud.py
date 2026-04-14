@@ -8,10 +8,10 @@ import uuid
 from application.database.mssql_connection import get_sql_db_connection
 from application.features.assignment_version_generation.assignment_context import build_prompt_for_version
 from application.features.assignment_version_generation.helpers import (
+    assign_images_for_pathways,
     generate_assignment,
     generate_assignment_modification_suggestions,
     get_emoji_for_pathway,
-    get_image_for_pathway,
 )
 from application.database.nosql_connection import get_cosmos_db_connection
 
@@ -144,8 +144,7 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
             option["selected"] = option_id in selected_option_ids
             if "emoji" not in option or not option.get("emoji"):
                 option["emoji"] = get_emoji_for_pathway(option)
-            if "image_url" not in option or not option.get("image_url"):
-                option["image_url"] = get_image_for_pathway(option)
+        assign_images_for_pathways(generated_options)
 
         # Determine next version number from CosmosDB
         try:
@@ -268,7 +267,7 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
         for idx, option in enumerate(gpt_data.get("learning_pathways", []), start=1):
             option["internal_id"] = f"opt_{idx}"
             option["emoji"] = get_emoji_for_pathway(option)
-            option["image_url"] = get_image_for_pathway(option)
+        assign_images_for_pathways(gpt_data.get("learning_pathways", []))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 

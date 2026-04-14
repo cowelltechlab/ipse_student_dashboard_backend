@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from functools import lru_cache
 from typing import Optional, List
 
@@ -33,6 +34,11 @@ PATHWAY_EMOJI_KEYWORDS = [
     (["choice", "choose", "option", "preference"], "✅"),
 ]
 DEFAULT_PATHWAY_EMOJI = "📚"
+STOPWORDS = {
+    "a", "an", "and", "are", "as", "at", "be", "by", "do", "for", "from",
+    "how", "in", "into", "is", "it", "its", "of", "on", "or", "that", "the",
+    "this", "to", "use", "using", "with", "you", "your"
+}
 
 
 def get_emoji_for_pathway(option: dict) -> str:
@@ -67,96 +73,90 @@ def _get_learning_pathway_blob_names() -> List[str]:
         return []
 
 
-def get_image_for_pathway(option: dict) -> Optional[str]:
-    """
-    Pick an image for a learning pathway based on an LLM-chosen `image_key`.
-
-    The LLM should set option["image_key"] to the BEST-FIT image from the
-    available images list it sees in the prompt. The value should match
-    a blob name in the "learning-pathways-pictures" container
-    (either with or without the file extension).
-
-    If image_key is missing, we fall back to simple keyword-based
-    heuristics based on the option name/description and then match
-    against known blob names.
-    """
-    key_raw = (option.get("image_key") or "").strip()
-    blob_names = _get_learning_pathway_blob_names()
-    if not blob_names or not STORAGE_ACCOUNT_CONNECTION_STRING:
+@lru_cache(maxsize=512)
+def _learning_pathway_blob_url(blob_name: str) -> Optional[str]:
+    if not STORAGE_ACCOUNT_CONNECTION_STRING or not blob_name:
         return None
-
-    # 1) If LLM provided an explicit image_key, treat it as a blob name
-    #    (with or without extension) and try to match exactly first.
-    if key_raw:
-        key_lower = key_raw.lower()
-
-        # Exact match including extension
-        for name in blob_names:
-            if name.lower() == key_lower:
-                chosen_name = name
-                break
-        else:
-            # Match without extension (e.g., "visual" -> "visual.png")
-            key_stem = key_lower.split(".")[0]
-            chosen_name = next(
-                (name for name in blob_names if name.lower().split(".")[0] == key_stem),
-                None,
-            )
-
-        if chosen_name:
-            try:
-                blob_service_client = BlobServiceClient.from_connection_string(
-                    STORAGE_ACCOUNT_CONNECTION_STRING
-                )
-                blob_client = blob_service_client.get_blob_client(
-                    container=LEARNING_PATHWAYS_CONTAINER_NAME,
-                    blob=chosen_name,
-                )
-                return blob_client.url
-            except Exception:
-                return None
-
-    # 2) Heuristic fallback: pick best match based on option text tokens
-    text = f"{option.get('name', '')} {option.get('description', '')}".lower()
-    tokens = {t for t in text.replace("/", " ").replace("-", " ").split() if t}
-    if not tokens:
-        return None
-
-    best_name = None
-    best_score = 0
-    for name in blob_names:
-        name_lower = name.lower()
-        score = sum(1 for token in tokens if token in name_lower)
-        if score > best_score:
-            best_score = score
-            best_name = name
-
-    if not best_name:
-        return None
-
     try:
         blob_service_client = BlobServiceClient.from_connection_string(
             STORAGE_ACCOUNT_CONNECTION_STRING
         )
         blob_client = blob_service_client.get_blob_client(
             container=LEARNING_PATHWAYS_CONTAINER_NAME,
-            blob=best_name,
+            blob=blob_name,
         )
         return blob_client.url
     except Exception:
         return None
 
+
+def _tokenize_for_image_matching(text: str) -> set[str]:
+    tokens = set(re.findall(r"[a-z0-9]+", (text or "").lower()))
+    return {t for t in tokens if t and t not in STOPWORDS and len(t) > 2}
+
+
+def _score_blob_match(pathway_tokens: set[str], blob_name: str) -> int:
+    blob_tokens = _tokenize_for_image_matching(blob_name.replace("_", " "))
+    if not blob_tokens:
+        return 0
+
+    # Exact overlap is cheap and more stable than substring-only scoring.
+    exact_overlap = pathway_tokens.intersection(blob_tokens)
+    return len(exact_overlap) * 3
+
+
+def assign_images_for_pathways(pathways: List[dict]) -> None:
+    """
+    Mutates pathway dicts in-place by setting image_url.
+    Fast, deterministic matcher with simple diversity so all three cards
+    do not collapse to the same image.
+    """
+    blob_names = _get_learning_pathway_blob_names()
+    if not blob_names or not pathways:
+        return
+
+    used_blob_names: set[str] = set()
+    blob_name_lookup = {name.lower(): name for name in blob_names}
+    blob_stem_lookup = {name.lower().split(".")[0]: name for name in blob_names}
+    for option in pathways:
+        if option.get("image_url"):
+            continue
+
+        # Prefer the model's direct image choice when present.
+        key_raw = (option.get("image_key") or "").strip().lower()
+        if key_raw:
+            chosen = blob_name_lookup.get(key_raw) or blob_stem_lookup.get(key_raw.split(".")[0])
+            if chosen and chosen not in used_blob_names:
+                option["image_url"] = _learning_pathway_blob_url(chosen)
+                used_blob_names.add(chosen)
+                continue
+
+        text = f"{option.get('name', '')} {option.get('description', '')}"
+        tokens = _tokenize_for_image_matching(text)
+        if not tokens:
+            continue
+
+        best_name = None
+        best_score = 0
+        for name in blob_names:
+            score = _score_blob_match(tokens, name)
+            if name in used_blob_names:
+                score -= 1  # slight diversity penalty; still allows reuse if clearly best
+
+            if score > best_score:
+                best_score = score
+                best_name = name
+
+        if best_name and best_score > 0:
+            option["image_url"] = _learning_pathway_blob_url(best_name)
+            used_blob_names.add(best_name)
+
+
 def generate_assignment_modification_suggestions(student_profile: dict, assignment: dict, class_info: dict) -> dict:
     
     student_group = student_profile.get("group_type")
-
-    # Build available images list string for the prompt
     blob_names = _get_learning_pathway_blob_names()
-    available_images = (
-        "\n".join(f"- {name}" for name in blob_names)
-        if blob_names
-        else "- (no images found in container)"
-    )
+    available_images = "\n".join(f"- {name}" for name in blob_names) if blob_names else "- no-images-available"
 
     if student_group == "A":
       with open("application/features/assignment_version_generation/prompts/group_A_rec_prompt.txt", "r", encoding="utf-8") as f:

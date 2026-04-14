@@ -154,10 +154,9 @@ o	description: ONE short, direct sentence (about 10–15 words) explaining what 
 o	why_good_existing: 1-2 short, direct sentences about 5-7 words long explaining how this option helps the student complete the task using a relevant tool, support, or skill
 o	why_challenge: 1–2 short, direct sentences (5–7 words) explaining how this option may present a challenge to the student. ## FRAME ASSIGNMENT ACCOMMODATIONS AS SOLUTIONS TO A GOAL DISCREPANCY PROBLEM, NOT WORKAROUNDS FOR ASSUMED WEAKNESSES. DO NOT DIRECTLY REFERENCE STUDENT’S WEAKNESSES AND DO NOT ASSUME LEARNING STYLES, PREFERENCES, OR GOALS.##
 o	why_good_growth: 1–2 short, direct sentences (5–7 words) explaining how this option supports growth toward building independence, communication, or academic habits
-o	selection_logic: For internal purposes, explain in 1-2 sentences, WHY you selected this option. 
-o	image_key (optional): Set this to the SINGLE BEST image filename from the Available Images list below that matches this option’s strategy. Use the exact filename (for example "schedule.png"). If none fit well, leave this field empty.
-
-Available Images (filenames from the storage bucket):
+o	selection_logic: For internal purposes, explain in 1-2 sentences, WHY you selected this option.
+o	image_key: choose exactly ONE filename from this list that best matches the pathway. Do not invent names and do not add explanations.
+Available image filenames:
 {available_images}
 
 Return ONLY a valid JSON object in the following format (do not include any explanations, markdown, or extra text):
@@ -166,30 +165,30 @@ Return ONLY a valid JSON object in the following format (do not include any expl
   "learning_pathways": [
     {{
       "name": "string",
+      "image_key": "string",
       "description": "string",
       "why_good_existing": "string",
       "why_challenge": "string",
       "why_good_growth": "string",
-      "selection_logic": "string",
-      "image_key": "string"
+      "selection_logic": "string"
     }},
     {{
       "name": "string",
+      "image_key": "string",
       "description": "string",
       "why_good_existing": "string",
       "why_challenge": "string",
       "why_good_growth": "string",
-      "selection_logic": "string",
-      "image_key": "string"
+      "selection_logic": "string"
     }},
     {{
       "name": "string",
+      "image_key": "string",
       "description": "string",
       "why_good_existing": "string",
       "why_challenge": "string",
       "why_good_growth": "string",
-      "selection_logic": "string",
-      "image_key": "string"
+      "selection_logic": "string"
     }},
 “output_reasoning”: “string”
   ]
