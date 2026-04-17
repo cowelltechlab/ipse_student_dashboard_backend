@@ -9,6 +9,38 @@ from application.features.gpt.crud import process_gpt_prompt_json, process_gpt_p
 load_dotenv()
 GPT_MODEL = os.getenv("GPT_MODEL")
 
+# Keyword -> emoji for learning pathway display (matched against name + description)
+PATHWAY_EMOJI_KEYWORDS = [
+    (["visual", "video", "see", "watch", "diagram", "chart", "picture"], "👁️"),
+    (["read", "reading", "text", "book", "written"], "📖"),
+    (["listen", "audio", "podcast", "hear"], "👂"),
+    (["write", "writing", "essay", "draft"], "✍️"),
+    (["speak", "present", "presentation", "oral", "discuss"], "🎤"),
+    (["group", "team", "together", "collaborative", "partner", "peer"], "👥"),
+    (["hand", "hands-on", "practice", "do", "activity", "build", "create"], "✋"),
+    (["think", "logic", "reason", "analyze", "reflect"], "🧠"),
+    (["draw", "art", "design", "sketch"], "🎨"),
+    (["goal", "plan", "step", "organize"], "🎯"),
+    (["research", "find", "explore", "investigate"], "🔍"),
+    (["tech", "digital", "computer", "online", "app"], "💻"),
+    (["game", "play", "interactive"], "🎮"),
+    (["story", "narrative", "role-play"], "📜"),
+    (["movement", "move", "physical", "kinesthetic"], "🏃"),
+    (["choice", "choose", "option", "preference"], "✅"),
+]
+DEFAULT_PATHWAY_EMOJI = "📚"
+
+
+def get_emoji_for_pathway(option: dict) -> str:
+    """Pick an emoji for a learning pathway based on its name and description text."""
+    name = (option.get("name") or "").lower()
+    desc = (option.get("description") or "").lower()
+    combined = f"{name} {desc}"
+    for keywords, emoji in PATHWAY_EMOJI_KEYWORDS:
+        if any(kw in combined for kw in keywords):
+            return emoji
+    return DEFAULT_PATHWAY_EMOJI
+
 def generate_assignment_modification_suggestions(student_profile: dict, assignment: dict, class_info: dict) -> dict:
     
     student_group = student_profile.get("group_type")

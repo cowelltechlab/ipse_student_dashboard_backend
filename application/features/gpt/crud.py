@@ -16,16 +16,6 @@ def process_gpt_prompt(prompt: str, model = GPT_MODEL) -> str:
     return get_gpt_response(prompt, model)
 
 
-def process_gpt_prompt_version_suggestion_json(prompt: str, model = GPT_MODEL, override_max_tokens: Optional[int] = None
-) -> dict:
-    response_text = get_gpt_response(prompt, model=model, override_max_tokens=override_max_tokens).strip()
-
-    try:
-        return json.loads(response_text)
-    except json.JSONDecodeError as e:
-        raise ValueError(f"Invalid JSON from GPT: {e}\nRaw content:\n{response_text}")
-
-
 # gpt_client.py
 client = OpenAI()
 
@@ -57,7 +47,66 @@ ASSIGNMENT_PACKAGE_JSON_SCHEMA = {
     ]
 }
 
+LEARNING_PATHWAYS_JSON_SCHEMA = {
+    "type": "object",
+    "additionalProperties": False,
+    "properties": {
+        "skills_for_success": {"type": "string"},
+        "learning_pathways": {
+            "type": "array",
+            "minItems": 3,
+            "maxItems": 3,
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "why_good_existing": {"type": "string"},
+                    "why_challenge": {"type": "string"},
+                    "why_good_growth": {"type": "string"},
+                    "selection_logic": {"type": "string"},
+                },
+                "required": [
+                    "name",
+                    "description",
+                    "why_good_existing",
+                    "why_challenge",
+                    "why_good_growth",
+                    "selection_logic",
+                ],
+            },
+        },
+        "output_reasoning": {"type": "string"},
+    },
+    "required": [
+        "skills_for_success",
+        "learning_pathways",
+        "output_reasoning",
+    ],
+}
 
+
+def process_gpt_prompt_version_suggestion_json(
+    prompt: str,
+    model=GPT_MODEL,
+    override_max_tokens: Optional[int] = None
+) -> dict:
+    max_output_tokens = override_max_tokens or 8000
+    resp = client.responses.create(
+        model=model,
+        input=prompt,
+        text={
+            "format": {
+                "type": "json_schema",
+                "name": "LearningPathways",
+                "strict": True,
+                "schema": LEARNING_PATHWAYS_JSON_SCHEMA,
+            }
+        },
+        max_output_tokens=max_output_tokens,
+    )
+    return json.loads(resp.output_text)
 
 
 def process_gpt_prompt_json(

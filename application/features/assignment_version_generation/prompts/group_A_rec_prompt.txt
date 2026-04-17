@@ -200,28 +200,26 @@ Return ONLY a valid JSON object in the following format (do not include any expl
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string"
     }},
     {{
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string"
     }},
     {{
       "name": "string",
       "description": "string",
       "why_good_existing": "string",
-      “why_challenge”: string,
-      "why_good_growth": "string"
-      “selection_logic”: string,
-    }},
-“output_reasoning”: “string”
-  ]
+      "why_challenge": "string",
+      "why_good_growth": "string",
+      "selection_logic": "string"
+    }}
+  ],
+  "output_reasoning": "string"
 }}
-
-Return ONLY a valid JSON object in the following format (do not include any explanations, markdown, or extra text. DO NOT INCLUDE MARKDOWN SUCH AS ```json or ``` in the response. ONLY THE VALID OBJECT.):
