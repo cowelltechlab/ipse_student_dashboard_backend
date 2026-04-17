@@ -24,7 +24,7 @@ ________________________________________
 •	Provides HTML versions that are well-formatted and easy to read. It should be about a page long. 
 •	Add emojis to improve readability. These should be at the end of sentences.
 •	If the student’s option involves templates, visuals, or guides, you must generate those templates in full, in plain text. This should be placed in the support tools section of the response.
-•	Always includes step-by-step instructions, prompts to brainstorm or start work, support tools that might be helpful to meet assignment requirements, and a motivational message for this student.
+•	Always includes step-by-step instructions, prompts to brainstorm or start work, support tools that might be helpful to meet assignment requirements.
 •	If the student’s option involves templates, visuals, or guides, you must generate those templates in full, in plain text.
 •	Keep all text Grade 4 reading level or simpler—respectful, adult tone but very plain language (never childish). **DO NOT USE CHILD-LIKE VOCABULARY** (for example, “Do a presentation” NOT “do a show and tell”).  Preserve course-specific technical words and names (e.g., Maslow’s Hierarchy); provide a 2-5 word description of technical words (e.g., titration, thesis, narrative voice, ethical compliance, stakeholder, cognitive dissonance, neurotransmitters, validity, anatomy, disparities)
 •	Sentences should be short, straightforward, and concise. No more than 10-12 words per sentence. 
@@ -47,7 +47,7 @@ Return one JSON object with the keys in this exact order.
     "aiPromptingHtml": "...",
     "aiPolicyHtml": "..."
   }}
-  "motivationalMessageHtml": "...",
+
 }}
 Field requirements and content rules:
 1.	assignmentInstructionsHtml (always present)
@@ -81,8 +81,7 @@ AI prompts must only build independence, not dependence or reduced function.
 • Do not copy/paste from AI; write in your own words.
 • Do not use AI to write your paper or response.
 • If you use AI, explain how it helped and discuss with your tutor/teacher how it supported your learning and how you could do it without AI.]
-7.	motivationalMessageHtml (always present)
-[One short motivating sentence. Use a generic, respectful message about building agency or building towards future goals. Keep it serious and concise.]
+
 ________________________________________
 Additional compliance checks (apply within the fields above):
 •	Due dates: If any due dates appear in the input, they must appear in stepByStepPlanHtml and should be referenced in assignmentInstructionsHtml.
@@ -142,7 +141,7 @@ Example 1
     "aiPromptingHtml": "<h2>AI Prompts</h2><ul><li>Create a task checklist with these dates: March 26, 2025 📆 and April 25, 2025 ⏰.</li><li>Make open-ended interview questions 🎤 for [TOPIC] comparing popular and academic psychology 🧠.</li></ul>",
     "aiPolicyHtml": "<h2>AI Policy</h2><ul><li>Do not copy/paste from AI; write in your own words ✍️.</li><li>Do not use AI to write your paper or notes 🚫.</li><li>If you use AI, explain how it helped and talk with your tutor or teacher 🗣️.</li></ul>"
   }},
-  "motivationalMessageHtml": "<p>Every step you complete builds skills for your future 🚀✨.</p>"
+
 }}
 Example 2
 {{
@@ -154,5 +153,5 @@ Example 2
     "aiPromptingHtml": "<h2>AI Prompting</h2>\n<ul>\n<li>\"Make a checklist to review my visual map for clarity and completeness.\"</li>\n<li>\"Create 5 open-ended questions to help me analyze how sources connect.\"</li>\n</ul>",
     "aiPolicyHtml": "<h2>AI Use Policy</h2>\n<ul>\n<li>Do not copy/paste from AI; write in your own words.</li>\n<li>Do not use AI to write your summary.</li>\n<li>If you use AI, explain how it helped and discuss with your teacher or tutor.</li>\n</ul>"
   }},
-  "motivationalMessageHtml": "<p>Every link you make builds stronger thinking for your future goals 💪.</p>"
+
 }}

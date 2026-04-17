@@ -177,10 +177,9 @@ def build_prompt_for_version(
     #     4. supportTools.toolsHtml               (REQUIRED)
     #     5. supportTools.aiPromptingHtml         (REQUIRED)
     #     6. supportTools.aiPolicyHtml            (REQUIRED)
-    #     7. motivationalMessageHtml              (REQUIRED)
 
     #     IMPORTANT EMISSION RULES
-    #     • Emit ALL seven sections above within a SINGLE response.
+    #     • Emit ALL six sections above within a SINGLE response.
     #     • Do NOT wait for tool results. Do NOT stop after the first call.
     #     • After emitting one section, immediately emit the next, until all are emitted in order.
     #     • Each tool call must include the complete HTML fragment in field "html".
@@ -229,7 +228,7 @@ def build_prompt_for_version(
     # json_header = (
     #     "Return one JSON object following the spec in the prompt (no tools). "
     #     "Keys must be in this exact order: "
-    #     "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools, motivationalMessageHtml. "
+    #     "assignmentInstructionsHtml, stepByStepPlanHtml, promptsHtml, supportTools. "
     #     "Inside supportTools, include keys in this exact order: toolsHtml, aiPromptingHtml, aiPolicyHtml. "
     #     "Omit no keys (all are required). "
     #     "All *Html values are valid HTML fragments (no outer HTML wrappers). "

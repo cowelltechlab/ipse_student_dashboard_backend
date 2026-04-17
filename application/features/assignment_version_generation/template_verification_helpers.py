@@ -62,7 +62,7 @@ def validate_and_order_result(data_in: Any, template_required: bool) -> dict[str
         "stepByStepPlanHtml",
         "promptsHtml",
         "supportTools",
-        "motivationalMessageHtml",
+        # "motivationalMessageHtml",
     ]
 
     # First check presence; then reorder if the sets match but order differs.
@@ -102,7 +102,7 @@ def validate_and_order_result(data_in: Any, template_required: bool) -> dict[str
         lower = value.lower()
         return all(tag not in lower for tag in ("<html", "<body", "<head", "<!doctype"))
 
-    for k in ["assignmentInstructionsHtml", "stepByStepPlanHtml", "promptsHtml", "motivationalMessageHtml"]:
+    for k in ["assignmentInstructionsHtml", "stepByStepPlanHtml", "promptsHtml"]:
         if not _is_fragment(data[k]):
             raise HTTPException(
                 status_code=500,

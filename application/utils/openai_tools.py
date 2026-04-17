@@ -12,7 +12,7 @@ class EmitSectionArgs(BaseModel):
         "supportTools.toolsHtml",
         "supportTools.aiPromptingHtml",
         "supportTools.aiPolicyHtml",
-        "motivationalMessageHtml",
+
     ]
     html: str  # full HTML fragment (no outer <html>/<body>)
 
