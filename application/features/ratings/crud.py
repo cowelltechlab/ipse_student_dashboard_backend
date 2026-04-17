@@ -176,7 +176,6 @@ def get_rating_data_by_assignment_version_id(assignment_version_id: str) -> Assi
                 selection_logic=option.get("selection_logic", ""),
                 internal_id=internal_id,
                 selected=internal_id in selected_options,
-                emoji=option.get("emoji"),
             ))
         
         # Build student profile response

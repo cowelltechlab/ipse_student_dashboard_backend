@@ -10,7 +10,6 @@ from application.features.assignment_version_generation.assignment_context impor
 from application.features.assignment_version_generation.helpers import (
     generate_assignment,
     generate_assignment_modification_suggestions,
-    get_emoji_for_pathway,
 )
 from application.database.nosql_connection import get_cosmos_db_connection
 
@@ -137,12 +136,10 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
         skills_for_success = version_doc.get("skills_for_success", "")
         student_id = version_doc.get("student_id")
 
-        # Mark which options were selected and ensure emoji is set
+        # Mark which options were selected
         for option in generated_options:
             option_id = option.get("internal_id")
             option["selected"] = option_id in selected_option_ids
-            if "emoji" not in option or not option.get("emoji"):
-                option["emoji"] = get_emoji_for_pathway(option)
 
         # Determine next version number from CosmosDB
         try:
@@ -261,10 +258,9 @@ def handle_assignment_suggestion_generation(assignment_id: int, modifier_id: int
         )
         gpt_data = gpt_raw
 
-        # Inject internal IDs and emoji into each learning pathway
+        # Inject internal IDs into each learning pathway
         for idx, option in enumerate(gpt_data.get("learning_pathways", []), start=1):
             option["internal_id"] = f"opt_{idx}"
-            option["emoji"] = get_emoji_for_pathway(option)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"GPT generation failed: {str(e)}")
 
